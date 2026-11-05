@@ -1,6 +1,7 @@
 """Pytest fixtures for async database sessions, repositories, and FastAPI HTTP test client."""
 
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -14,9 +15,12 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.pool import StaticPool
+from src.domain.ports import FileStoragePort
 from src.infrastructure.db.base import Base
 from src.infrastructure.db.session import get_async_db_session
+from src.infrastructure.parsers import LocalS3CompatibleStorageAdapter
 from src.main import create_app
+from src.presentation.dependencies import get_file_storage
 
 
 @pytest.fixture
@@ -60,14 +64,22 @@ async def db_session(async_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, 
 
 
 @pytest.fixture
-async def app(db_session: AsyncSession) -> AsyncGenerator[FastAPI, None]:
-    """Create FastAPI app with overridden database session dependency."""
+async def app(
+    db_session: AsyncSession,
+    tmp_path: Path,
+) -> AsyncGenerator[FastAPI, None]:
+    """Create FastAPI app with overridden database session and isolated temp file storage."""
     application = create_app()
+    storage_adapter = LocalS3CompatibleStorageAdapter(root_path=tmp_path / "storage")
 
     async def _override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield db_session
 
+    def _override_get_storage() -> FileStoragePort:
+        return storage_adapter
+
     application.dependency_overrides[get_async_db_session] = _override_get_db
+    application.dependency_overrides[get_file_storage] = _override_get_storage
     try:
         yield application
     finally:

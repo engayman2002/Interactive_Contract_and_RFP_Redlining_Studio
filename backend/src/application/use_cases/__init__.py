@@ -269,13 +269,22 @@ class UpdateDocumentFoundationUseCase:
         return DocumentResponseDTO.model_validate(saved)
 
 
+from src.application.use_cases.ingest_document import (  # noqa: E402
+    GetDocumentWorkspaceUseCase,
+    ListOrganizationDocumentsUseCase,
+    UploadAndIngestDocumentUseCase,
+)
+
 __all__ = [
     "AuthenticateUserUseCase",
     "CreateDocumentFoundationUseCase",
     "CreateOrganizationUserUseCase",
     "GetDocumentFoundationUseCase",
+    "GetDocumentWorkspaceUseCase",
     "GetOrganizationUserByIdUseCase",
+    "ListOrganizationDocumentsUseCase",
     "ListOrganizationUsersUseCase",
     "RegisterOrganizationAndAdminUseCase",
     "UpdateDocumentFoundationUseCase",
+    "UploadAndIngestDocumentUseCase",
 ]

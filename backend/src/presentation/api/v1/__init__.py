@@ -6,31 +6,26 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 
 from src.application.dtos import (
-    CreateDocumentRequestDTO,
     CreateUserRequestDTO,
-    DocumentResponseDTO,
     ImmutableDTO,
     LoginRequestDTO,
     OnboardingResponseDTO,
     RegisterOrganizationRequestDTO,
     TokenPayloadDTO,
     TokenResponseDTO,
-    UpdateDocumentRequestDTO,
     UserResponseDTO,
 )
 from src.application.services import JwtTokenService, PasswordService, RbacGuardService
 from src.application.use_cases import (
     AuthenticateUserUseCase,
-    CreateDocumentFoundationUseCase,
     CreateOrganizationUserUseCase,
-    GetDocumentFoundationUseCase,
     GetOrganizationUserByIdUseCase,
     ListOrganizationUsersUseCase,
     RegisterOrganizationAndAdminUseCase,
-    UpdateDocumentFoundationUseCase,
 )
 from src.domain.enums import UserRole
 from src.domain.ports import UnitOfWorkPort
+from src.presentation.api.v1.documents import documents_router
 from src.presentation.dependencies import (
     get_current_user,
     get_jwt_service,
@@ -219,82 +214,8 @@ async def get_organization_user(
 
 
 # ---------------------------------------------------------------------------
-# 4. Protected RBAC & Multi-Tenant Foundation Routes
+# 4. Protected RBAC Foundation Routes (Playbooks & Suggestions)
 # ---------------------------------------------------------------------------
-documents_router = APIRouter(prefix="/documents", tags=["Documents Foundation"])
-
-
-@documents_router.post(
-    "",
-    response_model=DocumentResponseDTO,
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_document(
-    payload: CreateDocumentRequestDTO,
-    current_user: Annotated[
-        TokenPayloadDTO,
-        Depends(
-            require_roles(
-                UserRole.ADMIN,
-                UserRole.LEGAL_COUNSEL,
-                UserRole.TECHNICAL_LEAD,
-            )
-        ),
-    ],
-    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
-    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
-) -> DocumentResponseDTO:
-    """Create a tenant-scoped document (VIEWER role is strictly blocked with 403)."""
-    use_case = CreateDocumentFoundationUseCase(uow=uow, rbac_guard=rbac_guard)
-    return await use_case.execute(actor=current_user, request=payload)
-
-
-@documents_router.get(
-    "/{document_id}",
-    response_model=DocumentResponseDTO,
-    status_code=status.HTTP_200_OK,
-)
-async def get_document(
-    document_id: UUID,
-    current_user: Annotated[TokenPayloadDTO, Depends(get_current_user)],
-    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
-    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
-) -> DocumentResponseDTO:
-    """Retrieve a document strictly within the caller's tenant organization."""
-    use_case = GetDocumentFoundationUseCase(uow=uow, rbac_guard=rbac_guard)
-    return await use_case.execute(actor=current_user, document_id=document_id)
-
-
-@documents_router.patch(
-    "/{document_id}",
-    response_model=DocumentResponseDTO,
-    status_code=status.HTTP_200_OK,
-)
-async def update_document(
-    document_id: UUID,
-    payload: UpdateDocumentRequestDTO,
-    current_user: Annotated[
-        TokenPayloadDTO,
-        Depends(
-            require_roles(
-                UserRole.ADMIN,
-                UserRole.LEGAL_COUNSEL,
-                UserRole.TECHNICAL_LEAD,
-            )
-        ),
-    ],
-    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
-    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
-) -> DocumentResponseDTO:
-    """Mutate a document within the caller's tenant organization (VIEWER blocked with 403)."""
-    use_case = UpdateDocumentFoundationUseCase(uow=uow, rbac_guard=rbac_guard)
-    return await use_case.execute(
-        actor=current_user,
-        document_id=document_id,
-        request=payload,
-    )
-
-
 playbooks_router = APIRouter(prefix="/playbooks", tags=["Playbooks RBAC Foundation"])
 
 

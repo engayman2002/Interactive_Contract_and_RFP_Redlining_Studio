@@ -77,6 +77,24 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:3000", "http://127.0.0.1:3000"]
     )
 
+    # Phase 2: Document Ingestion & Upload Storage Configuration
+    MAX_UPLOAD_SIZE_MB: int = Field(default=25, ge=1, le=100)
+    ALLOWED_UPLOAD_EXTENSIONS: tuple[str, ...] = (".docx", ".pdf")
+    ALLOWED_UPLOAD_MIME_TYPES: tuple[str, ...] = (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/pdf",
+        "application/octet-stream",
+    )
+    STORAGE_ROOT_PATH: Path = Field(
+        default=Path("/tmp/redlining_studio_storage"),  # noqa: S108
+        description="Local / S3-compatible object storage root outside the web root.",
+    )
+
+    @property
+    def max_upload_size_bytes(self) -> int:
+        """Return maximum allowed upload size in bytes."""
+        return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
     @field_validator("CORS_ALLOWED_ORIGINS")
     @classmethod
     def validate_no_wildcard_origins(cls, origins: list[str]) -> list[str]:

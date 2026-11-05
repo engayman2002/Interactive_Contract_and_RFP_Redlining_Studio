@@ -68,13 +68,22 @@ class DomainValidationError(DomainError):
         super().__init__(message=message, code="DOMAIN_VALIDATION_ERROR")
 
 
+from src.domain.exceptions.ingestion_exceptions import (  # noqa: E402
+    DocumentTooLargeError,
+    EmptyDocumentError,
+    InvalidDocumentFormatError,
+)
+
 __all__ = [
     "ConcurrencyConflictError",
+    "DocumentTooLargeError",
     "DomainError",
     "DomainValidationError",
     "DuplicateEntityError",
+    "EmptyDocumentError",
     "EntityNotFoundError",
     "ForbiddenRoleError",
+    "InvalidDocumentFormatError",
     "TenantIsolationError",
     "UnauthorizedError",
 ]

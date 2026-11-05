@@ -4,7 +4,12 @@ from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
-from src.domain.entities import Document, Organization, User
+from src.domain.entities import Document, DocumentClause, Organization, User
+from src.domain.ports.ingestion_ports import (
+    ClauseSegmenterPort,
+    DocumentParserPort,
+    FileStoragePort,
+)
 
 
 @runtime_checkable
@@ -74,6 +79,31 @@ class DocumentRepositoryPort(Protocol):
         """Delete a document strictly isolated within `org_id`."""
         ...
 
+    async def create_with_clauses(
+        self,
+        org_id: UUID,
+        document: Document,
+        clauses: Sequence[DocumentClause],
+    ) -> tuple[Document, list[DocumentClause]]:
+        """Atomically persist a document and its ordered `DocumentClause` list within `org_id`."""
+        ...
+
+    async def get_with_clauses(
+        self,
+        org_id: UUID,
+        document_id: UUID,
+    ) -> tuple[Document, list[DocumentClause]] | None:
+        """Fetch a document and its ordered clauses (`ORDER BY clause_index`) within `org_id`."""
+        ...
+
+    async def list_clauses_by_document(
+        self,
+        org_id: UUID,
+        document_id: UUID,
+    ) -> list[DocumentClause]:
+        """List ordered clauses for a document strictly isolated within `org_id`."""
+        ...
+
 
 @runtime_checkable
 class UnitOfWorkPort(Protocol):
@@ -93,7 +123,10 @@ class UnitOfWorkPort(Protocol):
 
 
 __all__ = [
+    "ClauseSegmenterPort",
+    "DocumentParserPort",
     "DocumentRepositoryPort",
+    "FileStoragePort",
     "OrganizationRepositoryPort",
     "UnitOfWorkPort",
     "UserRepositoryPort",

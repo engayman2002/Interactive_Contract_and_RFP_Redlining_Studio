@@ -12,10 +12,20 @@ from src.application.dtos import TokenPayloadDTO
 from src.application.services import JwtTokenService, PasswordService, RbacGuardService
 from src.domain.enums import UserRole
 from src.domain.exceptions import UnauthorizedError
-from src.domain.ports import UnitOfWorkPort
+from src.domain.ports import (
+    ClauseSegmenterPort,
+    DocumentParserPort,
+    FileStoragePort,
+    UnitOfWorkPort,
+)
 from src.infrastructure.config import get_settings
 from src.infrastructure.db.repositories import SqlAlchemyUnitOfWork
 from src.infrastructure.db.session import get_async_db_session
+from src.infrastructure.parsers import (
+    CompositeDocumentParser,
+    LocalS3CompatibleStorageAdapter,
+    SemanticClauseSegmenter,
+)
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -41,6 +51,25 @@ def get_jwt_service() -> JwtTokenService:
 def get_rbac_guard() -> RbacGuardService:
     """Provide singleton RbacGuardService."""
     return RbacGuardService()
+
+
+@lru_cache(maxsize=1)
+def get_document_parser() -> DocumentParserPort:
+    """Provide singleton CompositeDocumentParser for DOCX and PDF ingestion."""
+    return CompositeDocumentParser()
+
+
+@lru_cache(maxsize=1)
+def get_clause_segmenter() -> ClauseSegmenterPort:
+    """Provide singleton SemanticClauseSegmenter."""
+    return SemanticClauseSegmenter()
+
+
+@lru_cache(maxsize=1)
+def get_file_storage() -> FileStoragePort:
+    """Provide singleton LocalS3CompatibleStorageAdapter configured from settings."""
+    settings = get_settings()
+    return LocalS3CompatibleStorageAdapter(root_path=settings.STORAGE_ROOT_PATH)
 
 
 async def get_uow(
@@ -87,7 +116,10 @@ def require_roles(
 
 __all__ = [
     "bearer_scheme",
+    "get_clause_segmenter",
     "get_current_user",
+    "get_document_parser",
+    "get_file_storage",
     "get_jwt_service",
     "get_password_service",
     "get_rbac_guard",

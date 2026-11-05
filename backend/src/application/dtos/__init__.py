@@ -188,11 +188,22 @@ class DocumentResponseDTO(ImmutableDTO):
     created_at: datetime
 
 
+from src.application.dtos.ingestion_dtos import (  # noqa: E402
+    ClauseResponseDTO,
+    DocumentUploadResponseDTO,
+    DocumentWorkspaceResponseDTO,
+    IngestDocumentCommand,
+)
+
 __all__ = [
+    "ClauseResponseDTO",
     "CreateDocumentRequestDTO",
     "CreateUserRequestDTO",
     "DocumentResponseDTO",
+    "DocumentUploadResponseDTO",
+    "DocumentWorkspaceResponseDTO",
     "ImmutableDTO",
+    "IngestDocumentCommand",
     "LoginRequestDTO",
     "OnboardingResponseDTO",
     "OrganizationResponseDTO",

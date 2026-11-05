@@ -176,12 +176,21 @@ class ClauseComment:
         self.body = cleaned
 
 
+from src.domain.entities.parsed_clause import (  # noqa: E402
+    DocumentWithClauses,
+    ParsedClauseCandidate,
+    RawDocumentBlock,
+)
+
 __all__ = [
     "ClauseComment",
     "Document",
     "DocumentClause",
+    "DocumentWithClauses",
     "Organization",
+    "ParsedClauseCandidate",
     "PlaybookRule",
+    "RawDocumentBlock",
     "RedlineSuggestion",
     "User",
 ]
