@@ -12,6 +12,10 @@ from src.domain.ports.ai_ports import (
 from src.domain.ports.collaboration_ports import (
     CommentRepositoryPort,
 )
+from src.domain.ports.export_and_audit_ports import (
+    AuditLogRepositoryPort,
+    DocxExporterPort,
+)
 from src.domain.ports.ingestion_ports import (
     ClauseSegmenterPort,
     DocumentParserPort,
@@ -145,6 +149,7 @@ class UnitOfWorkPort(Protocol):
     playbooks: PlaybookRepositoryPort
     redlines: RedlineRepositoryPort
     comments: CommentRepositoryPort
+    audit_logs: AuditLogRepositoryPort
 
     async def commit(self) -> None:
         """Commit the current transaction."""
@@ -156,11 +161,13 @@ class UnitOfWorkPort(Protocol):
 
 
 __all__ = [
+    "AuditLogRepositoryPort",
     "ClauseAuditorPort",
     "ClauseSegmenterPort",
     "CommentRepositoryPort",
     "DocumentParserPort",
     "DocumentRepositoryPort",
+    "DocxExporterPort",
     "EmbeddingGeneratorPort",
     "FileStoragePort",
     "OrganizationRepositoryPort",

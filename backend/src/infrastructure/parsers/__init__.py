@@ -2,6 +2,7 @@
 
 from src.infrastructure.parsers.clause_segmenter import SemanticClauseSegmenter
 from src.infrastructure.parsers.composite_parser import CompositeDocumentParser
+from src.infrastructure.parsers.docx_exporter import NativeWordDocxExporter
 from src.infrastructure.parsers.docx_parser import DocxDocumentParser
 from src.infrastructure.parsers.pdf_parser import PdfDocumentParser
 from src.infrastructure.parsers.storage import LocalS3CompatibleStorageAdapter
@@ -10,6 +11,7 @@ __all__ = [
     "CompositeDocumentParser",
     "DocxDocumentParser",
     "LocalS3CompatibleStorageAdapter",
+    "NativeWordDocxExporter",
     "PdfDocumentParser",
     "SemanticClauseSegmenter",
 ]

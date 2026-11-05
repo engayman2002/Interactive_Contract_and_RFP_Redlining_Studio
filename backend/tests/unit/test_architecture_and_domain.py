@@ -18,6 +18,7 @@ from src.domain.entities import (
 from src.domain.enums import DocumentStatus, RiskLevel, SuggestionStatus, UserRole
 from src.domain.exceptions import ConcurrencyConflictError, DomainValidationError
 from src.domain.ports import (
+    AuditLogRepositoryPort,
     CommentRepositoryPort,
     DocumentRepositoryPort,
     RedlineRepositoryPort,
@@ -117,6 +118,14 @@ def test_repository_ports_require_org_id_parameter() -> None:
         sig = inspect.signature(method)
         assert "org_id" in sig.parameters, (
             f"CommentRepositoryPort.{method_name} must require 'org_id'"
+        )
+
+    tenant_audit_methods = ("append", "list_by_document")
+    for method_name in tenant_audit_methods:
+        method = getattr(AuditLogRepositoryPort, method_name)
+        sig = inspect.signature(method)
+        assert "org_id" in sig.parameters, (
+            f"AuditLogRepositoryPort.{method_name} must require 'org_id'"
         )
 
 

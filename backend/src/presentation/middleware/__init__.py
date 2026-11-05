@@ -140,10 +140,17 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
 
+from src.presentation.middleware.rate_limiter import (  # noqa: E402
+    SlidingWindowRateLimitMiddleware,
+    reset_rate_limiter_state,
+)
+
 __all__ = [
     "ALLOWED_HTTP_METHODS",
     "CorrelationAndSecurityMiddleware",
     "DOMAIN_ERROR_STATUS_MAP",
+    "SlidingWindowRateLimitMiddleware",
     "correlation_id_ctx",
     "register_exception_handlers",
+    "reset_rate_limiter_state",
 ]

@@ -279,6 +279,11 @@ from src.application.use_cases.collaboration import (  # noqa: E402
     ListClauseCommentsUseCase,
     ResolveRedlineSuggestionUseCase,
 )
+from src.application.use_cases.export_and_audit import (  # noqa: E402
+    DOCX_MIME_TYPE,
+    ExportDocumentUseCase,
+    ListDocumentAuditLogsUseCase,
+)
 from src.application.use_cases.ingest_document import (  # noqa: E402
     GetDocumentWorkspaceUseCase,
     ListOrganizationDocumentsUseCase,
@@ -301,12 +306,15 @@ __all__ = [
     "CreateDocumentFoundationUseCase",
     "CreateOrganizationUserUseCase",
     "CreatePlaybookRuleUseCase",
+    "DOCX_MIME_TYPE",
     "DeletePlaybookRuleUseCase",
+    "ExportDocumentUseCase",
     "GetDocumentFoundationUseCase",
     "GetDocumentWorkspaceUseCase",
     "GetOrganizationUserByIdUseCase",
     "GetPlaybookRuleUseCase",
     "ListClauseCommentsUseCase",
+    "ListDocumentAuditLogsUseCase",
     "ListOrganizationDocumentsUseCase",
     "ListOrganizationUsersUseCase",
     "ListPlaybookRulesUseCase",

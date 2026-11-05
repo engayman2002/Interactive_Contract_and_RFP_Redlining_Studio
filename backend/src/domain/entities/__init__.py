@@ -199,6 +199,10 @@ class ClauseComment:
         self.body = cleaned
 
 
+from src.domain.entities.audit_and_export import (  # noqa: E402
+    AuditLogEntry,
+    ExportedDocumentArtifact,
+)
 from src.domain.entities.parsed_clause import (  # noqa: E402
     DocumentWithClauses,
     ParsedClauseCandidate,
@@ -217,6 +221,7 @@ from src.domain.entities.redline_analysis import (  # noqa: E402
 
 __all__ = [
     "AuditEventType",
+    "AuditLogEntry",
     "AuditProgressEvent",
     "ClauseAuditInput",
     "ClauseAuditResult",
@@ -224,6 +229,7 @@ __all__ = [
     "Document",
     "DocumentClause",
     "DocumentWithClauses",
+    "ExportedDocumentArtifact",
     "MatchedPlaybookRule",
     "Organization",
     "ParsedClauseCandidate",

@@ -12,6 +12,7 @@ from src.application.dtos import (
 )
 from src.application.services import MUTATING_ROLES, RBACAction, RbacGuardService
 from src.domain.entities import (
+    AuditLogEntry,
     AuditProgressEvent,
     ClauseAuditInput,
     ClauseAuditResult,
@@ -20,7 +21,7 @@ from src.domain.entities import (
     PlaybookSearchQuery,
     RedlineSuggestion,
 )
-from src.domain.enums import DocumentStatus, RiskLevel, SuggestionStatus
+from src.domain.enums import AuditAction, DocumentStatus, RiskLevel, SuggestionStatus
 from src.domain.exceptions import EntityNotFoundError
 from src.domain.ports import (
     ClauseAuditorPort,
@@ -174,6 +175,20 @@ class AnalyzeDocumentClausesUseCase:
             org_id=actor.org_id,
             document=updated_doc,
             expected_version=document.version,
+        )
+        await self._uow.audit_logs.append(
+            org_id=actor.org_id,
+            entry=AuditLogEntry(
+                org_id=actor.org_id,
+                document_id=saved_doc.id,
+                actor_user_id=actor.sub,
+                actor_role=actor.role,
+                action=AuditAction.DOCUMENT_ANALYZED,
+                details={
+                    "total_clauses": len(clauses),
+                    "suggestions_created": len(persisted_suggestions),
+                },
+            ),
         )
         await self._uow.commit()
 

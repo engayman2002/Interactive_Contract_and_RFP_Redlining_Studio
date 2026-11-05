@@ -5,7 +5,7 @@ import { ContractEditorCanvas } from "@/components/editor/ContractEditorCanvas";
 import { AiInspectorPanel } from "@/components/inspector/AiInspectorPanel";
 import { useDocumentStream } from "@/hooks/useDocumentStream";
 import { DEMO_WORKSPACE_DATA } from "@/services/apiClient";
-import type { DocumentWorkspaceDTO } from "@/services/contracts";
+import type { DocumentWorkspaceDTO, ExportMode } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 
 export interface RedliningStudioWorkspaceProps {
@@ -20,8 +20,13 @@ export const RedliningStudioWorkspace: React.FC<
   const clauses = useWorkspaceStore((state) => state.clauses);
   const redlines = useWorkspaceStore((state) => state.redlines);
   const comments = useWorkspaceStore((state) => state.comments);
+  const auditLogs = useWorkspaceStore((state) => state.auditLogs);
   const documentVersion = useWorkspaceStore((state) => state.documentVersion);
   const conflictError = useWorkspaceStore((state) => state.conflictError);
+  const isExporting = useWorkspaceStore((state) => state.isExporting);
+  const lastExportedFilename = useWorkspaceStore(
+    (state) => state.lastExportedFilename
+  );
   const splitRatio = useWorkspaceStore((state) => state.splitRatio);
   const setSplitRatio = useWorkspaceStore((state) => state.setSplitRatio);
   const hydrateWorkspace = useWorkspaceStore((state) => state.hydrateWorkspace);
@@ -32,16 +37,18 @@ export const RedliningStudioWorkspace: React.FC<
   const modifySuggestion = useWorkspaceStore((state) => state.modifySuggestion);
   const rejectSuggestion = useWorkspaceStore((state) => state.rejectSuggestion);
   const addClauseComment = useWorkspaceStore((state) => state.addClauseComment);
+  const exportDocument = useWorkspaceStore((state) => state.exportDocument);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef<boolean>(false);
+  const resolvedDocId = documentId ?? initialWorkspace.document_id;
 
   useEffect(() => {
     hydrateWorkspace(initialWorkspace);
   }, [initialWorkspace, hydrateWorkspace]);
 
   const { startStream, streamProgress } = useDocumentStream({
-    documentId: documentId ?? initialWorkspace.document_id,
+    documentId: resolvedDocId,
     totalClauses: clauses.length,
     token,
   });
@@ -72,6 +79,13 @@ export const RedliningStudioWorkspace: React.FC<
       await addClauseComment(clauseId, body, token);
     },
     [addClauseComment, token]
+  );
+
+  const handleExport = useCallback(
+    async (mode: ExportMode) => {
+      await exportDocument(resolvedDocId, mode, token);
+    },
+    [exportDocument, resolvedDocId, token]
   );
 
   const handleDividerMouseDown = useCallback(() => {
@@ -121,10 +135,40 @@ export const RedliningStudioWorkspace: React.FC<
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {lastExportedFilename ? (
+            <span
+              data-testid="export-status-badge"
+              className="rounded border border-teal-500/40 bg-teal-500/15 px-2.5 py-1 font-mono text-[11px] text-teal-300"
+            >
+              Exported: {lastExportedFilename}
+            </span>
+          ) : null}
+
+          <button
+            type="button"
+            data-testid="export-track-changes-btn"
+            onClick={() => void handleExport("track_changes")}
+            disabled={isExporting}
+            className="rounded-md border border-teal-500/40 bg-teal-600/20 px-3 py-1.5 text-xs font-semibold text-teal-200 transition-colors hover:bg-teal-600/30 disabled:opacity-50"
+          >
+            Export Track Changes (.docx)
+          </button>
+
+          <button
+            type="button"
+            data-testid="export-clean-btn"
+            onClick={() => void handleExport("clean")}
+            disabled={isExporting}
+            className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-slate-700 disabled:opacity-50"
+          >
+            Export Clean (.docx)
+          </button>
+
           <span className="font-mono text-xs text-slate-400">
             Split: {splitRatio}% / {100 - splitRatio}%
           </span>
+
           <button
             type="button"
             data-testid="trigger-sse-audit-btn"
@@ -200,6 +244,7 @@ export const RedliningStudioWorkspace: React.FC<
             clauses={clauses}
             redlines={redlines}
             comments={comments}
+            auditLogs={auditLogs}
             onAcceptSuggestion={handleAcceptSuggestion}
             onModifySuggestion={handleModifySuggestion}
             onRejectSuggestion={handleRejectSuggestion}

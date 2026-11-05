@@ -21,7 +21,13 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.domain.enums import DocumentStatus, RiskLevel, SuggestionStatus, UserRole
+from src.domain.enums import (
+    AuditAction,
+    DocumentStatus,
+    RiskLevel,
+    SuggestionStatus,
+    UserRole,
+)
 from src.infrastructure.db.base import Base
 
 
@@ -301,7 +307,64 @@ class ClauseCommentModel(Base):
     clause: Mapped["DocumentClauseModel"] = relationship(back_populates="comments")
 
 
+class AuditLogModel(Base):
+    """ORM model for the immutable `audit_logs` compliance table."""
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    org_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    document_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    clause_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("document_clauses.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    actor_user_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=False,
+    )
+    actor_role: Mapped[UserRole] = mapped_column(
+        SAEnum(UserRole, name="user_role", native_enum=True),
+        nullable=False,
+    )
+    action: Mapped[AuditAction] = mapped_column(
+        SAEnum(AuditAction, name="audit_action", native_enum=False),
+        nullable=False,
+        index=True,
+    )
+    details_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON(),
+        nullable=False,
+        default=dict,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=_utc_now,
+        server_default=func.now(),
+        index=True,
+    )
+
+
 __all__ = [
+    "AuditLogModel",
     "ClauseCommentModel",
     "DocumentClauseModel",
     "DocumentModel",

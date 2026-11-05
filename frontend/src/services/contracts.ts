@@ -45,6 +45,33 @@ export const ClauseCommentDTOSchema = z.object({
 });
 export type ClauseCommentDTO = z.infer<typeof ClauseCommentDTOSchema>;
 
+export const ExportModeSchema = z.enum(["track_changes", "clean"]);
+export type ExportMode = z.infer<typeof ExportModeSchema>;
+
+export const AuditActionSchema = z.enum([
+  "DOCUMENT_INGESTED",
+  "DOCUMENT_ANALYZED",
+  "SUGGESTION_ACCEPTED",
+  "SUGGESTION_MODIFIED",
+  "SUGGESTION_REJECTED",
+  "COMMENT_CREATED",
+  "DOCUMENT_EXPORTED",
+]);
+export type AuditAction = z.infer<typeof AuditActionSchema>;
+
+export const AuditLogEntryDTOSchema = z.object({
+  id: z.string(),
+  org_id: z.string(),
+  document_id: z.string(),
+  clause_id: z.string().nullable().optional(),
+  actor_user_id: z.string(),
+  actor_role: z.string(),
+  action: AuditActionSchema,
+  details: z.record(z.union([z.string(), z.number(), z.null()])).default({}),
+  created_at: z.string(),
+});
+export type AuditLogEntryDTO = z.infer<typeof AuditLogEntryDTOSchema>;
+
 export const DocumentMetadataDTOSchema = z.object({
   id: z.string(),
   org_id: z.string(),
@@ -68,6 +95,7 @@ export const DocumentWorkspaceDTOSchema = z.object({
   clauses: z.array(ClauseDTOSchema),
   redlines: z.array(RedlineSuggestionDTOSchema),
   comments: z.array(ClauseCommentDTOSchema).default([]),
+  audit_logs: z.array(AuditLogEntryDTOSchema).default([]),
 });
 export type DocumentWorkspaceDTO = z.infer<typeof DocumentWorkspaceDTOSchema>;
 

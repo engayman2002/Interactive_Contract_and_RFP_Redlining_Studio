@@ -16,6 +16,7 @@ from src.domain.ports import (
     ClauseAuditorPort,
     ClauseSegmenterPort,
     DocumentParserPort,
+    DocxExporterPort,
     EmbeddingGeneratorPort,
     FileStoragePort,
     PlaybookRetrieverPort,
@@ -28,6 +29,7 @@ from src.infrastructure.db.session import get_async_db_session
 from src.infrastructure.parsers import (
     CompositeDocumentParser,
     LocalS3CompatibleStorageAdapter,
+    NativeWordDocxExporter,
     SemanticClauseSegmenter,
 )
 from src.infrastructure.vector import (
@@ -97,6 +99,12 @@ def get_clause_auditor() -> ClauseAuditorPort:
     )
 
 
+@lru_cache(maxsize=1)
+def get_docx_exporter() -> DocxExporterPort:
+    """Provide singleton NativeWordDocxExporter for Track-Changes and Clean DOCX export."""
+    return NativeWordDocxExporter()
+
+
 async def get_uow(
     session: Annotated[AsyncSession, Depends(get_async_db_session)],
 ) -> UnitOfWorkPort:
@@ -159,6 +167,7 @@ __all__ = [
     "get_clause_segmenter",
     "get_current_user",
     "get_document_parser",
+    "get_docx_exporter",
     "get_embedding_generator",
     "get_file_storage",
     "get_jwt_service",

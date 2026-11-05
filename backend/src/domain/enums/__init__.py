@@ -39,8 +39,29 @@ class DocumentStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class ExportMode(StrEnum):
+    """DOCX export output modes (Native Word Track Changes vs. Finalized Clean)."""
+
+    TRACK_CHANGES = "track_changes"
+    CLEAN = "clean"
+
+
+class AuditAction(StrEnum):
+    """Immutable compliance audit log actions recorded across the workspace lifecycle."""
+
+    DOCUMENT_INGESTED = "DOCUMENT_INGESTED"
+    DOCUMENT_ANALYZED = "DOCUMENT_ANALYZED"
+    SUGGESTION_ACCEPTED = "SUGGESTION_ACCEPTED"
+    SUGGESTION_MODIFIED = "SUGGESTION_MODIFIED"
+    SUGGESTION_REJECTED = "SUGGESTION_REJECTED"
+    COMMENT_CREATED = "COMMENT_CREATED"
+    DOCUMENT_EXPORTED = "DOCUMENT_EXPORTED"
+
+
 __all__ = [
+    "AuditAction",
     "DocumentStatus",
+    "ExportMode",
     "RiskLevel",
     "SuggestionStatus",
     "UserRole",

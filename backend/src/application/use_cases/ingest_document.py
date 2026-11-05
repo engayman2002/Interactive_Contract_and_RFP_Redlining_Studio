@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from src.application.dtos import (
+    AuditLogEntryResponseDTO,
     ClauseCommentResponseDTO,
     ClauseResponseDTO,
     DocumentResponseDTO,
@@ -13,8 +14,8 @@ from src.application.dtos import (
     TokenPayloadDTO,
 )
 from src.application.services import RBACAction, RbacGuardService
-from src.domain.entities import Document, DocumentClause
-from src.domain.enums import DocumentStatus
+from src.domain.entities import AuditLogEntry, Document, DocumentClause
+from src.domain.enums import AuditAction, DocumentStatus
 from src.domain.exceptions import (
     DocumentTooLargeError,
     EmptyDocumentError,
@@ -112,6 +113,21 @@ class UploadAndIngestDocumentUseCase:
             document=document,
             clauses=clause_entities,
         )
+        await self._uow.audit_logs.append(
+            org_id=actor.org_id,
+            entry=AuditLogEntry(
+                org_id=actor.org_id,
+                document_id=persisted_doc.id,
+                actor_user_id=actor.sub,
+                actor_role=actor.role,
+                action=AuditAction.DOCUMENT_INGESTED,
+                details={
+                    "title": persisted_doc.title,
+                    "clause_count": len(persisted_clauses),
+                    "storage_key": storage_key,
+                },
+            ),
+        )
         await self._uow.commit()
 
         return DocumentUploadResponseDTO(
@@ -170,6 +186,13 @@ class GetDocumentWorkspaceUseCase:
         comment_dtos = [
             ClauseCommentResponseDTO.from_domain(cm) for cm in comment_entities
         ]
+        audit_entities = await self._uow.audit_logs.list_by_document(
+            org_id=actor.org_id,
+            document_id=document.id,
+        )
+        audit_dtos = [
+            AuditLogEntryResponseDTO.from_domain(a) for a in audit_entities
+        ]
 
         return DocumentWorkspaceResponseDTO(
             document_id=document.id,
@@ -183,6 +206,7 @@ class GetDocumentWorkspaceUseCase:
             clauses=clause_dtos,
             redlines=redline_dtos,
             comments=comment_dtos,
+            audit_logs=audit_dtos,
         )
 
 

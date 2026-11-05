@@ -108,6 +108,11 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = Field(default="redis://localhost:6379/0")
     CELERY_TASK_ALWAYS_EAGER: bool = Field(default=True)
 
+    # Phase 7: Production Hardening & Sliding-Window Rate Limiting
+    RATE_LIMIT_ENABLED: bool = Field(default=True)
+    RATE_LIMIT_REQUESTS_PER_MINUTE: int = Field(default=240, ge=1, le=10000)
+    RATE_LIMIT_WINDOW_SECONDS: int = Field(default=60, ge=1, le=3600)
+
     @property
     def max_upload_size_bytes(self) -> int:
         """Return maximum allowed upload size in bytes."""

@@ -7,6 +7,7 @@ from src.infrastructure.config import get_settings
 from src.presentation.api.v1 import api_v1_router
 from src.presentation.middleware import (
     CorrelationAndSecurityMiddleware,
+    SlidingWindowRateLimitMiddleware,
     register_exception_handlers,
 )
 
@@ -28,10 +29,17 @@ def create_app() -> FastAPI:
         allow_origins=settings.CORS_ALLOWED_ORIGINS,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Correlation-ID"],
-        expose_headers=["X-Correlation-ID"],
+        allow_headers=["Authorization", "Content-Type", "X-Correlation-ID", "X-Client-ID"],
+        expose_headers=[
+            "X-Correlation-ID",
+            "Content-Disposition",
+            "Retry-After",
+            "X-RateLimit-Limit",
+            "X-RateLimit-Remaining",
+        ],
     )
 
+    app.add_middleware(SlidingWindowRateLimitMiddleware)
     app.add_middleware(CorrelationAndSecurityMiddleware)
     register_exception_handlers(app)
 

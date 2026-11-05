@@ -198,6 +198,9 @@ from src.application.dtos.collaboration_dtos import (  # noqa: E402
     ResolveSuggestionRequestDTO,
     ResolveSuggestionResponseDTO,
 )
+from src.application.dtos.export_and_audit_dtos import (  # noqa: E402
+    AuditLogEntryResponseDTO,
+)
 from src.application.dtos.ingestion_dtos import (  # noqa: E402
     ClauseResponseDTO,
     DocumentUploadResponseDTO,
@@ -220,6 +223,7 @@ from src.application.dtos.redline_dtos import (  # noqa: E402
 )
 
 __all__ = [
+    "AuditLogEntryResponseDTO",
     "ClauseCommentResponseDTO",
     "ClauseResolutionStateDTO",
     "ClauseResponseDTO",

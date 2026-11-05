@@ -3,10 +3,11 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from src.application.dtos import (
+    AuditLogEntryResponseDTO,
     CreateDocumentRequestDTO,
     DocumentAnalysisSummaryDTO,
     DocumentResponseDTO,
@@ -20,18 +21,21 @@ from src.application.services import RbacGuardService
 from src.application.use_cases import (
     AnalyzeDocumentClausesUseCase,
     CreateDocumentFoundationUseCase,
+    ExportDocumentUseCase,
     GetDocumentFoundationUseCase,
     GetDocumentWorkspaceUseCase,
+    ListDocumentAuditLogsUseCase,
     ListOrganizationDocumentsUseCase,
     StreamDocumentAnalysisUseCase,
     UpdateDocumentFoundationUseCase,
     UploadAndIngestDocumentUseCase,
 )
-from src.domain.enums import UserRole
+from src.domain.enums import ExportMode, UserRole
 from src.domain.ports import (
     ClauseAuditorPort,
     ClauseSegmenterPort,
     DocumentParserPort,
+    DocxExporterPort,
     FileStoragePort,
     PlaybookRetrieverPort,
     UnitOfWorkPort,
@@ -42,6 +46,7 @@ from src.presentation.dependencies import (
     get_clause_segmenter,
     get_current_user,
     get_document_parser,
+    get_docx_exporter,
     get_file_storage,
     get_playbook_retriever,
     get_rbac_guard,
@@ -273,6 +278,62 @@ async def update_document(
         actor=current_user,
         document_id=document_id,
         request=payload,
+    )
+
+
+@documents_router.get(
+    "/{document_id}/export",
+    status_code=status.HTTP_200_OK,
+)
+async def export_document_docx(
+    document_id: UUID,
+    current_user: Annotated[TokenPayloadDTO, Depends(get_current_user)],
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
+    exporter: Annotated[DocxExporterPort, Depends(get_docx_exporter)],
+    mode: Annotated[ExportMode, Query(description="Export mode: track_changes or clean")] = (
+        ExportMode.TRACK_CHANGES
+    ),
+) -> Response:
+    """Export the document as a `.docx` file with native Word Track Changes or clean text."""
+    use_case = ExportDocumentUseCase(
+        uow=uow,
+        rbac_guard=rbac_guard,
+        exporter=exporter,
+    )
+    artifact = await use_case.execute(
+        actor=current_user,
+        document_id=document_id,
+        mode=mode,
+    )
+    return Response(
+        content=artifact.file_bytes,
+        media_type=artifact.content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{artifact.filename}"',
+        },
+    )
+
+
+@documents_router.get(
+    "/{document_id}/audit-trail",
+    response_model=list[AuditLogEntryResponseDTO],
+    status_code=status.HTTP_200_OK,
+)
+async def list_document_audit_trail(
+    document_id: UUID,
+    current_user: Annotated[TokenPayloadDTO, Depends(get_current_user)],
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
+) -> list[AuditLogEntryResponseDTO]:
+    """List immutable compliance audit trail entries for a document within `org_id`."""
+    use_case = ListDocumentAuditLogsUseCase(
+        uow=uow,
+        rbac_guard=rbac_guard,
+    )
+    return await use_case.execute(
+        actor=current_user,
+        document_id=document_id,
     )
 
 

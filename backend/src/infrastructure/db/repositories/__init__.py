@@ -15,6 +15,9 @@ from src.domain.ports import (
     UserRepositoryPort,
 )
 from src.infrastructure.db.models import OrganizationModel, UserModel
+from src.infrastructure.db.repositories.audit_log_repository import (
+    SqlAlchemyAuditLogRepository,
+)
 from src.infrastructure.db.repositories.base import MultiTenantRepositoryBase
 from src.infrastructure.db.repositories.comment_repository import (
     SqlAlchemyCommentRepository,
@@ -149,6 +152,7 @@ class SqlAlchemyUnitOfWork(UnitOfWorkPort):
         self.playbooks = SqlAlchemyPlaybookRepository(session)
         self.redlines = SqlAlchemyRedlineRepository(session)
         self.comments = SqlAlchemyCommentRepository(session)
+        self.audit_logs = SqlAlchemyAuditLogRepository(session)
 
     async def commit(self) -> None:
         await self._session.commit()
@@ -159,6 +163,7 @@ class SqlAlchemyUnitOfWork(UnitOfWorkPort):
 
 __all__ = [
     "MultiTenantRepositoryBase",
+    "SqlAlchemyAuditLogRepository",
     "SqlAlchemyCommentRepository",
     "SqlAlchemyDocumentRepository",
     "SqlAlchemyOrganizationRepository",

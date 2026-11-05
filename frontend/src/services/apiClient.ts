@@ -1,4 +1,6 @@
 import {
+  AuditLogEntryDTO,
+  AuditLogEntryDTOSchema,
   ClauseCommentDTO,
   ClauseCommentDTOSchema,
   CreateClauseCommentRequestDTOSchema,
@@ -6,6 +8,8 @@ import {
   DocumentAnalysisSummaryDTOSchema,
   DocumentWorkspaceDTO,
   DocumentWorkspaceDTOSchema,
+  ExportMode,
+  ExportModeSchema,
   ResolveSuggestionRequestDTO,
   ResolveSuggestionRequestDTOSchema,
   ResolveSuggestionResponseDTO,
@@ -170,6 +174,36 @@ export const DEMO_WORKSPACE_DATA: DocumentWorkspaceDTO = {
     },
   ],
   comments: [],
+  audit_logs: [
+    {
+      id: "al000000-0000-4000-8000-000000000401",
+      org_id: DEMO_ORG_ID,
+      document_id: DEMO_DOCUMENT_ID,
+      clause_id: null,
+      actor_user_id: DEMO_USER_ID,
+      actor_role: "LEGAL_COUNSEL",
+      action: "DOCUMENT_INGESTED",
+      details: {
+        title: "Master Cloud Infrastructure & Enterprise AI Services Agreement",
+        clause_count: 6,
+      },
+      created_at: "2026-11-05T00:00:00Z",
+    },
+    {
+      id: "al000000-0000-4000-8000-000000000402",
+      org_id: DEMO_ORG_ID,
+      document_id: DEMO_DOCUMENT_ID,
+      clause_id: null,
+      actor_user_id: DEMO_USER_ID,
+      actor_role: "LEGAL_COUNSEL",
+      action: "DOCUMENT_ANALYZED",
+      details: {
+        total_clauses: 6,
+        suggestions_created: 5,
+      },
+      created_at: "2026-11-05T00:01:05Z",
+    },
+  ],
 };
 
 function buildHeaders(token?: string, jsonBody: boolean = false): HeadersInit {
@@ -354,4 +388,73 @@ export async function createClauseComment(
     }
     throw err;
   }
+}
+
+export async function exportDocumentDocx(
+  documentId: string,
+  mode: ExportMode = "track_changes",
+  token?: string
+): Promise<{ filename: string; blob: Blob }> {
+  const validatedMode = ExportModeSchema.parse(mode);
+  const fallbackFilename = `contract_${validatedMode}.docx`;
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}/export?mode=${encodeURIComponent(validatedMode)}`,
+      {
+        method: "GET",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }
+    );
+
+    if (!response.ok) {
+      if (!token) {
+        return {
+          filename: fallbackFilename,
+          blob: new Blob(["PK\x03\x04"], {
+            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          }),
+        };
+      }
+      throw new Error(`Failed to export document (${response.status})`);
+    }
+
+    const disposition = response.headers.get("Content-Disposition") ?? "";
+    const match = /filename="?([^";]+)"?/i.exec(disposition);
+    const filename = match?.[1]?.trim() || fallbackFilename;
+    const blob = await response.blob();
+    return { filename, blob };
+  } catch (err) {
+    if (!token) {
+      return {
+        filename: fallbackFilename,
+        blob: new Blob(["PK\x03\x04"], {
+          type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }),
+      };
+    }
+    throw err;
+  }
+}
+
+export async function fetchDocumentAuditTrail(
+  documentId: string,
+  token?: string
+): Promise<AuditLogEntryDTO[]> {
+  if (!documentId || documentId === DEMO_DOCUMENT_ID || !token) {
+    return DEMO_WORKSPACE_DATA.audit_logs;
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}/audit-trail`,
+    {
+      method: "GET",
+      headers: buildHeaders(token),
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to fetch audit trail (${response.status})`);
+  }
+  const raw = (await response.json()) as unknown[];
+  return raw.map((item) => AuditLogEntryDTOSchema.parse(item));
 }

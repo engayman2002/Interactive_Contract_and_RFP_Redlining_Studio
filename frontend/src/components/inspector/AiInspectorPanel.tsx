@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type {
+  AuditLogEntryDTO,
   ClauseCommentDTO,
   ClauseDTO,
   RedlineSuggestionDTO,
 } from "@/services/contracts";
 import { RiskFilterMode, useWorkspaceStore } from "@/store/workspaceStore";
+import { AuditTrailPanel } from "./AuditTrailPanel";
 import { ClauseCommentThread } from "./ClauseCommentThread";
 import { RedlineCard } from "./RedlineCard";
 
@@ -14,6 +16,7 @@ export interface AiInspectorPanelProps {
   clauses: ClauseDTO[];
   redlines: RedlineSuggestionDTO[];
   comments?: ClauseCommentDTO[];
+  auditLogs?: AuditLogEntryDTO[];
   onAcceptSuggestion?: (suggestionId: string) => Promise<void> | void;
   onModifySuggestion?: (
     suggestionId: string,
@@ -37,6 +40,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
   clauses,
   redlines,
   comments = [],
+  auditLogs,
   onAcceptSuggestion,
   onModifySuggestion,
   onRejectSuggestion,
@@ -50,6 +54,12 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
   const setRiskFilter = useWorkspaceStore((state) => state.setRiskFilter);
   const streamProgress = useWorkspaceStore((state) => state.streamProgress);
   const selectClause = useWorkspaceStore((state) => state.selectClause);
+  const storeAuditLogs = useWorkspaceStore((state) => state.auditLogs);
+
+  const resolvedAuditLogs = auditLogs ?? storeAuditLogs;
+  const [activeViewTab, setActiveViewTab] = useState<"redlines" | "audit">(
+    "redlines"
+  );
 
   const cardContainerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -146,6 +156,34 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
           </div>
         </div>
 
+        {/* View Mode Switcher: Redlines vs Compliance Audit Trail */}
+        <div className="mt-3 flex gap-2 border-b border-slate-800 pb-2.5">
+          <button
+            type="button"
+            data-testid="inspector-tab-redlines"
+            onClick={() => setActiveViewTab("redlines")}
+            className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${
+              activeViewTab === "redlines"
+                ? "bg-indigo-600 text-white"
+                : "bg-slate-800/80 text-slate-300 hover:bg-slate-800"
+            }`}
+          >
+            Redlines ({redlines.length})
+          </button>
+          <button
+            type="button"
+            data-testid="inspector-tab-audit"
+            onClick={() => setActiveViewTab("audit")}
+            className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${
+              activeViewTab === "audit"
+                ? "bg-indigo-600 text-white"
+                : "bg-slate-800/80 text-slate-300 hover:bg-slate-800"
+            }`}
+          >
+            Audit Trail ({resolvedAuditLogs.length})
+          </button>
+        </div>
+
         {/* Real-time SSE Audit Progress Bar */}
         {streamProgress.isStreaming || streamProgress.total > 0 ? (
           <div
@@ -180,113 +218,121 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
           </div>
         ) : null}
 
-        {/* Filter Tabs */}
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {FILTER_TABS.map((tab) => {
-            const active = riskFilter === tab.mode;
-            return (
-              <button
-                key={tab.mode}
-                type="button"
-                data-testid={`filter-tab-${tab.mode}`}
-                onClick={() => setRiskFilter(tab.mode)}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                  active
-                    ? "bg-indigo-600 text-white"
-                    : "bg-slate-800/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Filter Tabs (shown in Redlines view) */}
+        {activeViewTab === "redlines" ? (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {FILTER_TABS.map((tab) => {
+              const active = riskFilter === tab.mode;
+              return (
+                <button
+                  key={tab.mode}
+                  type="button"
+                  data-testid={`filter-tab-${tab.mode}`}
+                  onClick={() => setRiskFilter(tab.mode)}
+                  className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    active
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-800/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
 
-      {/* Scrollable Redline Cards List */}
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
-        {riskFilter !== "COMPLIANT" &&
-          filteredRedlines.map((suggestion) => {
-            const clause = clausesById.get(suggestion.clause_id);
-            if (!clause) {
-              return null;
-            }
-            const clauseComments = commentsByClauseId.get(clause.id) ?? [];
-            return (
-              <div
-                key={suggestion.id}
-                ref={(el) => {
-                  if (el) {
-                    cardContainerRefs.current.set(clause.id, el);
-                  } else {
-                    cardContainerRefs.current.delete(clause.id);
-                  }
-                }}
-              >
-                <RedlineCard
-                  clause={clause}
-                  suggestion={suggestion}
-                  commentCount={clauseComments.length}
-                  onAcceptSuggestion={onAcceptSuggestion}
-                  onModifySuggestion={onModifySuggestion}
-                  onRejectSuggestion={onRejectSuggestion}
-                  onLocalApplyPreview={onLocalApplyPreview}
-                  onLocalRejectPreview={onLocalRejectPreview}
-                />
-              </div>
-            );
-          })}
+      {activeViewTab === "audit" ? (
+        <AuditTrailPanel auditLogs={resolvedAuditLogs} />
+      ) : (
+        <>
+          {/* Scrollable Redline Cards List */}
+          <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            {riskFilter !== "COMPLIANT" &&
+              filteredRedlines.map((suggestion) => {
+                const clause = clausesById.get(suggestion.clause_id);
+                if (!clause) {
+                  return null;
+                }
+                const clauseComments = commentsByClauseId.get(clause.id) ?? [];
+                return (
+                  <div
+                    key={suggestion.id}
+                    ref={(el) => {
+                      if (el) {
+                        cardContainerRefs.current.set(clause.id, el);
+                      } else {
+                        cardContainerRefs.current.delete(clause.id);
+                      }
+                    }}
+                  >
+                    <RedlineCard
+                      clause={clause}
+                      suggestion={suggestion}
+                      commentCount={clauseComments.length}
+                      onAcceptSuggestion={onAcceptSuggestion}
+                      onModifySuggestion={onModifySuggestion}
+                      onRejectSuggestion={onRejectSuggestion}
+                      onLocalApplyPreview={onLocalApplyPreview}
+                      onLocalRejectPreview={onLocalRejectPreview}
+                    />
+                  </div>
+                );
+              })}
 
-        {(riskFilter === "ALL" || riskFilter === "COMPLIANT") &&
-          compliantClauses.map((clause) => {
-            const isSelected = activeClauseId === clause.id;
-            return (
-              <div
-                key={clause.id}
-                ref={(el) => {
-                  if (el) {
-                    cardContainerRefs.current.set(clause.id, el);
-                  } else {
-                    cardContainerRefs.current.delete(clause.id);
-                  }
-                }}
-                data-testid={`redline-card-${clause.id}`}
-                data-clause-id={clause.id}
-                data-risk-level="COMPLIANT"
-                data-active={isSelected ? "true" : "false"}
-                onClick={() => selectClause(clause.id, "inspector")}
-                className={`cursor-pointer rounded-lg border p-3.5 transition-colors ${
-                  isSelected
-                    ? "border-indigo-500 bg-indigo-950/35 ring-2 ring-indigo-500/80"
-                    : "border-slate-800/80 bg-slate-900/40 hover:border-slate-700"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-200">
-                    Clause #{clause.clause_index + 1}:{" "}
-                    {clause.heading ?? "Provision"}
-                  </span>
-                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
-                    COMPLIANT
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-400">
-                  Satisfies company playbook standards with zero unacceptable
-                  triggers.
-                </p>
-              </div>
-            );
-          })}
-      </div>
+            {(riskFilter === "ALL" || riskFilter === "COMPLIANT") &&
+              compliantClauses.map((clause) => {
+                const isSelected = activeClauseId === clause.id;
+                return (
+                  <div
+                    key={clause.id}
+                    ref={(el) => {
+                      if (el) {
+                        cardContainerRefs.current.set(clause.id, el);
+                      } else {
+                        cardContainerRefs.current.delete(clause.id);
+                      }
+                    }}
+                    data-testid={`redline-card-${clause.id}`}
+                    data-clause-id={clause.id}
+                    data-risk-level="COMPLIANT"
+                    data-active={isSelected ? "true" : "false"}
+                    onClick={() => selectClause(clause.id, "inspector")}
+                    className={`cursor-pointer rounded-lg border p-3.5 transition-colors ${
+                      isSelected
+                        ? "border-indigo-500 bg-indigo-950/35 ring-2 ring-indigo-500/80"
+                        : "border-slate-800/80 bg-slate-900/40 hover:border-slate-700"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-200">
+                        Clause #{clause.clause_index + 1}:{" "}
+                        {clause.heading ?? "Provision"}
+                      </span>
+                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                        COMPLIANT
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Satisfies company playbook standards with zero
+                      unacceptable triggers.
+                    </p>
+                  </div>
+                );
+              })}
+          </div>
 
-      {/* Threaded Clause Comments Panel */}
-      {activeClauseForComments && onAddComment ? (
-        <ClauseCommentThread
-          clause={activeClauseForComments}
-          comments={commentsByClauseId.get(activeClauseForComments.id) ?? []}
-          onAddComment={onAddComment}
-        />
-      ) : null}
+          {/* Threaded Clause Comments Panel */}
+          {activeClauseForComments && onAddComment ? (
+            <ClauseCommentThread
+              clause={activeClauseForComments}
+              comments={commentsByClauseId.get(activeClauseForComments.id) ?? []}
+              onAddComment={onAddComment}
+            />
+          ) : null}
+        </>
+      )}
     </aside>
   );
 };
