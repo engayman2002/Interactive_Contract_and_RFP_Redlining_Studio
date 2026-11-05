@@ -90,6 +90,14 @@ class Settings(BaseSettings):
         description="Local / S3-compatible object storage root outside the web root.",
     )
 
+    # Phase 3: Company Playbook & Vector Knowledge Base Configuration
+    EMBEDDING_DIMENSION: int = Field(default=1536, ge=128, le=4096)
+    PLAYBOOK_DEFAULT_TOP_K: int = Field(default=3, ge=1, le=50)
+    HYBRID_VECTOR_WEIGHT: float = Field(default=0.7, ge=0.0, le=1.0)
+    HYBRID_KEYWORD_WEIGHT: float = Field(default=0.3, ge=0.0, le=1.0)
+    OPENAI_API_KEY: str | None = Field(default=None)
+    EMBEDDING_MODEL_NAME: str = Field(default="text-embedding-3-small")
+
     @property
     def max_upload_size_bytes(self) -> int:
         """Return maximum allowed upload size in bytes."""

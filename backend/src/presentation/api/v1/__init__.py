@@ -26,6 +26,7 @@ from src.application.use_cases import (
 from src.domain.enums import UserRole
 from src.domain.ports import UnitOfWorkPort
 from src.presentation.api.v1.documents import documents_router
+from src.presentation.api.v1.playbooks import playbooks_router
 from src.presentation.dependencies import (
     get_current_user,
     get_jwt_service,
@@ -48,15 +49,6 @@ class LogoutResponseDTO(ImmutableDTO):
     """Session invalidation response."""
 
     status: str = "logged_out"
-
-
-class PlaybookRuleFoundationRequestDTO(ImmutableDTO):
-    """Foundation DTO for testing RBAC on `/api/v1/playbooks/rules`."""
-
-    category: str
-    standard_position: str
-    fallback_position: str
-    unacceptable_triggers: str
 
 
 class ResolveSuggestionFoundationRequestDTO(ImmutableDTO):
@@ -214,32 +206,8 @@ async def get_organization_user(
 
 
 # ---------------------------------------------------------------------------
-# 4. Protected RBAC Foundation Routes (Playbooks & Suggestions)
+# 4. Protected RBAC Foundation Routes (Suggestions)
 # ---------------------------------------------------------------------------
-playbooks_router = APIRouter(prefix="/playbooks", tags=["Playbooks RBAC Foundation"])
-
-
-@playbooks_router.post(
-    "/rules",
-    response_model=RBACFoundationOperationResponseDTO,
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_playbook_rule_foundation(
-    _payload: PlaybookRuleFoundationRequestDTO,
-    current_user: Annotated[
-        TokenPayloadDTO,
-        Depends(require_roles(UserRole.ADMIN, UserRole.LEGAL_COUNSEL)),
-    ],
-) -> RBACFoundationOperationResponseDTO:
-    """Protected foundation route restricting Playbook Rule creation to ADMIN and LEGAL_COUNSEL."""
-    return RBACFoundationOperationResponseDTO(
-        actor_id=current_user.sub,
-        org_id=current_user.org_id,
-        role=current_user.role,
-        operation="CREATE_PLAYBOOK_RULE",
-    )
-
-
 suggestions_router = APIRouter(prefix="/suggestions", tags=["Suggestions RBAC Foundation"])
 
 

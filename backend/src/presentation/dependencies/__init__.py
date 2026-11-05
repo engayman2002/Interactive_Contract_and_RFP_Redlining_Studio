@@ -15,7 +15,9 @@ from src.domain.exceptions import UnauthorizedError
 from src.domain.ports import (
     ClauseSegmenterPort,
     DocumentParserPort,
+    EmbeddingGeneratorPort,
     FileStoragePort,
+    PlaybookRetrieverPort,
     UnitOfWorkPort,
 )
 from src.infrastructure.config import get_settings
@@ -25,6 +27,10 @@ from src.infrastructure.parsers import (
     CompositeDocumentParser,
     LocalS3CompatibleStorageAdapter,
     SemanticClauseSegmenter,
+)
+from src.infrastructure.vector import (
+    DeterministicHashEmbeddingAdapter,
+    HybridPlaybookRetriever,
 )
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -72,11 +78,32 @@ def get_file_storage() -> FileStoragePort:
     return LocalS3CompatibleStorageAdapter(root_path=settings.STORAGE_ROOT_PATH)
 
 
+@lru_cache(maxsize=1)
+def get_embedding_generator() -> EmbeddingGeneratorPort:
+    """Provide singleton DeterministicHashEmbeddingAdapter configured with 1536 dimensions."""
+    settings = get_settings()
+    return DeterministicHashEmbeddingAdapter(dimension=settings.EMBEDDING_DIMENSION)
+
+
 async def get_uow(
     session: Annotated[AsyncSession, Depends(get_async_db_session)],
 ) -> UnitOfWorkPort:
     """Provide transactional UnitOfWorkPort backed by SQLAlchemy AsyncSession."""
     return SqlAlchemyUnitOfWork(session)
+
+
+async def get_playbook_retriever(
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    embedding_generator: Annotated[EmbeddingGeneratorPort, Depends(get_embedding_generator)],
+) -> PlaybookRetrieverPort:
+    """Provide tenant-isolated HybridPlaybookRetriever combining vector + BM25 scoring."""
+    settings = get_settings()
+    return HybridPlaybookRetriever(
+        repository=uow.playbooks,
+        embedding_generator=embedding_generator,
+        vector_weight=settings.HYBRID_VECTOR_WEIGHT,
+        keyword_weight=settings.HYBRID_KEYWORD_WEIGHT,
+    )
 
 
 async def get_current_user(
@@ -119,9 +146,11 @@ __all__ = [
     "get_clause_segmenter",
     "get_current_user",
     "get_document_parser",
+    "get_embedding_generator",
     "get_file_storage",
     "get_jwt_service",
     "get_password_service",
+    "get_playbook_retriever",
     "get_rbac_guard",
     "get_uow",
     "require_roles",

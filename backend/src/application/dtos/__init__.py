@@ -194,10 +194,22 @@ from src.application.dtos.ingestion_dtos import (  # noqa: E402
     DocumentWorkspaceResponseDTO,
     IngestDocumentCommand,
 )
+from src.application.dtos.playbook_dtos import (  # noqa: E402
+    CreatePlaybookRuleCommand,
+    CreatePlaybookRuleRequestDTO,
+    MatchedPlaybookRuleResponseDTO,
+    PlaybookRuleResponseDTO,
+    PlaybookSearchRequestDTO,
+    PlaybookSearchResponseDTO,
+    UpdatePlaybookRuleCommand,
+    UpdatePlaybookRuleRequestDTO,
+)
 
 __all__ = [
     "ClauseResponseDTO",
     "CreateDocumentRequestDTO",
+    "CreatePlaybookRuleCommand",
+    "CreatePlaybookRuleRequestDTO",
     "CreateUserRequestDTO",
     "DocumentResponseDTO",
     "DocumentUploadResponseDTO",
@@ -205,11 +217,17 @@ __all__ = [
     "ImmutableDTO",
     "IngestDocumentCommand",
     "LoginRequestDTO",
+    "MatchedPlaybookRuleResponseDTO",
     "OnboardingResponseDTO",
     "OrganizationResponseDTO",
+    "PlaybookRuleResponseDTO",
+    "PlaybookSearchRequestDTO",
+    "PlaybookSearchResponseDTO",
     "RegisterOrganizationRequestDTO",
     "TokenPayloadDTO",
     "TokenResponseDTO",
     "UpdateDocumentRequestDTO",
+    "UpdatePlaybookRuleCommand",
+    "UpdatePlaybookRuleRequestDTO",
     "UserResponseDTO",
 ]

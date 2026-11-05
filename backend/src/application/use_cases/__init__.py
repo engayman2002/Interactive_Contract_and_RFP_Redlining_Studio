@@ -274,17 +274,33 @@ from src.application.use_cases.ingest_document import (  # noqa: E402
     ListOrganizationDocumentsUseCase,
     UploadAndIngestDocumentUseCase,
 )
+from src.application.use_cases.manage_playbook import (  # noqa: E402
+    CreatePlaybookRuleUseCase,
+    DeletePlaybookRuleUseCase,
+    GetPlaybookRuleUseCase,
+    ListPlaybookRulesUseCase,
+    SearchPlaybookRulesUseCase,
+    UpdatePlaybookRuleUseCase,
+    compose_playbook_embedding_text,
+)
 
 __all__ = [
     "AuthenticateUserUseCase",
     "CreateDocumentFoundationUseCase",
     "CreateOrganizationUserUseCase",
+    "CreatePlaybookRuleUseCase",
+    "DeletePlaybookRuleUseCase",
     "GetDocumentFoundationUseCase",
     "GetDocumentWorkspaceUseCase",
     "GetOrganizationUserByIdUseCase",
+    "GetPlaybookRuleUseCase",
     "ListOrganizationDocumentsUseCase",
     "ListOrganizationUsersUseCase",
+    "ListPlaybookRulesUseCase",
     "RegisterOrganizationAndAdminUseCase",
+    "SearchPlaybookRulesUseCase",
     "UpdateDocumentFoundationUseCase",
+    "UpdatePlaybookRuleUseCase",
     "UploadAndIngestDocumentUseCase",
+    "compose_playbook_embedding_text",
 ]

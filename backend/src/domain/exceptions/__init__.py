@@ -73,6 +73,11 @@ from src.domain.exceptions.ingestion_exceptions import (  # noqa: E402
     EmptyDocumentError,
     InvalidDocumentFormatError,
 )
+from src.domain.exceptions.playbook_exceptions import (  # noqa: E402
+    EmbeddingGenerationError,
+    InvalidPlaybookRuleError,
+    PlaybookRuleNotFoundError,
+)
 
 __all__ = [
     "ConcurrencyConflictError",
@@ -80,10 +85,13 @@ __all__ = [
     "DomainError",
     "DomainValidationError",
     "DuplicateEntityError",
+    "EmbeddingGenerationError",
     "EmptyDocumentError",
     "EntityNotFoundError",
     "ForbiddenRoleError",
     "InvalidDocumentFormatError",
+    "InvalidPlaybookRuleError",
+    "PlaybookRuleNotFoundError",
     "TenantIsolationError",
     "UnauthorizedError",
 ]

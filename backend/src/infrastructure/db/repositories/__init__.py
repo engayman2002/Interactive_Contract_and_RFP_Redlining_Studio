@@ -19,6 +19,9 @@ from src.infrastructure.db.repositories.base import MultiTenantRepositoryBase
 from src.infrastructure.db.repositories.document_repository import (
     SqlAlchemyDocumentRepository,
 )
+from src.infrastructure.db.repositories.playbook_repository import (
+    SqlAlchemyPlaybookRepository,
+)
 
 
 class SqlAlchemyOrganizationRepository(OrganizationRepositoryPort):
@@ -137,6 +140,7 @@ class SqlAlchemyUnitOfWork(UnitOfWorkPort):
         self.organizations = SqlAlchemyOrganizationRepository(session)
         self.users = SqlAlchemyUserRepository(session)
         self.documents = SqlAlchemyDocumentRepository(session)
+        self.playbooks = SqlAlchemyPlaybookRepository(session)
 
     async def commit(self) -> None:
         await self._session.commit()
@@ -149,6 +153,7 @@ __all__ = [
     "MultiTenantRepositoryBase",
     "SqlAlchemyDocumentRepository",
     "SqlAlchemyOrganizationRepository",
+    "SqlAlchemyPlaybookRepository",
     "SqlAlchemyUnitOfWork",
     "SqlAlchemyUserRepository",
 ]

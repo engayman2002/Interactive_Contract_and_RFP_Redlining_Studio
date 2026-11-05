@@ -5,7 +5,11 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from src.domain.enums import DocumentStatus, RiskLevel, SuggestionStatus, UserRole
-from src.domain.exceptions import ConcurrencyConflictError, DomainValidationError
+from src.domain.exceptions import (
+    ConcurrencyConflictError,
+    DomainValidationError,
+    InvalidPlaybookRuleError,
+)
 
 
 def _utc_now() -> datetime:
@@ -58,10 +62,24 @@ class PlaybookRule:
     id: UUID = field(default_factory=uuid4)
 
     def __post_init__(self) -> None:
-        if not self.category.strip():
-            raise DomainValidationError("Playbook rule category cannot be empty.")
+        cleaned_cat = self.category.strip()
+        cleaned_std = self.standard_position.strip()
+        cleaned_fb = self.fallback_position.strip()
+        cleaned_trig = self.unacceptable_triggers.strip()
+        if not cleaned_cat:
+            raise InvalidPlaybookRuleError("Playbook rule category cannot be empty.")
+        if not cleaned_std:
+            raise InvalidPlaybookRuleError("Playbook rule standard_position cannot be empty.")
+        if not cleaned_fb:
+            raise InvalidPlaybookRuleError("Playbook rule fallback_position cannot be empty.")
+        if not cleaned_trig:
+            raise InvalidPlaybookRuleError("Playbook rule unacceptable_triggers cannot be empty.")
         if self.embedding and len(self.embedding) != 1536:
-            raise DomainValidationError("Playbook rule embedding must have dimension 1536.")
+            raise InvalidPlaybookRuleError("Playbook rule embedding must have dimension 1536.")
+        self.category = cleaned_cat
+        self.standard_position = cleaned_std
+        self.fallback_position = cleaned_fb
+        self.unacceptable_triggers = cleaned_trig
 
 
 @dataclass(slots=True)
@@ -181,15 +199,21 @@ from src.domain.entities.parsed_clause import (  # noqa: E402
     ParsedClauseCandidate,
     RawDocumentBlock,
 )
+from src.domain.entities.playbook_search import (  # noqa: E402
+    MatchedPlaybookRule,
+    PlaybookSearchQuery,
+)
 
 __all__ = [
     "ClauseComment",
     "Document",
     "DocumentClause",
     "DocumentWithClauses",
+    "MatchedPlaybookRule",
     "Organization",
     "ParsedClauseCandidate",
     "PlaybookRule",
+    "PlaybookSearchQuery",
     "RawDocumentBlock",
     "RedlineSuggestion",
     "User",

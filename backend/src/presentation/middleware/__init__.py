@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 correlation_id_ctx: ContextVar[str] = ContextVar("correlation_id", default="")
 
 ALLOWED_HTTP_METHODS: Final[frozenset[str]] = frozenset(
-    {"GET", "POST", "PATCH", "OPTIONS", "HEAD"}
+    {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"}
 )
 
 DOMAIN_ERROR_STATUS_MAP: Final[dict[type[DomainError], int]] = {

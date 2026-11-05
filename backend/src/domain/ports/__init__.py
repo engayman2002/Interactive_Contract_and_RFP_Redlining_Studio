@@ -10,6 +10,11 @@ from src.domain.ports.ingestion_ports import (
     DocumentParserPort,
     FileStoragePort,
 )
+from src.domain.ports.playbook_ports import (
+    EmbeddingGeneratorPort,
+    PlaybookRepositoryPort,
+    PlaybookRetrieverPort,
+)
 
 
 @runtime_checkable
@@ -112,6 +117,7 @@ class UnitOfWorkPort(Protocol):
     organizations: OrganizationRepositoryPort
     users: UserRepositoryPort
     documents: DocumentRepositoryPort
+    playbooks: PlaybookRepositoryPort
 
     async def commit(self) -> None:
         """Commit the current transaction."""
@@ -126,8 +132,11 @@ __all__ = [
     "ClauseSegmenterPort",
     "DocumentParserPort",
     "DocumentRepositoryPort",
+    "EmbeddingGeneratorPort",
     "FileStoragePort",
     "OrganizationRepositoryPort",
+    "PlaybookRepositoryPort",
+    "PlaybookRetrieverPort",
     "UnitOfWorkPort",
     "UserRepositoryPort",
 ]
