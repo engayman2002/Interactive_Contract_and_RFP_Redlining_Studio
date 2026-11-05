@@ -48,3 +48,11 @@ frontend/out/
 storage/
 uploads/
 .storage/
+
+# Frontend Node.js & Next.js artifacts
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/coverage/
+*.tsbuildinfo
+next-env.d.ts

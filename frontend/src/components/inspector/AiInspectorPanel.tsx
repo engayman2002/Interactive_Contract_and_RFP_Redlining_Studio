@@ -1,0 +1,244 @@
+"use client";
+
+import React, { useEffect, useMemo, useRef } from "react";
+import type { ClauseDTO, RedlineSuggestionDTO } from "@/services/contracts";
+import { RiskFilterMode, useWorkspaceStore } from "@/store/workspaceStore";
+import { RedlineCard } from "./RedlineCard";
+
+export interface AiInspectorPanelProps {
+  clauses: ClauseDTO[];
+  redlines: RedlineSuggestionDTO[];
+  onLocalApplyPreview?: (clauseId: string, proposedText: string) => void;
+  onLocalRejectPreview?: (suggestionId: string) => void;
+}
+
+const FILTER_TABS: { mode: RiskFilterMode; label: string }[] = [
+  { mode: "ALL", label: "All Risks" },
+  { mode: "CRITICAL", label: "Critical" },
+  { mode: "HIGH", label: "High" },
+  { mode: "MEDIUM", label: "Medium" },
+  { mode: "COMPLIANT", label: "Compliant" },
+];
+
+export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
+  clauses,
+  redlines,
+  onLocalApplyPreview,
+  onLocalRejectPreview,
+}) => {
+  const activeClauseId = useWorkspaceStore((state) => state.activeClauseId);
+  const selectionSource = useWorkspaceStore((state) => state.selectionSource);
+  const riskFilter = useWorkspaceStore((state) => state.riskFilter);
+  const setRiskFilter = useWorkspaceStore((state) => state.setRiskFilter);
+  const streamProgress = useWorkspaceStore((state) => state.streamProgress);
+  const selectClause = useWorkspaceStore((state) => state.selectClause);
+
+  const cardContainerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const clausesById = useMemo(() => {
+    const map = new Map<string, ClauseDTO>();
+    for (const c of clauses) {
+      map.set(c.id, c);
+    }
+    return map;
+  }, [clauses]);
+
+  const redlinesByClauseId = useMemo(() => {
+    const map = new Map<string, RedlineSuggestionDTO>();
+    for (const r of redlines) {
+      map.set(r.clause_id, r);
+    }
+    return map;
+  }, [redlines]);
+
+  const filteredRedlines = useMemo(() => {
+    if (riskFilter === "ALL") {
+      return redlines;
+    }
+    if (riskFilter === "COMPLIANT") {
+      return [];
+    }
+    return redlines.filter((r) => r.risk === riskFilter);
+  }, [redlines, riskFilter]);
+
+  const compliantClauses = useMemo(
+    () => clauses.filter((c) => !redlinesByClauseId.has(c.id)),
+    [clauses, redlinesByClauseId]
+  );
+
+  // Scroll matching AI card into view when user clicks a clause in the left-hand editor
+  useEffect(() => {
+    if (!activeClauseId || selectionSource !== "editor") {
+      return;
+    }
+    const cardEl = cardContainerRefs.current.get(activeClauseId);
+    if (cardEl && typeof cardEl.scrollIntoView === "function") {
+      cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [activeClauseId, selectionSource]);
+
+  const criticalCount = redlines.filter((r) => r.risk === "CRITICAL").length;
+  const highCount = redlines.filter((r) => r.risk === "HIGH").length;
+
+  return (
+    <aside
+      aria-label="AI Redline Inspector Panel"
+      data-testid="ai-inspector-panel"
+      className="flex h-full w-full flex-col overflow-hidden bg-slate-950"
+    >
+      {/* Inspector Header & Summary */}
+      <div className="border-b border-slate-800 bg-slate-900/80 px-5 py-3.5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold tracking-tight text-slate-100">
+              AI Redline Inspector
+            </h2>
+            <p className="text-xs text-slate-400">
+              Hover over &ldquo;Apply Redline&rdquo; to preview inline word-level
+              diffs
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="rounded bg-rose-500/15 px-2 py-0.5 font-semibold text-rose-300">
+              {criticalCount} Critical
+            </span>
+            <span className="rounded bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-300">
+              {highCount} High
+            </span>
+            <span className="rounded bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-300">
+              {compliantClauses.length} Compliant
+            </span>
+          </div>
+        </div>
+
+        {/* Real-time SSE Audit Progress Bar */}
+        {streamProgress.isStreaming || streamProgress.total > 0 ? (
+          <div
+            data-testid="sse-progress-bar"
+            className="mt-3 rounded border border-slate-800 bg-slate-950 px-3 py-2"
+          >
+            <div className="mb-1 flex items-center justify-between text-[11px] text-slate-300">
+              <span>
+                {streamProgress.isStreaming
+                  ? "Streaming LangChain Clause Evaluation..."
+                  : "AI Audit Complete"}
+              </span>
+              <span className="font-mono">
+                {streamProgress.completed}/{streamProgress.total} clauses
+              </span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+              <div
+                className="h-full bg-indigo-500 transition-all duration-150"
+                style={{
+                  width: `${
+                    streamProgress.total > 0
+                      ? Math.round(
+                          (streamProgress.completed / streamProgress.total) *
+                            100
+                        )
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {/* Filter Tabs */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {FILTER_TABS.map((tab) => {
+            const active = riskFilter === tab.mode;
+            return (
+              <button
+                key={tab.mode}
+                type="button"
+                data-testid={`filter-tab-${tab.mode}`}
+                onClick={() => setRiskFilter(tab.mode)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  active
+                    ? "bg-indigo-600 text-white"
+                    : "bg-slate-800/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Scrollable Redline Cards List */}
+      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+        {riskFilter !== "COMPLIANT" &&
+          filteredRedlines.map((suggestion) => {
+            const clause = clausesById.get(suggestion.clause_id);
+            if (!clause) {
+              return null;
+            }
+            return (
+              <div
+                key={suggestion.id}
+                ref={(el) => {
+                  if (el) {
+                    cardContainerRefs.current.set(clause.id, el);
+                  } else {
+                    cardContainerRefs.current.delete(clause.id);
+                  }
+                }}
+              >
+                <RedlineCard
+                  clause={clause}
+                  suggestion={suggestion}
+                  onLocalApplyPreview={onLocalApplyPreview}
+                  onLocalRejectPreview={onLocalRejectPreview}
+                />
+              </div>
+            );
+          })}
+
+        {(riskFilter === "ALL" || riskFilter === "COMPLIANT") &&
+          compliantClauses.map((clause) => {
+            const isSelected = activeClauseId === clause.id;
+            return (
+              <div
+                key={clause.id}
+                ref={(el) => {
+                  if (el) {
+                    cardContainerRefs.current.set(clause.id, el);
+                  } else {
+                    cardContainerRefs.current.delete(clause.id);
+                  }
+                }}
+                data-testid={`redline-card-${clause.id}`}
+                data-clause-id={clause.id}
+                data-risk-level="COMPLIANT"
+                data-active={isSelected ? "true" : "false"}
+                onClick={() => selectClause(clause.id, "inspector")}
+                className={`cursor-pointer rounded-lg border p-3.5 transition-colors ${
+                  isSelected
+                    ? "border-indigo-500 bg-indigo-950/35 ring-2 ring-indigo-500/80"
+                    : "border-slate-800/80 bg-slate-900/40 hover:border-slate-700"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-200">
+                    Clause #{clause.clause_index + 1}:{" "}
+                    {clause.heading ?? "Provision"}
+                  </span>
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                    COMPLIANT
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">
+                  Satisfies company playbook standards with zero unacceptable
+                  triggers.
+                </p>
+              </div>
+            );
+          })}
+      </div>
+    </aside>
+  );
+};
+
