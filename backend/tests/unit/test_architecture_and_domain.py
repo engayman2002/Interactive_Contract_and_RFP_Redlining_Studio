@@ -18,6 +18,7 @@ from src.domain.entities import (
 from src.domain.enums import DocumentStatus, RiskLevel, SuggestionStatus, UserRole
 from src.domain.exceptions import ConcurrencyConflictError, DomainValidationError
 from src.domain.ports import (
+    CommentRepositoryPort,
     DocumentRepositoryPort,
     RedlineRepositoryPort,
     UserRepositoryPort,
@@ -80,7 +81,15 @@ def test_repository_ports_require_org_id_parameter() -> None:
             f"UserRepositoryPort.{method_name} must require 'org_id'"
         )
 
-    tenant_doc_methods = ("create", "get_by_id", "list_by_org", "update", "delete")
+    tenant_doc_methods = (
+        "create",
+        "get_by_id",
+        "list_by_org",
+        "update",
+        "delete",
+        "get_clause_by_id",
+        "update_clause_with_optimistic_lock",
+    )
     for method_name in tenant_doc_methods:
         method = getattr(DocumentRepositoryPort, method_name)
         sig = inspect.signature(method)
@@ -88,12 +97,26 @@ def test_repository_ports_require_org_id_parameter() -> None:
             f"DocumentRepositoryPort.{method_name} must require 'org_id'"
         )
 
-    tenant_redline_methods = ("create_many", "list_by_document", "delete_pending_by_document")
+    tenant_redline_methods = (
+        "create_many",
+        "list_by_document",
+        "delete_pending_by_document",
+        "get_by_id",
+        "update_resolution",
+    )
     for method_name in tenant_redline_methods:
         method = getattr(RedlineRepositoryPort, method_name)
         sig = inspect.signature(method)
         assert "org_id" in sig.parameters, (
             f"RedlineRepositoryPort.{method_name} must require 'org_id'"
+        )
+
+    tenant_comment_methods = ("create", "list_by_clause", "list_by_document")
+    for method_name in tenant_comment_methods:
+        method = getattr(CommentRepositoryPort, method_name)
+        sig = inspect.signature(method)
+        assert "org_id" in sig.parameters, (
+            f"CommentRepositoryPort.{method_name} must require 'org_id'"
         )
 
 

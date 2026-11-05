@@ -72,6 +72,11 @@ from src.domain.exceptions.ai_exceptions import (  # noqa: E402
     ClauseAnalysisError,
     StructuredOutputValidationError,
 )
+from src.domain.exceptions.collaboration_exceptions import (  # noqa: E402
+    ClauseNotFoundError,
+    InvalidResolutionError,
+    SuggestionNotFoundError,
+)
 from src.domain.exceptions.ingestion_exceptions import (  # noqa: E402
     DocumentTooLargeError,
     EmptyDocumentError,
@@ -85,6 +90,7 @@ from src.domain.exceptions.playbook_exceptions import (  # noqa: E402
 
 __all__ = [
     "ClauseAnalysisError",
+    "ClauseNotFoundError",
     "ConcurrencyConflictError",
     "DocumentTooLargeError",
     "DomainError",
@@ -96,8 +102,10 @@ __all__ = [
     "ForbiddenRoleError",
     "InvalidDocumentFormatError",
     "InvalidPlaybookRuleError",
+    "InvalidResolutionError",
     "PlaybookRuleNotFoundError",
     "StructuredOutputValidationError",
+    "SuggestionNotFoundError",
     "TenantIsolationError",
     "UnauthorizedError",
 ]

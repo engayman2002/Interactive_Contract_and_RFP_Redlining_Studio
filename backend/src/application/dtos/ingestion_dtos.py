@@ -2,12 +2,12 @@
 
 import os
 from datetime import datetime
-from typing import Any
 from uuid import UUID
 
 from pydantic import Field
 
 from src.application.dtos import DocumentResponseDTO, ImmutableDTO
+from src.application.dtos.collaboration_dtos import ClauseCommentResponseDTO
 from src.application.dtos.redline_dtos import RedlineSuggestionResponseDTO
 
 
@@ -70,7 +70,7 @@ class DocumentWorkspaceResponseDTO(ImmutableDTO):
     document: DocumentResponseDTO
     clauses: list[ClauseResponseDTO]
     redlines: list[RedlineSuggestionResponseDTO] = Field(default_factory=list)
-    comments: list[dict[str, Any]] = Field(default_factory=list)
+    comments: list[ClauseCommentResponseDTO] = Field(default_factory=list)
 
 
 __all__ = [

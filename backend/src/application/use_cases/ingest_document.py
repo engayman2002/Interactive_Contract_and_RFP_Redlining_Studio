@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from src.application.dtos import (
+    ClauseCommentResponseDTO,
     ClauseResponseDTO,
     DocumentResponseDTO,
     DocumentUploadResponseDTO,
@@ -162,6 +163,13 @@ class GetDocumentWorkspaceUseCase:
         redline_dtos = [
             RedlineSuggestionResponseDTO.from_domain(s) for s in redline_entities
         ]
+        comment_entities = await self._uow.comments.list_by_document(
+            org_id=actor.org_id,
+            document_id=document.id,
+        )
+        comment_dtos = [
+            ClauseCommentResponseDTO.from_domain(cm) for cm in comment_entities
+        ]
 
         return DocumentWorkspaceResponseDTO(
             document_id=document.id,
@@ -174,7 +182,7 @@ class GetDocumentWorkspaceUseCase:
             document=doc_dto,
             clauses=clause_dtos,
             redlines=redline_dtos,
-            comments=[],
+            comments=comment_dtos,
         )
 
 

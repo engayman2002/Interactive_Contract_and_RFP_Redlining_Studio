@@ -53,6 +53,22 @@ class RedlineRepositoryPort(Protocol):
         """Delete existing `PENDING` suggestions for a document in `org_id` before re-analysis."""
         ...
 
+    async def get_by_id(
+        self,
+        org_id: UUID,
+        suggestion_id: UUID,
+    ) -> RedlineSuggestion | None:
+        """Fetch a single `RedlineSuggestion` by ID strictly isolated within `org_id`."""
+        ...
+
+    async def update_resolution(
+        self,
+        org_id: UUID,
+        suggestion: RedlineSuggestion,
+    ) -> RedlineSuggestion:
+        """Persist resolution state (`status`, `proposed_text`, `resolved_by`) in `org_id`."""
+        ...
+
 
 __all__ = [
     "ClauseAuditorPort",

@@ -9,6 +9,7 @@ from src.domain.exceptions import (
     ConcurrencyConflictError,
     DomainValidationError,
     InvalidPlaybookRuleError,
+    InvalidResolutionError,
 )
 
 
@@ -169,8 +170,12 @@ class RedlineSuggestion:
     ) -> None:
         """Resolve a suggestion idempotently."""
         if new_status == SuggestionStatus.PENDING:
-            raise DomainValidationError("Cannot resolve a suggestion back to PENDING.")
-        if new_status == SuggestionStatus.MODIFIED and modified_text:
+            raise InvalidResolutionError("Cannot resolve a suggestion back to PENDING.")
+        if new_status == SuggestionStatus.MODIFIED:
+            if modified_text is None or not modified_text.strip():
+                raise InvalidResolutionError(
+                    "MODIFIED resolution requires non-empty modified_text."
+                )
             self.proposed_text = modified_text.strip()
         self.status = new_status
         self.resolved_by = resolved_by

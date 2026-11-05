@@ -240,9 +240,10 @@ async def test_api_rbac_roles_and_viewer_mutation_blocking(client: AsyncClient) 
         resolve_resp = await client.post(
             f"/api/v1/suggestions/{uuid4()}/resolve",
             headers={"Authorization": f"Bearer {role_tokens[mutating_role]}"},
-            json={"action": "ACCEPT"},
+            json={"action": "ACCEPT", "expected_clause_version": 1},
         )
-        assert resolve_resp.status_code == 200
+        # Authorized mutating role passes RBAC (not 403) and reaches entity lookup (404)
+        assert resolve_resp.status_code == 404
 
     # VIEWER is allowed to read the document (200 OK)
     viewer_get_resp = await client.get(

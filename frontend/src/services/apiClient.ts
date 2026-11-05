@@ -1,8 +1,15 @@
 import {
+  ClauseCommentDTO,
+  ClauseCommentDTOSchema,
+  CreateClauseCommentRequestDTOSchema,
   DocumentAnalysisSummaryDTO,
   DocumentAnalysisSummaryDTOSchema,
   DocumentWorkspaceDTO,
   DocumentWorkspaceDTOSchema,
+  ResolveSuggestionRequestDTO,
+  ResolveSuggestionRequestDTOSchema,
+  ResolveSuggestionResponseDTO,
+  ResolveSuggestionResponseDTOSchema,
 } from "./contracts";
 
 export const API_BASE_URL =
@@ -10,6 +17,19 @@ export const API_BASE_URL =
 
 export const DEMO_DOCUMENT_ID = "d0000000-0000-4000-8000-000000000001";
 export const DEMO_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+export const DEMO_USER_ID = "b0000000-0000-4000-8000-000000000001";
+
+export class VersionConflictError extends Error {
+  public readonly status: number = 409;
+  public readonly code: string = "CONCURRENCY_CONFLICT";
+
+  constructor(
+    message: string = "Clause version conflict: another user modified this clause simultaneously."
+  ) {
+    super(message);
+    this.name = "VersionConflictError";
+  }
+}
 
 export const DEMO_WORKSPACE_DATA: DocumentWorkspaceDTO = {
   document_id: DEMO_DOCUMENT_ID,
@@ -17,7 +37,7 @@ export const DEMO_WORKSPACE_DATA: DocumentWorkspaceDTO = {
   title: "Master Cloud Infrastructure & Enterprise AI Services Agreement",
   status: "ANALYZED",
   version: 1,
-  created_by: "b0000000-0000-4000-8000-000000000001",
+  created_by: DEMO_USER_ID,
   created_at: "2026-11-05T00:00:00Z",
   clauses: [
     {
@@ -152,10 +172,13 @@ export const DEMO_WORKSPACE_DATA: DocumentWorkspaceDTO = {
   comments: [],
 };
 
-function buildHeaders(token?: string): HeadersInit {
+function buildHeaders(token?: string, jsonBody: boolean = false): HeadersInit {
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
+  if (jsonBody) {
+    headers["Content-Type"] = "application/json";
+  }
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -244,3 +267,91 @@ export async function triggerDocumentAnalysis(
   return DocumentAnalysisSummaryDTOSchema.parse(raw);
 }
 
+export async function resolveSuggestion(
+  suggestionId: string,
+  payload: ResolveSuggestionRequestDTO,
+  token?: string
+): Promise<ResolveSuggestionResponseDTO | null> {
+  const validatedPayload = ResolveSuggestionRequestDTOSchema.parse(payload);
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/suggestions/${encodeURIComponent(suggestionId)}/resolve`,
+      {
+        method: "POST",
+        headers: buildHeaders(token, true),
+        body: JSON.stringify(validatedPayload),
+      }
+    );
+
+    if (response.status === 409) {
+      let conflictMessage =
+        "Version conflict (409): This clause was modified by another user. Your stale change was rolled back.";
+      try {
+        const body = (await response.json()) as {
+          error?: { message?: string };
+        };
+        if (body?.error?.message) {
+          conflictMessage = body.error.message;
+        }
+      } catch {
+        // Keep default conflict message
+      }
+      throw new VersionConflictError(conflictMessage);
+    }
+
+    if (!response.ok) {
+      if (!token) {
+        return null;
+      }
+      throw new Error(`Failed to resolve suggestion (${response.status})`);
+    }
+
+    const raw = await response.json();
+    return ResolveSuggestionResponseDTOSchema.parse(raw);
+  } catch (err) {
+    if (err instanceof VersionConflictError) {
+      throw err;
+    }
+    if (!token) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+export async function createClauseComment(
+  clauseId: string,
+  body: string,
+  token?: string
+): Promise<ClauseCommentDTO | null> {
+  const validated = CreateClauseCommentRequestDTOSchema.parse({
+    body: body.trim(),
+  });
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/clauses/${encodeURIComponent(clauseId)}/comments`,
+      {
+        method: "POST",
+        headers: buildHeaders(token, true),
+        body: JSON.stringify(validated),
+      }
+    );
+
+    if (!response.ok) {
+      if (!token) {
+        return null;
+      }
+      throw new Error(`Failed to post clause comment (${response.status})`);
+    }
+
+    const raw = await response.json();
+    return ClauseCommentDTOSchema.parse(raw);
+  } catch (err) {
+    if (!token) {
+      return null;
+    }
+    throw err;
+  }
+}

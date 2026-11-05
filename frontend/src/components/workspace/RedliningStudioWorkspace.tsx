@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { ContractEditorCanvas } from "@/components/editor/ContractEditorCanvas";
 import { AiInspectorPanel } from "@/components/inspector/AiInspectorPanel";
 import { useDocumentStream } from "@/hooks/useDocumentStream";
@@ -17,52 +17,61 @@ export interface RedliningStudioWorkspaceProps {
 export const RedliningStudioWorkspace: React.FC<
   RedliningStudioWorkspaceProps
 > = ({ documentId, initialWorkspace = DEMO_WORKSPACE_DATA, token }) => {
-  const [workspace, setWorkspace] =
-    useState<DocumentWorkspaceDTO>(initialWorkspace);
+  const clauses = useWorkspaceStore((state) => state.clauses);
+  const redlines = useWorkspaceStore((state) => state.redlines);
+  const comments = useWorkspaceStore((state) => state.comments);
+  const documentVersion = useWorkspaceStore((state) => state.documentVersion);
+  const conflictError = useWorkspaceStore((state) => state.conflictError);
   const splitRatio = useWorkspaceStore((state) => state.splitRatio);
   const setSplitRatio = useWorkspaceStore((state) => state.setSplitRatio);
-  const setHoveredSuggestion = useWorkspaceStore(
-    (state) => state.setHoveredSuggestion
+  const hydrateWorkspace = useWorkspaceStore((state) => state.hydrateWorkspace);
+  const dismissConflictError = useWorkspaceStore(
+    (state) => state.dismissConflictError
   );
+  const acceptSuggestion = useWorkspaceStore((state) => state.acceptSuggestion);
+  const modifySuggestion = useWorkspaceStore((state) => state.modifySuggestion);
+  const rejectSuggestion = useWorkspaceStore((state) => state.rejectSuggestion);
+  const addClauseComment = useWorkspaceStore((state) => state.addClauseComment);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef<boolean>(false);
 
+  useEffect(() => {
+    hydrateWorkspace(initialWorkspace);
+  }, [initialWorkspace, hydrateWorkspace]);
+
   const { startStream, streamProgress } = useDocumentStream({
-    documentId: documentId ?? workspace.document_id,
-    totalClauses: workspace.clauses.length,
+    documentId: documentId ?? initialWorkspace.document_id,
+    totalClauses: clauses.length,
     token,
   });
 
-  const handleLocalApplyPreview = useCallback(
-    (clauseId: string, proposedText: string) => {
-      setHoveredSuggestion(null);
-      setWorkspace((prev) => ({
-        ...prev,
-        clauses: prev.clauses.map((c) =>
-          c.id === clauseId
-            ? { ...c, current_text: proposedText, version: c.version + 1 }
-            : c
-        ),
-        redlines: prev.redlines.map((r) =>
-          r.clause_id === clauseId ? { ...r, status: "ACCEPTED" } : r
-        ),
-      }));
+  const handleAcceptSuggestion = useCallback(
+    async (suggestionId: string) => {
+      await acceptSuggestion(suggestionId, token);
     },
-    [setHoveredSuggestion]
+    [acceptSuggestion, token]
   );
 
-  const handleLocalRejectPreview = useCallback(
-    (suggestionId: string) => {
-      setHoveredSuggestion(null);
-      setWorkspace((prev) => ({
-        ...prev,
-        redlines: prev.redlines.map((r) =>
-          r.id === suggestionId ? { ...r, status: "REJECTED" } : r
-        ),
-      }));
+  const handleModifySuggestion = useCallback(
+    async (suggestionId: string, modifiedText: string) => {
+      await modifySuggestion(suggestionId, modifiedText, token);
     },
-    [setHoveredSuggestion]
+    [modifySuggestion, token]
+  );
+
+  const handleRejectSuggestion = useCallback(
+    async (suggestionId: string) => {
+      await rejectSuggestion(suggestionId, token);
+    },
+    [rejectSuggestion, token]
+  );
+
+  const handleAddComment = useCallback(
+    async (clauseId: string, body: string) => {
+      await addClauseComment(clauseId, body, token);
+    },
+    [addClauseComment, token]
   );
 
   const handleDividerMouseDown = useCallback(() => {
@@ -103,11 +112,11 @@ export const RedliningStudioWorkspace: React.FC<
           </span>
           <div>
             <h1 className="text-sm font-semibold text-slate-100">
-              {workspace.title}
+              {initialWorkspace.title}
             </h1>
             <p className="text-[11px] text-slate-400">
-              Document v{workspace.version} · {workspace.clauses.length} Clauses
-              · Status: {workspace.status}
+              Document v{documentVersion} · {clauses.length} Clauses · Status:{" "}
+              {initialWorkspace.status}
             </p>
           </div>
         </div>
@@ -130,6 +139,30 @@ export const RedliningStudioWorkspace: React.FC<
         </div>
       </header>
 
+      {/* Optimistic Concurrency Version Conflict (409) Banner */}
+      {conflictError ? (
+        <div
+          role="alert"
+          data-testid="version-conflict-banner"
+          className="flex items-center justify-between border-b border-rose-500/40 bg-rose-950/90 px-6 py-2.5 text-xs text-rose-200"
+        >
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
+              409 Conflict
+            </span>
+            <span>{conflictError}</span>
+          </div>
+          <button
+            type="button"
+            data-testid="dismiss-conflict-banner-btn"
+            onClick={dismissConflictError}
+            className="rounded border border-rose-500/40 bg-rose-900/60 px-2.5 py-1 text-[11px] font-medium text-rose-100 hover:bg-rose-800/70"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+
       {/* Split-Pane Resizable Container */}
       <div
         ref={containerRef}
@@ -142,10 +175,7 @@ export const RedliningStudioWorkspace: React.FC<
           style={{ width: `${splitRatio}%` }}
           className="h-full overflow-hidden"
         >
-          <ContractEditorCanvas
-            clauses={workspace.clauses}
-            redlines={workspace.redlines}
-          />
+          <ContractEditorCanvas clauses={clauses} redlines={redlines} />
         </section>
 
         {/* Draggable Split-Pane Divider */}
@@ -167,14 +197,16 @@ export const RedliningStudioWorkspace: React.FC<
           className="h-full overflow-hidden"
         >
           <AiInspectorPanel
-            clauses={workspace.clauses}
-            redlines={workspace.redlines}
-            onLocalApplyPreview={handleLocalApplyPreview}
-            onLocalRejectPreview={handleLocalRejectPreview}
+            clauses={clauses}
+            redlines={redlines}
+            comments={comments}
+            onAcceptSuggestion={handleAcceptSuggestion}
+            onModifySuggestion={handleModifySuggestion}
+            onRejectSuggestion={handleRejectSuggestion}
+            onAddComment={handleAddComment}
           />
         </section>
       </div>
     </div>
   );
 };
-

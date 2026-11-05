@@ -7,7 +7,7 @@ from sqlalchemy import delete, select
 
 from src.domain.entities import RedlineSuggestion
 from src.domain.enums import SuggestionStatus
-from src.domain.exceptions import EntityNotFoundError
+from src.domain.exceptions import EntityNotFoundError, SuggestionNotFoundError
 from src.domain.ports import RedlineRepositoryPort
 from src.infrastructure.db.models import (
     DocumentClauseModel,
@@ -131,6 +131,54 @@ class SqlAlchemyRedlineRepository(MultiTenantRepositoryBase, RedlineRepositoryPo
         await self._session.execute(del_stmt)
         await self._session.flush()
         return len(pending_ids)
+
+    async def get_by_id(
+        self,
+        org_id: UUID,
+        suggestion_id: UUID,
+    ) -> RedlineSuggestion | None:
+        """Fetch a single `RedlineSuggestion` by ID strictly isolated within `org_id`."""
+        stmt = (
+            select(RedlineSuggestionModel)
+            .join(DocumentClauseModel, RedlineSuggestionModel.clause_id == DocumentClauseModel.id)
+            .join(DocumentModel, DocumentClauseModel.document_id == DocumentModel.id)
+            .where(
+                DocumentModel.org_id == org_id,
+                RedlineSuggestionModel.id == suggestion_id,
+            )
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._to_domain(model) if model is not None else None
+
+    async def update_resolution(
+        self,
+        org_id: UUID,
+        suggestion: RedlineSuggestion,
+    ) -> RedlineSuggestion:
+        """Persist resolution state (`status`, `proposed_text`, `resolved_by`) in `org_id`."""
+        stmt = (
+            select(RedlineSuggestionModel)
+            .join(DocumentClauseModel, RedlineSuggestionModel.clause_id == DocumentClauseModel.id)
+            .join(DocumentModel, DocumentClauseModel.document_id == DocumentModel.id)
+            .where(
+                DocumentModel.org_id == org_id,
+                RedlineSuggestionModel.id == suggestion.id,
+            )
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            raise SuggestionNotFoundError(
+                f"Redline suggestion '{suggestion.id}' not found in organization '{org_id}'."
+            )
+
+        model.proposed_text = suggestion.proposed_text
+        model.status = suggestion.status
+        model.resolved_by = suggestion.resolved_by
+        model.resolved_at = suggestion.resolved_at
+        await self._session.flush()
+        return self._to_domain(model)
 
 
 __all__ = ["SqlAlchemyRedlineRepository"]

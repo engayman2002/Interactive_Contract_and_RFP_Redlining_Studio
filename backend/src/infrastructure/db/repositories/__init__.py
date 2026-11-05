@@ -16,6 +16,9 @@ from src.domain.ports import (
 )
 from src.infrastructure.db.models import OrganizationModel, UserModel
 from src.infrastructure.db.repositories.base import MultiTenantRepositoryBase
+from src.infrastructure.db.repositories.comment_repository import (
+    SqlAlchemyCommentRepository,
+)
 from src.infrastructure.db.repositories.document_repository import (
     SqlAlchemyDocumentRepository,
 )
@@ -145,6 +148,7 @@ class SqlAlchemyUnitOfWork(UnitOfWorkPort):
         self.documents = SqlAlchemyDocumentRepository(session)
         self.playbooks = SqlAlchemyPlaybookRepository(session)
         self.redlines = SqlAlchemyRedlineRepository(session)
+        self.comments = SqlAlchemyCommentRepository(session)
 
     async def commit(self) -> None:
         await self._session.commit()
@@ -155,6 +159,7 @@ class SqlAlchemyUnitOfWork(UnitOfWorkPort):
 
 __all__ = [
     "MultiTenantRepositoryBase",
+    "SqlAlchemyCommentRepository",
     "SqlAlchemyDocumentRepository",
     "SqlAlchemyOrganizationRepository",
     "SqlAlchemyPlaybookRepository",

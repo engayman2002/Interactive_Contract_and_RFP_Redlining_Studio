@@ -1,13 +1,26 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef } from "react";
-import type { ClauseDTO, RedlineSuggestionDTO } from "@/services/contracts";
+import type {
+  ClauseCommentDTO,
+  ClauseDTO,
+  RedlineSuggestionDTO,
+} from "@/services/contracts";
 import { RiskFilterMode, useWorkspaceStore } from "@/store/workspaceStore";
+import { ClauseCommentThread } from "./ClauseCommentThread";
 import { RedlineCard } from "./RedlineCard";
 
 export interface AiInspectorPanelProps {
   clauses: ClauseDTO[];
   redlines: RedlineSuggestionDTO[];
+  comments?: ClauseCommentDTO[];
+  onAcceptSuggestion?: (suggestionId: string) => Promise<void> | void;
+  onModifySuggestion?: (
+    suggestionId: string,
+    modifiedText: string
+  ) => Promise<void> | void;
+  onRejectSuggestion?: (suggestionId: string) => Promise<void> | void;
+  onAddComment?: (clauseId: string, body: string) => Promise<void> | void;
   onLocalApplyPreview?: (clauseId: string, proposedText: string) => void;
   onLocalRejectPreview?: (suggestionId: string) => void;
 }
@@ -23,6 +36,11 @@ const FILTER_TABS: { mode: RiskFilterMode; label: string }[] = [
 export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
   clauses,
   redlines,
+  comments = [],
+  onAcceptSuggestion,
+  onModifySuggestion,
+  onRejectSuggestion,
+  onAddComment,
   onLocalApplyPreview,
   onLocalRejectPreview,
 }) => {
@@ -51,6 +69,16 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
     return map;
   }, [redlines]);
 
+  const commentsByClauseId = useMemo(() => {
+    const map = new Map<string, ClauseCommentDTO[]>();
+    for (const cm of comments) {
+      const existing = map.get(cm.clause_id) ?? [];
+      existing.push(cm);
+      map.set(cm.clause_id, existing);
+    }
+    return map;
+  }, [comments]);
+
   const filteredRedlines = useMemo(() => {
     if (riskFilter === "ALL") {
       return redlines;
@@ -76,6 +104,13 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
       cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [activeClauseId, selectionSource]);
+
+  const activeClauseForComments = useMemo(() => {
+    if (activeClauseId && clausesById.has(activeClauseId)) {
+      return clausesById.get(activeClauseId) ?? null;
+    }
+    return clauses[0] ?? null;
+  }, [activeClauseId, clauses, clausesById]);
 
   const criticalCount = redlines.filter((r) => r.risk === "CRITICAL").length;
   const highCount = redlines.filter((r) => r.risk === "HIGH").length;
@@ -176,6 +211,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
             if (!clause) {
               return null;
             }
+            const clauseComments = commentsByClauseId.get(clause.id) ?? [];
             return (
               <div
                 key={suggestion.id}
@@ -190,6 +226,10 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
                 <RedlineCard
                   clause={clause}
                   suggestion={suggestion}
+                  commentCount={clauseComments.length}
+                  onAcceptSuggestion={onAcceptSuggestion}
+                  onModifySuggestion={onModifySuggestion}
+                  onRejectSuggestion={onRejectSuggestion}
                   onLocalApplyPreview={onLocalApplyPreview}
                   onLocalRejectPreview={onLocalRejectPreview}
                 />
@@ -238,7 +278,15 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
             );
           })}
       </div>
+
+      {/* Threaded Clause Comments Panel */}
+      {activeClauseForComments && onAddComment ? (
+        <ClauseCommentThread
+          clause={activeClauseForComments}
+          comments={commentsByClauseId.get(activeClauseForComments.id) ?? []}
+          onAddComment={onAddComment}
+        />
+      ) : null}
     </aside>
   );
 };
-

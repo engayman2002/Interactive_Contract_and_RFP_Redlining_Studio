@@ -18,6 +18,8 @@ class RedlineSuggestionResponseDTO(ImmutableDTO):
     proposed_text: str
     rationale: str
     status: SuggestionStatus
+    resolved_by: UUID | None = None
+    resolved_at: datetime | None = None
     created_at: datetime
 
     @classmethod
@@ -31,6 +33,8 @@ class RedlineSuggestionResponseDTO(ImmutableDTO):
             proposed_text=suggestion.proposed_text,
             rationale=suggestion.rationale,
             status=suggestion.status,
+            resolved_by=suggestion.resolved_by,
+            resolved_at=suggestion.resolved_at,
             created_at=suggestion.created_at,
         )
 

@@ -25,6 +25,10 @@ from src.application.use_cases import (
 )
 from src.domain.enums import UserRole
 from src.domain.ports import UnitOfWorkPort
+from src.presentation.api.v1.collaboration import (
+    clauses_router,
+    suggestions_router,
+)
 from src.presentation.api.v1.documents import documents_router
 from src.presentation.api.v1.playbooks import playbooks_router
 from src.presentation.dependencies import (
@@ -49,22 +53,6 @@ class LogoutResponseDTO(ImmutableDTO):
     """Session invalidation response."""
 
     status: str = "logged_out"
-
-
-class ResolveSuggestionFoundationRequestDTO(ImmutableDTO):
-    """Foundation DTO for testing RBAC on `/api/v1/suggestions/{id}/resolve`."""
-
-    action: str = "ACCEPT"
-
-
-class RBACFoundationOperationResponseDTO(ImmutableDTO):
-    """Response confirming RBAC authorization and tenant context on foundation endpoints."""
-
-    authorized: bool = True
-    actor_id: UUID
-    org_id: UUID
-    role: UserRole
-    operation: str
 
 
 api_v1_router = APIRouter()
@@ -205,46 +193,13 @@ async def get_organization_user(
     return await use_case.execute(actor=current_user, user_id=user_id)
 
 
-# ---------------------------------------------------------------------------
-# 4. Protected RBAC Foundation Routes (Suggestions)
-# ---------------------------------------------------------------------------
-suggestions_router = APIRouter(prefix="/suggestions", tags=["Suggestions RBAC Foundation"])
-
-
-@suggestions_router.post(
-    "/{suggestion_id}/resolve",
-    response_model=RBACFoundationOperationResponseDTO,
-    status_code=status.HTTP_200_OK,
-)
-async def resolve_suggestion_foundation(
-    suggestion_id: UUID,
-    _payload: ResolveSuggestionFoundationRequestDTO,
-    current_user: Annotated[
-        TokenPayloadDTO,
-        Depends(
-            require_roles(
-                UserRole.ADMIN,
-                UserRole.LEGAL_COUNSEL,
-                UserRole.TECHNICAL_LEAD,
-            )
-        ),
-    ],
-) -> RBACFoundationOperationResponseDTO:
-    """Protected foundation route blocking VIEWER from mutating/resolving AI redlines."""
-    return RBACFoundationOperationResponseDTO(
-        actor_id=current_user.sub,
-        org_id=current_user.org_id,
-        role=current_user.role,
-        operation=f"RESOLVE_SUGGESTION:{suggestion_id}",
-    )
-
-
 api_v1_router.include_router(health_router)
 api_v1_router.include_router(auth_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(documents_router)
 api_v1_router.include_router(playbooks_router)
 api_v1_router.include_router(suggestions_router)
+api_v1_router.include_router(clauses_router)
 
 __all__ = ["api_v1_router"]
 

@@ -8,8 +8,9 @@ from sqlalchemy import select
 from src.domain.entities import Document, DocumentClause
 from src.domain.enums import DocumentStatus
 from src.domain.exceptions import (
+    ClauseNotFoundError,
     ConcurrencyConflictError,
-     DomainValidationError,
+    DomainValidationError,
     EntityNotFoundError,
 )
 from src.domain.ports import DocumentRepositoryPort
@@ -153,6 +154,60 @@ class SqlAlchemyDocumentRepository(MultiTenantRepositoryBase, DocumentRepository
         )
         result = await self._session.execute(stmt)
         return [self._clause_to_domain(row) for row in result.scalars().all()]
+
+    async def get_clause_by_id(
+        self,
+        org_id: UUID,
+        clause_id: UUID,
+    ) -> DocumentClause | None:
+        """Fetch a single `DocumentClause` by ID strictly isolated within `org_id`."""
+        stmt = (
+            select(DocumentClauseModel)
+            .join(DocumentModel, DocumentClauseModel.document_id == DocumentModel.id)
+            .where(
+                DocumentModel.org_id == org_id,
+                DocumentClauseModel.id == clause_id,
+            )
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._clause_to_domain(model) if model is not None else None
+
+    async def update_clause_with_optimistic_lock(
+        self,
+        org_id: UUID,
+        clause_id: UUID,
+        new_text: str,
+        expected_version: int,
+    ) -> DocumentClause:
+        """Update clause text and increment version within `org_id` enforcing `expected_version`."""
+        stmt = (
+            select(DocumentClauseModel, DocumentModel)
+            .join(DocumentModel, DocumentClauseModel.document_id == DocumentModel.id)
+            .where(
+                DocumentModel.org_id == org_id,
+                DocumentClauseModel.id == clause_id,
+            )
+        )
+        result = await self._session.execute(stmt)
+        row = result.one_or_none()
+        if row is None:
+            raise ClauseNotFoundError(
+                f"Document clause '{clause_id}' not found in organization '{org_id}'."
+            )
+
+        clause_model, doc_model = row
+        domain_clause = self._clause_to_domain(clause_model)
+        domain_clause.apply_text_revision(
+            new_text=new_text,
+            expected_version=expected_version,
+        )
+
+        clause_model.current_text = domain_clause.current_text
+        clause_model.version = domain_clause.version
+        doc_model.version += 1
+        await self._session.flush()
+        return self._clause_to_domain(clause_model)
 
     async def list_by_org(self, org_id: UUID) -> Sequence[Document]:
         stmt = (

@@ -9,6 +9,9 @@ from src.domain.ports.ai_ports import (
     ClauseAuditorPort,
     RedlineRepositoryPort,
 )
+from src.domain.ports.collaboration_ports import (
+    CommentRepositoryPort,
+)
 from src.domain.ports.ingestion_ports import (
     ClauseSegmenterPort,
     DocumentParserPort,
@@ -113,6 +116,24 @@ class DocumentRepositoryPort(Protocol):
         """List ordered clauses for a document strictly isolated within `org_id`."""
         ...
 
+    async def get_clause_by_id(
+        self,
+        org_id: UUID,
+        clause_id: UUID,
+    ) -> DocumentClause | None:
+        """Fetch a single `DocumentClause` by ID strictly isolated within `org_id`."""
+        ...
+
+    async def update_clause_with_optimistic_lock(
+        self,
+        org_id: UUID,
+        clause_id: UUID,
+        new_text: str,
+        expected_version: int,
+    ) -> DocumentClause:
+        """Update clause text and increment version within `org_id` enforcing `expected_version`."""
+        ...
+
 
 @runtime_checkable
 class UnitOfWorkPort(Protocol):
@@ -123,6 +144,7 @@ class UnitOfWorkPort(Protocol):
     documents: DocumentRepositoryPort
     playbooks: PlaybookRepositoryPort
     redlines: RedlineRepositoryPort
+    comments: CommentRepositoryPort
 
     async def commit(self) -> None:
         """Commit the current transaction."""
@@ -136,6 +158,7 @@ class UnitOfWorkPort(Protocol):
 __all__ = [
     "ClauseAuditorPort",
     "ClauseSegmenterPort",
+    "CommentRepositoryPort",
     "DocumentParserPort",
     "DocumentRepositoryPort",
     "EmbeddingGeneratorPort",

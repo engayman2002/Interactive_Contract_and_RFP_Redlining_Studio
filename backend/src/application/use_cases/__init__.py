@@ -274,6 +274,11 @@ from src.application.use_cases.analyze_document import (  # noqa: E402
     StreamDocumentAnalysisUseCase,
     format_sse_event,
 )
+from src.application.use_cases.collaboration import (  # noqa: E402
+    CreateClauseCommentUseCase,
+    ListClauseCommentsUseCase,
+    ResolveRedlineSuggestionUseCase,
+)
 from src.application.use_cases.ingest_document import (  # noqa: E402
     GetDocumentWorkspaceUseCase,
     ListOrganizationDocumentsUseCase,
@@ -292,6 +297,7 @@ from src.application.use_cases.manage_playbook import (  # noqa: E402
 __all__ = [
     "AnalyzeDocumentClausesUseCase",
     "AuthenticateUserUseCase",
+    "CreateClauseCommentUseCase",
     "CreateDocumentFoundationUseCase",
     "CreateOrganizationUserUseCase",
     "CreatePlaybookRuleUseCase",
@@ -300,10 +306,12 @@ __all__ = [
     "GetDocumentWorkspaceUseCase",
     "GetOrganizationUserByIdUseCase",
     "GetPlaybookRuleUseCase",
+    "ListClauseCommentsUseCase",
     "ListOrganizationDocumentsUseCase",
     "ListOrganizationUsersUseCase",
     "ListPlaybookRulesUseCase",
     "RegisterOrganizationAndAdminUseCase",
+    "ResolveRedlineSuggestionUseCase",
     "SearchPlaybookRulesUseCase",
     "StreamDocumentAnalysisUseCase",
     "UpdateDocumentFoundationUseCase",

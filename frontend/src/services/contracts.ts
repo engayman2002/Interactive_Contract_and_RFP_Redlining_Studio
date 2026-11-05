@@ -30,6 +30,8 @@ export const RedlineSuggestionDTOSchema = z.object({
   proposed_text: z.string(),
   rationale: z.string(),
   status: SuggestionStatusSchema,
+  resolved_by: z.string().nullable().optional(),
+  resolved_at: z.string().nullable().optional(),
   created_at: z.string(),
 });
 export type RedlineSuggestionDTO = z.infer<typeof RedlineSuggestionDTOSchema>;
@@ -101,4 +103,32 @@ export const AuditProgressEventDTOSchema = z.object({
   rationale: z.string().optional(),
 });
 export type AuditProgressEventDTO = z.infer<typeof AuditProgressEventDTOSchema>;
+
+export const ResolutionActionSchema = z.enum(["ACCEPT", "REJECT", "MODIFY"]);
+export type ResolutionAction = z.infer<typeof ResolutionActionSchema>;
+
+export const ResolveSuggestionRequestDTOSchema = z.object({
+  action: ResolutionActionSchema,
+  expected_clause_version: z.number().int().positive(),
+  modified_text: z.string().nullable().optional(),
+});
+export type ResolveSuggestionRequestDTO = z.infer<
+  typeof ResolveSuggestionRequestDTOSchema
+>;
+
+export const ResolveSuggestionResponseDTOSchema = z.object({
+  suggestion: RedlineSuggestionDTOSchema,
+  clause: ClauseDTOSchema,
+  document_version: z.number().int().positive(),
+});
+export type ResolveSuggestionResponseDTO = z.infer<
+  typeof ResolveSuggestionResponseDTOSchema
+>;
+
+export const CreateClauseCommentRequestDTOSchema = z.object({
+  body: z.string().min(1),
+});
+export type CreateClauseCommentRequestDTO = z.infer<
+  typeof CreateClauseCommentRequestDTOSchema
+>;
 
