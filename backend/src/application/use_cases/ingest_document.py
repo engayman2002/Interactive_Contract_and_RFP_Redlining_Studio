@@ -8,6 +8,7 @@ from src.application.dtos import (
     DocumentUploadResponseDTO,
     DocumentWorkspaceResponseDTO,
     IngestDocumentCommand,
+    RedlineSuggestionResponseDTO,
     TokenPayloadDTO,
 )
 from src.application.services import RBACAction, RbacGuardService
@@ -154,6 +155,13 @@ class GetDocumentWorkspaceUseCase:
         document, clauses = result
         doc_dto = DocumentResponseDTO.model_validate(document)
         clause_dtos = [ClauseResponseDTO.model_validate(c) for c in clauses]
+        redline_entities = await self._uow.redlines.list_by_document(
+            org_id=actor.org_id,
+            document_id=document.id,
+        )
+        redline_dtos = [
+            RedlineSuggestionResponseDTO.from_domain(s) for s in redline_entities
+        ]
 
         return DocumentWorkspaceResponseDTO(
             document_id=document.id,
@@ -165,7 +173,7 @@ class GetDocumentWorkspaceUseCase:
             created_at=document.created_at,
             document=doc_dto,
             clauses=clause_dtos,
-            redlines=[],
+            redlines=redline_dtos,
             comments=[],
         )
 

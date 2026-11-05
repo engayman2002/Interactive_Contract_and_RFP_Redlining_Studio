@@ -68,6 +68,10 @@ class DomainValidationError(DomainError):
         super().__init__(message=message, code="DOMAIN_VALIDATION_ERROR")
 
 
+from src.domain.exceptions.ai_exceptions import (  # noqa: E402
+    ClauseAnalysisError,
+    StructuredOutputValidationError,
+)
 from src.domain.exceptions.ingestion_exceptions import (  # noqa: E402
     DocumentTooLargeError,
     EmptyDocumentError,
@@ -80,6 +84,7 @@ from src.domain.exceptions.playbook_exceptions import (  # noqa: E402
 )
 
 __all__ = [
+    "ClauseAnalysisError",
     "ConcurrencyConflictError",
     "DocumentTooLargeError",
     "DomainError",
@@ -92,6 +97,7 @@ __all__ = [
     "InvalidDocumentFormatError",
     "InvalidPlaybookRuleError",
     "PlaybookRuleNotFoundError",
+    "StructuredOutputValidationError",
     "TenantIsolationError",
     "UnauthorizedError",
 ]

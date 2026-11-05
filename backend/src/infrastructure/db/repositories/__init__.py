@@ -22,6 +22,9 @@ from src.infrastructure.db.repositories.document_repository import (
 from src.infrastructure.db.repositories.playbook_repository import (
     SqlAlchemyPlaybookRepository,
 )
+from src.infrastructure.db.repositories.redline_repository import (
+    SqlAlchemyRedlineRepository,
+)
 
 
 class SqlAlchemyOrganizationRepository(OrganizationRepositoryPort):
@@ -141,6 +144,7 @@ class SqlAlchemyUnitOfWork(UnitOfWorkPort):
         self.users = SqlAlchemyUserRepository(session)
         self.documents = SqlAlchemyDocumentRepository(session)
         self.playbooks = SqlAlchemyPlaybookRepository(session)
+        self.redlines = SqlAlchemyRedlineRepository(session)
 
     async def commit(self) -> None:
         await self._session.commit()
@@ -154,6 +158,7 @@ __all__ = [
     "SqlAlchemyDocumentRepository",
     "SqlAlchemyOrganizationRepository",
     "SqlAlchemyPlaybookRepository",
+    "SqlAlchemyRedlineRepository",
     "SqlAlchemyUnitOfWork",
     "SqlAlchemyUserRepository",
 ]

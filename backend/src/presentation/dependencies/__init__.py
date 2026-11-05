@@ -13,6 +13,7 @@ from src.application.services import JwtTokenService, PasswordService, RbacGuard
 from src.domain.enums import UserRole
 from src.domain.exceptions import UnauthorizedError
 from src.domain.ports import (
+    ClauseAuditorPort,
     ClauseSegmenterPort,
     DocumentParserPort,
     EmbeddingGeneratorPort,
@@ -20,6 +21,7 @@ from src.domain.ports import (
     PlaybookRetrieverPort,
     UnitOfWorkPort,
 )
+from src.infrastructure.ai import LangChainClauseAuditor
 from src.infrastructure.config import get_settings
 from src.infrastructure.db.repositories import SqlAlchemyUnitOfWork
 from src.infrastructure.db.session import get_async_db_session
@@ -85,6 +87,16 @@ def get_embedding_generator() -> EmbeddingGeneratorPort:
     return DeterministicHashEmbeddingAdapter(dimension=settings.EMBEDDING_DIMENSION)
 
 
+@lru_cache(maxsize=1)
+def get_clause_auditor() -> ClauseAuditorPort:
+    """Provide singleton LangChainClauseAuditor configured from settings."""
+    settings = get_settings()
+    return LangChainClauseAuditor(
+        max_retries=settings.REDLINE_MAX_RETRIES,
+        temperature=settings.LLM_TEMPERATURE,
+    )
+
+
 async def get_uow(
     session: Annotated[AsyncSession, Depends(get_async_db_session)],
 ) -> UnitOfWorkPort:
@@ -143,6 +155,7 @@ def require_roles(
 
 __all__ = [
     "bearer_scheme",
+    "get_clause_auditor",
     "get_clause_segmenter",
     "get_current_user",
     "get_document_parser",

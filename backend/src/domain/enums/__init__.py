@@ -34,6 +34,7 @@ class DocumentStatus(StrEnum):
     """Processing states of an uploaded contract or RFP document."""
 
     PROCESSING = "PROCESSING"
+    ANALYZED = "ANALYZED"
     READY = "READY"
     FAILED = "FAILED"
 

@@ -98,6 +98,16 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = Field(default=None)
     EMBEDDING_MODEL_NAME: str = Field(default="text-embedding-3-small")
 
+    # Phase 4: LangChain Redlining Engine & Async Worker Pipeline Configuration
+    LLM_PROVIDER: str = Field(default="deterministic")
+    GROQ_API_KEY: str | None = Field(default=None)
+    LLM_MODEL_NAME: str = Field(default="llama-3.3-70b-versatile")
+    LLM_TEMPERATURE: float = Field(default=0.0, ge=0.0, le=1.0)
+    REDLINE_BATCH_CONCURRENCY: int = Field(default=20, ge=1, le=100)
+    REDLINE_MAX_RETRIES: int = Field(default=2, ge=0, le=10)
+    CELERY_BROKER_URL: str = Field(default="redis://localhost:6379/0")
+    CELERY_TASK_ALWAYS_EAGER: bool = Field(default=True)
+
     @property
     def max_upload_size_bytes(self) -> int:
         """Return maximum allowed upload size in bytes."""

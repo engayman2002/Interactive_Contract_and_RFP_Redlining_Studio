@@ -17,7 +17,11 @@ from src.domain.entities import (
 )
 from src.domain.enums import DocumentStatus, RiskLevel, SuggestionStatus, UserRole
 from src.domain.exceptions import ConcurrencyConflictError, DomainValidationError
-from src.domain.ports import DocumentRepositoryPort, UserRepositoryPort
+from src.domain.ports import (
+    DocumentRepositoryPort,
+    RedlineRepositoryPort,
+    UserRepositoryPort,
+)
 
 FORBIDDEN_DOMAIN_IMPORT_PREFIXES: tuple[str, ...] = (
     "src.infrastructure",
@@ -35,6 +39,10 @@ FORBIDDEN_DOMAIN_IMPORT_PREFIXES: tuple[str, ...] = (
     "passlib",
     "pgvector",
     "alembic",
+    "langchain",
+    "langchain_core",
+    "celery",
+    "redis",
 )
 
 
@@ -78,6 +86,14 @@ def test_repository_ports_require_org_id_parameter() -> None:
         sig = inspect.signature(method)
         assert "org_id" in sig.parameters, (
             f"DocumentRepositoryPort.{method_name} must require 'org_id'"
+        )
+
+    tenant_redline_methods = ("create_many", "list_by_document", "delete_pending_by_document")
+    for method_name in tenant_redline_methods:
+        method = getattr(RedlineRepositoryPort, method_name)
+        sig = inspect.signature(method)
+        assert "org_id" in sig.parameters, (
+            f"RedlineRepositoryPort.{method_name} must require 'org_id'"
         )
 
 

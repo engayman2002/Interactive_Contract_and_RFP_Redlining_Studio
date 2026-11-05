@@ -203,8 +203,18 @@ from src.domain.entities.playbook_search import (  # noqa: E402
     MatchedPlaybookRule,
     PlaybookSearchQuery,
 )
+from src.domain.entities.redline_analysis import (  # noqa: E402
+    AuditEventType,
+    AuditProgressEvent,
+    ClauseAuditInput,
+    ClauseAuditResult,
+)
 
 __all__ = [
+    "AuditEventType",
+    "AuditProgressEvent",
+    "ClauseAuditInput",
+    "ClauseAuditResult",
     "ClauseComment",
     "Document",
     "DocumentClause",

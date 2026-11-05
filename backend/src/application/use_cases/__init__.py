@@ -269,6 +269,11 @@ class UpdateDocumentFoundationUseCase:
         return DocumentResponseDTO.model_validate(saved)
 
 
+from src.application.use_cases.analyze_document import (  # noqa: E402
+    AnalyzeDocumentClausesUseCase,
+    StreamDocumentAnalysisUseCase,
+    format_sse_event,
+)
 from src.application.use_cases.ingest_document import (  # noqa: E402
     GetDocumentWorkspaceUseCase,
     ListOrganizationDocumentsUseCase,
@@ -285,6 +290,7 @@ from src.application.use_cases.manage_playbook import (  # noqa: E402
 )
 
 __all__ = [
+    "AnalyzeDocumentClausesUseCase",
     "AuthenticateUserUseCase",
     "CreateDocumentFoundationUseCase",
     "CreateOrganizationUserUseCase",
@@ -299,8 +305,10 @@ __all__ = [
     "ListPlaybookRulesUseCase",
     "RegisterOrganizationAndAdminUseCase",
     "SearchPlaybookRulesUseCase",
+    "StreamDocumentAnalysisUseCase",
     "UpdateDocumentFoundationUseCase",
     "UpdatePlaybookRuleUseCase",
     "UploadAndIngestDocumentUseCase",
     "compose_playbook_embedding_text",
+    "format_sse_event",
 ]

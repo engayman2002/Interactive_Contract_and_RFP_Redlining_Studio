@@ -4,9 +4,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi.responses import StreamingResponse
 
 from src.application.dtos import (
     CreateDocumentRequestDTO,
+    DocumentAnalysisSummaryDTO,
     DocumentResponseDTO,
     DocumentUploadResponseDTO,
     DocumentWorkspaceResponseDTO,
@@ -16,26 +18,32 @@ from src.application.dtos import (
 )
 from src.application.services import RbacGuardService
 from src.application.use_cases import (
+    AnalyzeDocumentClausesUseCase,
     CreateDocumentFoundationUseCase,
     GetDocumentFoundationUseCase,
     GetDocumentWorkspaceUseCase,
     ListOrganizationDocumentsUseCase,
+    StreamDocumentAnalysisUseCase,
     UpdateDocumentFoundationUseCase,
     UploadAndIngestDocumentUseCase,
 )
 from src.domain.enums import UserRole
 from src.domain.ports import (
+    ClauseAuditorPort,
     ClauseSegmenterPort,
     DocumentParserPort,
     FileStoragePort,
+    PlaybookRetrieverPort,
     UnitOfWorkPort,
 )
 from src.infrastructure.config import get_settings
 from src.presentation.dependencies import (
+    get_clause_auditor,
     get_clause_segmenter,
     get_current_user,
     get_document_parser,
     get_file_storage,
+    get_playbook_retriever,
     get_rbac_guard,
     get_uow,
     require_roles,
@@ -116,9 +124,85 @@ async def get_document_workspace(
     uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
     rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
 ) -> DocumentWorkspaceResponseDTO:
-    """Fetch document metadata and ordered clauses for the split-screen workspace."""
+    """Fetch document metadata, ordered clauses, and AI redlines for the split-screen workspace."""
     use_case = GetDocumentWorkspaceUseCase(uow=uow, rbac_guard=rbac_guard)
     return await use_case.execute(actor=current_user, document_id=document_id)
+
+
+@documents_router.post(
+    "/{document_id}/analyze",
+    response_model=DocumentAnalysisSummaryDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def analyze_document_clauses(
+    document_id: UUID,
+    current_user: Annotated[
+        TokenPayloadDTO,
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.LEGAL_COUNSEL,
+                UserRole.TECHNICAL_LEAD,
+            )
+        ),
+    ],
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
+    retriever: Annotated[PlaybookRetrieverPort, Depends(get_playbook_retriever)],
+    auditor: Annotated[ClauseAuditorPort, Depends(get_clause_auditor)],
+) -> DocumentAnalysisSummaryDTO:
+    """Trigger concurrent AI redline evaluation across all clauses in a document."""
+    settings = get_settings()
+    use_case = AnalyzeDocumentClausesUseCase(
+        uow=uow,
+        rbac_guard=rbac_guard,
+        retriever=retriever,
+        auditor=auditor,
+        concurrency=settings.REDLINE_BATCH_CONCURRENCY,
+        top_k=settings.PLAYBOOK_DEFAULT_TOP_K,
+    )
+    return await use_case.execute(actor=current_user, document_id=document_id)
+
+
+@documents_router.get(
+    "/{document_id}/stream",
+    status_code=status.HTTP_200_OK,
+)
+async def stream_document_analysis(
+    document_id: UUID,
+    current_user: Annotated[TokenPayloadDTO, Depends(get_current_user)],
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
+    retriever: Annotated[PlaybookRetrieverPort, Depends(get_playbook_retriever)],
+    auditor: Annotated[ClauseAuditorPort, Depends(get_clause_auditor)],
+) -> StreamingResponse:
+    """Stream Server-Sent Events (`text/event-stream`) of real-time AI clause audit results."""
+    settings = get_settings()
+    use_case = StreamDocumentAnalysisUseCase(
+        uow=uow,
+        rbac_guard=rbac_guard,
+        retriever=retriever,
+        auditor=auditor,
+        concurrency=settings.REDLINE_BATCH_CONCURRENCY,
+        top_k=settings.PLAYBOOK_DEFAULT_TOP_K,
+    )
+    document, clauses = await use_case.verify_access_and_load(
+        actor=current_user,
+        document_id=document_id,
+    )
+    return StreamingResponse(
+        use_case.stream_events(
+            actor=current_user,
+            document=document,
+            clauses=clauses,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @documents_router.post(

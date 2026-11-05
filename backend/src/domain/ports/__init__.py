@@ -5,6 +5,10 @@ from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from src.domain.entities import Document, DocumentClause, Organization, User
+from src.domain.ports.ai_ports import (
+    ClauseAuditorPort,
+    RedlineRepositoryPort,
+)
 from src.domain.ports.ingestion_ports import (
     ClauseSegmenterPort,
     DocumentParserPort,
@@ -118,6 +122,7 @@ class UnitOfWorkPort(Protocol):
     users: UserRepositoryPort
     documents: DocumentRepositoryPort
     playbooks: PlaybookRepositoryPort
+    redlines: RedlineRepositoryPort
 
     async def commit(self) -> None:
         """Commit the current transaction."""
@@ -129,6 +134,7 @@ class UnitOfWorkPort(Protocol):
 
 
 __all__ = [
+    "ClauseAuditorPort",
     "ClauseSegmenterPort",
     "DocumentParserPort",
     "DocumentRepositoryPort",
@@ -137,6 +143,7 @@ __all__ = [
     "OrganizationRepositoryPort",
     "PlaybookRepositoryPort",
     "PlaybookRetrieverPort",
+    "RedlineRepositoryPort",
     "UnitOfWorkPort",
     "UserRepositoryPort",
 ]

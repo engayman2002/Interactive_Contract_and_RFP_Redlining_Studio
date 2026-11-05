@@ -8,6 +8,7 @@ from uuid import UUID
 from pydantic import Field
 
 from src.application.dtos import DocumentResponseDTO, ImmutableDTO
+from src.application.dtos.redline_dtos import RedlineSuggestionResponseDTO
 
 
 class IngestDocumentCommand(ImmutableDTO):
@@ -57,7 +58,7 @@ class DocumentUploadResponseDTO(ImmutableDTO):
 
 
 class DocumentWorkspaceResponseDTO(ImmutableDTO):
-    """Output DTO representing the full document workspace with ordered clauses."""
+    """Output DTO representing the full document workspace with ordered clauses and redlines."""
 
     document_id: UUID
     org_id: UUID
@@ -68,7 +69,7 @@ class DocumentWorkspaceResponseDTO(ImmutableDTO):
     created_at: datetime
     document: DocumentResponseDTO
     clauses: list[ClauseResponseDTO]
-    redlines: list[dict[str, Any]] = Field(default_factory=list)
+    redlines: list[RedlineSuggestionResponseDTO] = Field(default_factory=list)
     comments: list[dict[str, Any]] = Field(default_factory=list)
 
 

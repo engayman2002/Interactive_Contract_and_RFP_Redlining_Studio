@@ -204,6 +204,10 @@ from src.application.dtos.playbook_dtos import (  # noqa: E402
     UpdatePlaybookRuleCommand,
     UpdatePlaybookRuleRequestDTO,
 )
+from src.application.dtos.redline_dtos import (  # noqa: E402
+    DocumentAnalysisSummaryDTO,
+    RedlineSuggestionResponseDTO,
+)
 
 __all__ = [
     "ClauseResponseDTO",
@@ -211,6 +215,7 @@ __all__ = [
     "CreatePlaybookRuleCommand",
     "CreatePlaybookRuleRequestDTO",
     "CreateUserRequestDTO",
+    "DocumentAnalysisSummaryDTO",
     "DocumentResponseDTO",
     "DocumentUploadResponseDTO",
     "DocumentWorkspaceResponseDTO",
@@ -223,6 +228,7 @@ __all__ = [
     "PlaybookRuleResponseDTO",
     "PlaybookSearchRequestDTO",
     "PlaybookSearchResponseDTO",
+    "RedlineSuggestionResponseDTO",
     "RegisterOrganizationRequestDTO",
     "TokenPayloadDTO",
     "TokenResponseDTO",
