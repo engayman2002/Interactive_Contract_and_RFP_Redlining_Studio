@@ -108,7 +108,7 @@ spec:
           command:
             - "celery"
             - "-A"
-            - "src.infrastructure.ai.celery_worker:celery_app"
+            - "src.infrastructure.ai.celery_app:celery_app"
             - "worker"
             - "--loglevel=info"
             - "--concurrency=4"
