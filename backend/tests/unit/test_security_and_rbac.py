@@ -138,21 +138,34 @@ def test_production_secret_file_mount_resolution(
     jwt_file = tmp_path / "jwt_secret_key"
     groq_file = tmp_path / "groq_api_key"
     openai_file = tmp_path / "openai_api_key"
+    gemini_file = tmp_path / "gemini_api_key"
 
     jwt_file.write_text("prod-mounted-jwt-secret-key-with-32-plus-bytes\n", encoding="utf-8")
     groq_file.write_text("gsk_prod_mounted_groq_key\n", encoding="utf-8")
     openai_file.write_text("sk-prod-mounted-openai-key\n", encoding="utf-8")
+    gemini_file.write_text("gemini-prod-mounted-key\n", encoding="utf-8")
 
     monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("JWT_SECRET_KEY_FILE", str(jwt_file))
     monkeypatch.setenv("GROQ_API_KEY_FILE", str(groq_file))
     monkeypatch.setenv("OPENAI_API_KEY_FILE", str(openai_file))
+    monkeypatch.setenv("GEMINI_API_KEY_FILE", str(gemini_file))
 
     prod_settings = Settings()
     assert prod_settings.JWT_SECRET_KEY == "prod-mounted-jwt-secret-key-with-32-plus-bytes"  # noqa: S105
     assert prod_settings.GROQ_API_KEY == "gsk_prod_mounted_groq_key"
     assert prod_settings.OPENAI_API_KEY == "sk-prod-mounted-openai-key"
+    assert prod_settings.GEMINI_API_KEY == "gemini-prod-mounted-key"
+    assert prod_settings.resolve_llm_api_key() == "gsk_prod_mounted_groq_key"
+    assert prod_settings.resolve_embedding_api_key() == "sk-prod-mounted-openai-key"
+
+    gemini_llm_settings = Settings(LLM_PROVIDER="gemini")
+    assert gemini_llm_settings.resolve_llm_api_key() == "gemini-prod-mounted-key"
+
+    gemini_embed_settings = Settings(EMBEDDING_PROVIDER="gemini")
+    assert gemini_embed_settings.resolve_embedding_api_key() == "gemini-prod-mounted-key"
 

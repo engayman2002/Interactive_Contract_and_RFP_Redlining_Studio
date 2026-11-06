@@ -311,6 +311,153 @@ class OllamaEmbeddingAdapter(EmbeddingGeneratorPort):
         return vectors[0]
 
 
+class GeminiEmbeddingAdapter(EmbeddingGeneratorPort):
+    """Async HTTP adapter for Google Gemini embedding models via Generative Language API."""
+
+    def __init__(
+        self,
+        model_name: str = "text-embedding-004",
+        base_url: str = "https://generativelanguage.googleapis.com/v1beta",
+        api_key: str | None = None,
+        dimension: int = 1536,
+        timeout_seconds: float = 30.0,
+        http_client: httpx.AsyncClient | None = None,
+    ) -> None:
+        if dimension <= 0:
+            raise ValueError("Embedding dimension must be positive.")
+        self._model_id = model_name.strip().removeprefix("models/")
+        self._base_url = base_url.strip().rstrip("/")
+        self._api_key = api_key
+        self._dimension = dimension
+        self._timeout_seconds = timeout_seconds
+        self._http_client = http_client
+
+    @property
+    def dimension(self) -> int:
+        return self._dimension
+
+    def _get_headers(self) -> dict[str, str]:
+        if not self._api_key:
+            raise EmbeddingGenerationError(
+                "Missing API key for 'gemini' embedding provider. "
+                "Configure EMBEDDING_API_KEY or GEMINI_API_KEY."
+            )
+        return {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self._api_key,
+        }
+
+    async def embed_text(self, text: str) -> list[float]:
+        """Generate an adapted 1536-d L2-normalized embedding for a single text."""
+        cleaned = text.strip()
+        if not cleaned:
+            raise EmbeddingGenerationError("Cannot generate embedding for empty or blank text.")
+
+        headers = self._get_headers()
+        url = f"{self._base_url}/models/{self._model_id}:embedContent"
+        payload: dict[str, Any] = {
+            "model": f"models/{self._model_id}",
+            "content": {"parts": [{"text": cleaned}]},
+        }
+
+        try:
+            if self._http_client is not None:
+                response = await self._http_client.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=self._timeout_seconds,
+                )
+            else:
+                async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
+                    response = await client.post(
+                        url,
+                        headers=headers,
+                        json=payload,
+                    )
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as exc:
+            raise EmbeddingGenerationError(
+                f"Gemini embedding HTTP request to '{url}' failed: {exc}"
+            ) from exc
+        except ValueError as exc:
+            raise EmbeddingGenerationError(
+                f"Gemini embedding endpoint '{url}' returned invalid JSON: {exc}"
+            ) from exc
+
+        raw_vec = data.get("embedding", {}).get("values") if isinstance(data, dict) else None
+        if not isinstance(raw_vec, list) or not raw_vec:
+            raise EmbeddingGenerationError(
+                f"Gemini response from '{url}' missing 'embedding.values' list."
+            )
+        return adapt_and_normalize_vector(raw_vec, target_dim=self._dimension)
+
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """Generate adapted 1536-d L2-normalized embeddings for a batch of texts."""
+        if not texts:
+            return []
+        for text in texts:
+            if not text or not text.strip():
+                raise EmbeddingGenerationError(
+                    "Cannot generate embedding for empty or blank text."
+                )
+
+        headers = self._get_headers()
+        url = f"{self._base_url}/models/{self._model_id}:batchEmbedContents"
+        payload: dict[str, Any] = {
+            "requests": [
+                {
+                    "model": f"models/{self._model_id}",
+                    "content": {"parts": [{"text": t.strip()}]},
+                }
+                for t in texts
+            ]
+        }
+
+        try:
+            if self._http_client is not None:
+                response = await self._http_client.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=self._timeout_seconds,
+                )
+            else:
+                async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
+                    response = await client.post(
+                        url,
+                        headers=headers,
+                        json=payload,
+                    )
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as exc:
+            raise EmbeddingGenerationError(
+                f"Gemini batch embedding HTTP request to '{url}' failed: {exc}"
+            ) from exc
+        except ValueError as exc:
+            raise EmbeddingGenerationError(
+                f"Gemini batch embedding endpoint '{url}' returned invalid JSON: {exc}"
+            ) from exc
+
+        embeddings_list = data.get("embeddings") if isinstance(data, dict) else None
+        if not isinstance(embeddings_list, list) or len(embeddings_list) != len(texts):
+            raise EmbeddingGenerationError(
+                f"Gemini response from '{url}' missing or mismatched 'embeddings' list."
+            )
+
+        results: list[list[float]] = []
+        for item in embeddings_list:
+            raw_vec = item.get("values") if isinstance(item, dict) else None
+            if not isinstance(raw_vec, list) or not raw_vec:
+                raise EmbeddingGenerationError(
+                    "Gemini batch item missing 'values' list in response."
+                )
+            results.append(adapt_and_normalize_vector(raw_vec, target_dim=self._dimension))
+        return results
+
+
 EmbeddingFactoryCallable = Callable[..., EmbeddingGeneratorPort]
 
 
@@ -445,6 +592,27 @@ def _build_ollama_embedding_provider(
     )
 
 
+@register_embedding_provider("gemini")
+def _build_gemini_embedding_provider(
+    settings: Settings,
+    http_client: httpx.AsyncClient | None = None,
+) -> EmbeddingGeneratorPort:
+    model_name = (
+        "text-embedding-004"
+        if settings.EMBEDDING_MODEL_NAME == "text-embedding-3-small"
+        else settings.EMBEDDING_MODEL_NAME
+    )
+    return GeminiEmbeddingAdapter(
+        model_name=model_name,
+        base_url=settings.EMBEDDING_BASE_URL
+        or "https://generativelanguage.googleapis.com/v1beta",
+        api_key=settings.resolve_embedding_api_key(),
+        dimension=settings.EMBEDDING_DIMENSION,
+        timeout_seconds=settings.EMBEDDING_TIMEOUT_SECONDS,
+        http_client=http_client,
+    )
+
+
 def create_embedding_generator(
     settings: Settings,
     http_client: httpx.AsyncClient | None = None,
@@ -456,6 +624,7 @@ def create_embedding_generator(
 __all__ = [
     "EmbeddingFactoryCallable",
     "EmbeddingProviderRegistry",
+    "GeminiEmbeddingAdapter",
     "OllamaEmbeddingAdapter",
     "OpenAICompatibleEmbeddingAdapter",
     "UnsupportedAIProviderError",

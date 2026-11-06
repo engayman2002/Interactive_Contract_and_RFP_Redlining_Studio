@@ -14,6 +14,7 @@ from src.domain.entities import (
     PlaybookSearchQuery,
 )
 from src.domain.enums import RiskLevel
+from src.domain.exceptions import ClauseAnalysisError, EmbeddingGenerationError
 from src.domain.ports.playbook_ports import (
     EmbeddingGeneratorPort,
     PlaybookRepositoryPort,
@@ -92,6 +93,7 @@ def test_builtin_providers_are_registered() -> None:
         "groq",
         "openai",
         "anthropic",
+        "gemini",
         "ollama",
         "openai_compatible",
     ):
@@ -101,6 +103,7 @@ def test_builtin_providers_are_registered() -> None:
     for expected_embed in (
         "deterministic",
         "openai",
+        "gemini",
         "ollama",
         "openai_compatible",
     ):
@@ -373,6 +376,147 @@ async def test_cloud_and_openai_compatible_providers_via_mock_transport() -> Non
         )
         assert claude_res.is_compliant is True
         assert claude_res.risk == RiskLevel.LOW
+
+
+@pytest.mark.asyncio
+async def test_google_gemini_llm_and_embeddings_mock_transport() -> None:
+    """Verify native Google Gemini LLM and 768-d embedding adapter via mock transport."""
+    captured_requests: list[tuple[str, dict[str, Any], dict[str, str]]] = []
+
+    def mock_gemini_handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        headers = dict(request.headers)
+        captured_requests.append((str(request.url), body, headers))
+
+        assert headers.get("x-goog-api-key") == "test-gemini-key"
+
+        if request.url.path.endswith(":embedContent"):
+            assert body["model"] == "models/text-embedding-004"
+            assert "parts" in body["content"]
+            raw_768 = [0.05 * ((i % 5) + 1) for i in range(768)]
+            return httpx.Response(200, json={"embedding": {"values": raw_768}})
+
+        if request.url.path.endswith(":batchEmbedContents"):
+            assert len(body["requests"]) == 2
+            for req_item in body["requests"]:
+                assert req_item["model"] == "models/text-embedding-004"
+                assert "parts" in req_item["content"]
+            raw_batch = [
+                {"values": [0.05 * ((i % 5) + 1) for i in range(768)]},
+                {"values": [0.02 * ((i % 7) + 1) for i in range(768)]},
+            ]
+            return httpx.Response(200, json={"embeddings": raw_batch})
+
+        if request.url.path.endswith(":generateContent"):
+            assert "gemini-2.5-flash:generateContent" in request.url.path
+            assert body["generationConfig"]["temperature"] == 0.0
+            assert body["generationConfig"]["responseMimeType"] == "application/json"
+            assert "system_instruction" in body
+            assert "contents" in body
+
+            redline_data = {
+                "is_compliant": False,
+                "risk": "CRITICAL",
+                "category": "Limitation of Liability",
+                "proposed_text": (
+                    "Each party aggregate liability shall not exceed 12 months fees paid."
+                ),
+                "rationale": "Gemini 2.5 Flash identified unacceptable uncapped liability.",
+                "negotiation_talking_point": "Standard mutual cap required.",
+            }
+            return httpx.Response(
+                200,
+                json={
+                    "candidates": [
+                        {
+                            "content": {
+                                "parts": [
+                                    {"text": json.dumps(redline_data)}
+                                ]
+                            }
+                        }
+                    ]
+                },
+            )
+
+        return httpx.Response(404, json={"error": "endpoint not found"})
+
+    transport = httpx.MockTransport(mock_gemini_handler)
+    async with httpx.AsyncClient(transport=transport) as mock_client:
+        gemini_settings = Settings(
+            LLM_PROVIDER="gemini",
+            LLM_MODEL_NAME="gemini-2.5-flash",
+            GEMINI_API_KEY="test-gemini-key",
+            EMBEDDING_PROVIDER="gemini",
+            EMBEDDING_MODEL_NAME="text-embedding-004",
+            EMBEDDING_DIMENSION=1536,
+        )
+
+        embedder = create_embedding_generator(gemini_settings, http_client=mock_client)
+        single_vec = await embedder.embed_text("12 months fees limitation of liability")
+        assert len(single_vec) == 1536
+        assert math.isclose(math.sqrt(sum(v * v for v in single_vec)), 1.0, rel_tol=1e-6)
+
+        batch_vecs = await embedder.embed_batch(["Clause text A", "Clause text B"])
+        assert len(batch_vecs) == 2
+        assert len(batch_vecs[0]) == 1536
+        assert len(batch_vecs[1]) == 1536
+        assert math.isclose(math.sqrt(sum(v * v for v in batch_vecs[0])), 1.0, rel_tol=1e-6)
+        assert math.isclose(math.sqrt(sum(v * v for v in batch_vecs[1])), 1.0, rel_tol=1e-6)
+
+        gemini_llm = create_llm_runnable(gemini_settings, http_client=mock_client)
+        auditor = LangChainClauseAuditor(
+            llm_runnable=gemini_llm,
+            max_retries=0,
+            enable_deterministic_fallback=False,
+        )
+        audit_result = await auditor.audit_clause(
+            ClauseAuditInput(
+                org_id=uuid4(),
+                document_id=uuid4(),
+                clause_id=uuid4(),
+                clause_index=0,
+                heading="Limitation of Liability",
+                clause_text="Customer shall have uncapped liability.",
+            ),
+            matched_rules=[],
+        )
+        assert audit_result.is_compliant is False
+        assert audit_result.risk == RiskLevel.CRITICAL
+        assert "12 months fees paid" in audit_result.proposed_text
+        assert "Gemini 2.5 Flash" in audit_result.rationale
+
+
+@pytest.mark.asyncio
+async def test_gemini_missing_api_key_and_empty_text_errors() -> None:
+    """Verify Gemini adapters raise appropriate domain exceptions on missing key or blank text."""
+    no_key_settings = Settings(
+        LLM_PROVIDER="gemini",
+        EMBEDDING_PROVIDER="gemini",
+        GEMINI_API_KEY=None,
+        LLM_API_KEY=None,
+        EMBEDDING_API_KEY=None,
+    )
+
+    embedder = create_embedding_generator(no_key_settings)
+    with pytest.raises(EmbeddingGenerationError) as embed_exc:
+        await embedder.embed_text("Sample text")
+    assert "Missing API key for 'gemini' embedding provider" in str(embed_exc.value)
+
+    with_key_settings = Settings(
+        LLM_PROVIDER="gemini",
+        EMBEDDING_PROVIDER="gemini",
+        GEMINI_API_KEY="valid-key",
+    )
+    valid_embedder = create_embedding_generator(with_key_settings)
+    with pytest.raises(EmbeddingGenerationError) as blank_exc:
+        await valid_embedder.embed_text("   ")
+    assert "empty or blank text" in str(blank_exc.value)
+
+    llm = create_llm_runnable(no_key_settings)
+    with pytest.raises(ClauseAnalysisError) as llm_exc:
+        await llm.ainvoke({"clause_text": "Sample clause", "playbook_context": ""})
+    assert "Missing API key for 'gemini' LLM provider" in str(llm_exc.value)
 
 
 @pytest.mark.asyncio

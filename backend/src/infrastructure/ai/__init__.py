@@ -8,6 +8,7 @@ from src.infrastructure.ai.celery_app import (
 )
 from src.infrastructure.ai.provider_registry import (
     AnthropicMessagesChatRunnable,
+    GeminiGenerateContentChatRunnable,
     LLMProviderRegistry,
     OllamaChatRunnable,
     OpenAICompatibleChatRunnable,
@@ -28,6 +29,7 @@ from src.infrastructure.ai.redline_chain import (
 __all__ = [
     "AnthropicMessagesChatRunnable",
     "BatchDocumentAuditWorker",
+    "GeminiGenerateContentChatRunnable",
     "LLMProviderRegistry",
     "LangChainClauseAuditor",
     "OllamaChatRunnable",

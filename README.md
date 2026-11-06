@@ -464,22 +464,23 @@ All backend configuration variables are defined and validated via Pydantic Setti
 | `ALLOWED_UPLOAD_EXTENSIONS` | — | `(".docx", ".pdf")` | No | Allow-listed contract file extensions. |
 | `ALLOWED_UPLOAD_MIME_TYPES` | — | `("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/pdf", "application/octet-stream")` | No | Allow-listed MIME types for document ingestion. |
 | `STORAGE_ROOT_PATH` | — | `Path("/tmp/redlining_studio_storage")` | **Yes** (`/var/lib/redlining_studio/storage`) | Filesystem root directory (outside web root) where tenant-isolated raw uploads are stored (`{org_id}/{document_id}/...`). |
-| `EMBEDDING_PROVIDER` | — | `"deterministic"` | No (`"openai"`, `"ollama"`, or `"openai_compatible"`) | Selects the playbook vector embedding adapter registered in [`EmbeddingProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py#L315-L373). |
-| `EMBEDDING_MODEL_NAME` | — | `"text-embedding-3-small"` | No | Target embedding model identifier (e.g., `"text-embedding-3-small"`, `"nomic-embed-text"`, `"mxbai-embed-large"`, `"bge-m3"`). |
-| `EMBEDDING_BASE_URL` | — | `None` | No | Optional custom base URL for local or self-hosted embedding servers (e.g., `"http://localhost:11434"` for Ollama or `"http://localhost:8080/v1"` for vLLM/TEI/LM Studio). |
-| `EMBEDDING_API_KEY` | `EMBEDDING_API_KEY_FILE` (`/run/secrets/embedding_api_key`) | `None` | Optional | Unified API key for the active embedding provider (falls back to `OPENAI_API_KEY`). |
+| `EMBEDDING_PROVIDER` | — | `"deterministic"` | No (`"openai"`, `"gemini"`, `"ollama"`, or `"openai_compatible"`) | Selects the playbook vector embedding adapter registered in [`EmbeddingProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py#L315-L373). |
+| `EMBEDDING_MODEL_NAME` | — | `"text-embedding-3-small"` | No | Target embedding model identifier (e.g., `"text-embedding-3-small"`, `"text-embedding-004"`, `"nomic-embed-text"`, `"mxbai-embed-large"`, `"bge-m3"`). |
+| `EMBEDDING_BASE_URL` | — | `None` | No | Optional custom base URL for local or self-hosted embedding servers (e.g., `"http://localhost:11434"` for Ollama, `"https://generativelanguage.googleapis.com/v1beta"` for Gemini, or `"http://localhost:8080/v1"` for vLLM/TEI/LM Studio). |
+| `EMBEDDING_API_KEY` | `EMBEDDING_API_KEY_FILE` (`/run/secrets/embedding_api_key`) | `None` | Optional | Unified API key for the active embedding provider (falls back to `OPENAI_API_KEY` or `GEMINI_API_KEY`). |
 | `EMBEDDING_TIMEOUT_SECONDS` | — | `30.0` (`1.0`–`300.0`) | No | HTTP request timeout in seconds for external/local embedding calls. |
 | `EMBEDDING_DIMENSION` | — | `1536` (`128`–`4096`) | No | Vector dimensionality matching the PostgreSQL `vector(1536)` column on `playbook_rules`. |
 | `PLAYBOOK_DEFAULT_TOP_K` | — | `3` (`1`–`50`) | No | Number of top-ranked playbook rules retrieved per clause during hybrid search and AI auditing. |
 | `HYBRID_VECTOR_WEIGHT` | — | `0.7` (`0.0`–`1.0`) | No | Weight applied to dense vector cosine similarity in [`HybridPlaybookRetriever`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/hybrid_retriever.py#L34-L48). |
 | `HYBRID_KEYWORD_WEIGHT` | — | `0.3` (`0.0`–`1.0`) | No | Weight applied to normalized BM25 + lexical overlap score in [`HybridPlaybookRetriever`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/hybrid_retriever.py#L34-L48). |
 | `OPENAI_API_KEY` | `OPENAI_API_KEY_FILE` (`/run/secrets/openai_api_key`) | `None` | Optional (Required if using OpenAI embeddings/LLM) | API key for OpenAI `text-embedding-3-small` or `gpt-4o`. |
-| `LLM_PROVIDER` | — | `"deterministic"` | No (`"groq"`, `"openai"`, `"anthropic"`, `"ollama"`, or `"openai_compatible"`) | Selects the clause auditing engine registered in [`LLMProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L365-L429). |
-| `LLM_MODEL_NAME` | — | `"llama-3.3-70b-versatile"` | No | Model identifier passed to the active LLM provider (e.g., `"llama-3.3-70b-versatile"`, `"gpt-4o-mini"`, `"claude-3-5-sonnet-latest"`, `"llama3.1:8b"`, `"qwen2.5:14b"`). |
-| `LLM_BASE_URL` | — | `None` | No | Optional base URL override for local or custom LLM servers (e.g., `"http://localhost:11434"` for Ollama, `"http://localhost:8000/v1"` for vLLM, `"http://localhost:1234/v1"` for LM Studio). |
-| `LLM_API_KEY` | `LLM_API_KEY_FILE` (`/run/secrets/llm_api_key`) | `None` | Optional | Unified API key for the active LLM provider (automatically falls back to `GROQ_API_KEY`, `OPENAI_API_KEY`, or `ANTHROPIC_API_KEY`). |
+| `LLM_PROVIDER` | — | `"deterministic"` | No (`"groq"`, `"openai"`, `"anthropic"`, `"gemini"`, `"ollama"`, or `"openai_compatible"`) | Selects the clause auditing engine registered in [`LLMProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L365-L429). |
+| `LLM_MODEL_NAME` | — | `"llama-3.3-70b-versatile"` | No | Model identifier passed to the active LLM provider (e.g., `"llama-3.3-70b-versatile"`, `"gpt-4o-mini"`, `"claude-3-5-sonnet-latest"`, `"gemini-2.5-flash"`, `"llama3.1:8b"`, `"qwen2.5:14b"`). |
+| `LLM_BASE_URL` | — | `None` | No | Optional base URL override for local or custom LLM servers (e.g., `"http://localhost:11434"` for Ollama, `"http://localhost:8000/v1"` for vLLM, `"https://generativelanguage.googleapis.com/v1beta"` for Gemini). |
+| `LLM_API_KEY` | `LLM_API_KEY_FILE` (`/run/secrets/llm_api_key`) | `None` | Optional | Unified API key for the active LLM provider (automatically falls back to `GROQ_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY`). |
 | `GROQ_API_KEY` | `GROQ_API_KEY_FILE` (`/run/secrets/groq_api_key`) | `None` | Optional (Required when `LLM_PROVIDER=groq`) | API key for Groq Cloud inference (`llama-3.3-70b-versatile`). |
 | `ANTHROPIC_API_KEY` | `ANTHROPIC_API_KEY_FILE` (`/run/secrets/anthropic_api_key`) | `None` | Optional (Required when `LLM_PROVIDER=anthropic`) | API key for Anthropic Claude inference (`claude-3-5-sonnet-latest`). |
+| `GEMINI_API_KEY` | `GEMINI_API_KEY_FILE` (`/run/secrets/gemini_api_key`) | `None` | Optional (Required when using Gemini LLM/embeddings) | API key for Google Gemini Generative Language API (`gemini-2.5-flash`, `text-embedding-004`). |
 | `LLM_TEMPERATURE` | — | `0.0` (`0.0`–`1.0`) | No | Sampling temperature. Must remain `0.0` for deterministic legal redlining. |
 | `LLM_TIMEOUT_SECONDS` | — | `60.0` (`1.0`–`600.0`) | No | HTTP request timeout in seconds for external/local LLM chat completions. |
 | `REDLINE_BATCH_CONCURRENCY` | — | `20` (`1`–`100`) | No | Maximum concurrent clause evaluations per document (`asyncio.Semaphore`). |
@@ -514,6 +515,7 @@ The backend implements a vendor-agnostic **Plugin Registry Architecture** strict
 | `"groq"` | [`OpenAICompatibleChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L94-L198) | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile`, `qwen-qwq-32b`, `mixtral-8x7b-32768` | **Yes** (`LLM_API_KEY` or `GROQ_API_KEY`) |
 | `"openai"` | [`OpenAICompatibleChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L94-L198) | `https://api.openai.com/v1` | `gpt-4o-mini`, `gpt-4o` | **Yes** (`LLM_API_KEY` or `OPENAI_API_KEY`) |
 | `"anthropic"` | [`AnthropicMessagesChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L201-L289) | `https://api.anthropic.com` (`/v1/messages`) | `claude-3-5-sonnet-latest`, `claude-3-5-haiku-latest` | **Yes** (`LLM_API_KEY` or `ANTHROPIC_API_KEY`) |
+| `"gemini"` | [`GeminiGenerateContentChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py) | `https://generativelanguage.googleapis.com/v1beta` | `gemini-2.5-flash`, `gemini-2.5-pro` | **Yes** (`LLM_API_KEY` or `GEMINI_API_KEY`) |
 | `"ollama"` *(100% Local)* | [`OllamaChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L292-L360) | `http://localhost:11434` (`/api/chat`) | `llama3.1:8b`, `qwen2.5:14b`, `mistral:7b`, `deepseek-r1:14b` | **No** |
 | `"openai_compatible"` *(Local vLLM / LM Studio / llama.cpp)* | [`OpenAICompatibleChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L94-L198) | `http://localhost:8000/v1` (vLLM) or `http://localhost:1234/v1` (LM Studio) | `Qwen/Qwen2.5-14B-Instruct`, `meta-llama/Llama-3.1-8B-Instruct` | Optional (`LLM_API_KEY` if gated) |
 
@@ -523,6 +525,7 @@ The backend implements a vendor-agnostic **Plugin Registry Architecture** strict
 | :--- | :--- | :--- | :--- | :--- |
 | `"deterministic"` *(default)* | [`DeterministicHashEmbeddingAdapter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/embedding_service.py#L265-L348) | In-process (`BLAKE2b` + Legal Stemming) | N/A | `1536 -> 1536` |
 | `"openai"` | [`OpenAICompatibleEmbeddingAdapter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py#L84-L202) | `https://api.openai.com/v1` (`/v1/embeddings`) | `text-embedding-3-small` (`1536-d`), `text-embedding-3-large` (`3072-d`) | `1536/3072 -> 1536` |
+| `"gemini"` | [`GeminiEmbeddingAdapter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py) | `https://generativelanguage.googleapis.com/v1beta` | `text-embedding-004` (`768-d`), `gemini-embedding-001` (`768-d`) | `768 -> 1536` |
 | `"ollama"` *(100% Local)* | [`OllamaEmbeddingAdapter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py#L205-L310) | `http://localhost:11434` (`/api/embed`) | `nomic-embed-text` (`768-d`), `mxbai-embed-large` (`1024-d`), `bge-m3` (`1024-d`), `all-minilm` (`384-d`) | `384/768/1024 -> 1536` |
 | `"openai_compatible"` *(Local TEI / vLLM / LM Studio)* | [`OpenAICompatibleEmbeddingAdapter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py#L84-L202) | `http://localhost:8080/v1` (`/v1/embeddings`) | `BAAI/bge-large-en-v1.5` (`1024-d`), `sentence-transformers/all-MiniLM-L6-v2` (`384-d`) | `384/1024 -> 1536` |
 
@@ -586,6 +589,19 @@ ANTHROPIC_API_KEY=sk-ant-your_anthropic_api_key_here
 LLM_TEMPERATURE=0.0
 
 EMBEDDING_PROVIDER=deterministic
+EMBEDDING_DIMENSION=1536
+```
+
+##### Recipe 5: Google Gemini (Full Gemini Stack: LLM + Embeddings)
+```dotenv
+LLM_PROVIDER=gemini
+LLM_MODEL_NAME=gemini-2.5-flash
+GEMINI_API_KEY=your_gemini_api_key_here
+LLM_TEMPERATURE=0.0
+LLM_TIMEOUT_SECONDS=60.0
+
+EMBEDDING_PROVIDER=gemini
+EMBEDDING_MODEL_NAME=text-embedding-004
 EMBEDDING_DIMENSION=1536
 ```
 
@@ -975,7 +991,7 @@ cd /home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend
 # 2. Strict Static Type Checking (92 source & test files)
 ./.venv/bin/mypy --strict src tests
 
-# 3. Full Unit & Multi-Tenant Integration Test Suite (44 tests)
+# 3. Full Unit & Multi-Tenant Integration Test Suite (46 tests)
 ./.venv/bin/pytest -v
 ```
 

@@ -12,6 +12,7 @@ from src.infrastructure.vector.hybrid_retriever import (
 )
 from src.infrastructure.vector.provider_registry import (
     EmbeddingProviderRegistry,
+    GeminiEmbeddingAdapter,
     OllamaEmbeddingAdapter,
     OpenAICompatibleEmbeddingAdapter,
     UnsupportedAIProviderError,
@@ -23,6 +24,7 @@ from src.infrastructure.vector.provider_registry import (
 __all__ = [
     "DeterministicHashEmbeddingAdapter",
     "EmbeddingProviderRegistry",
+    "GeminiEmbeddingAdapter",
     "HybridPlaybookRetriever",
     "OllamaEmbeddingAdapter",
     "OpenAICompatibleEmbeddingAdapter",

@@ -136,6 +136,9 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str | None = Field(
         default_factory=lambda: _resolve_optional_secret("ANTHROPIC_API_KEY")
     )
+    GEMINI_API_KEY: str | None = Field(
+        default_factory=lambda: _resolve_optional_secret("GEMINI_API_KEY")
+    )
     LLM_TEMPERATURE: float = Field(default=0.0, ge=0.0, le=1.0)
     LLM_TIMEOUT_SECONDS: float = Field(default=60.0, ge=1.0, le=600.0)
     REDLINE_BATCH_CONCURRENCY: int = Field(default=20, ge=1, le=100)
@@ -159,13 +162,23 @@ class Settings(BaseSettings):
             return self.OPENAI_API_KEY or self.GROQ_API_KEY
         if provider == "anthropic":
             return self.ANTHROPIC_API_KEY
-        return self.GROQ_API_KEY or self.OPENAI_API_KEY or self.ANTHROPIC_API_KEY
+        if provider == "gemini":
+            return self.GEMINI_API_KEY
+        return (
+            self.GROQ_API_KEY
+            or self.OPENAI_API_KEY
+            or self.ANTHROPIC_API_KEY
+            or self.GEMINI_API_KEY
+        )
 
     def resolve_embedding_api_key(self) -> str | None:
-        """Resolve the effective Embedding API key with fallback to OPENAI_API_KEY."""
+        """Resolve the effective Embedding API key with provider-specific fallback."""
         if self.EMBEDDING_API_KEY:
             return self.EMBEDDING_API_KEY
-        return self.OPENAI_API_KEY
+        provider = self.EMBEDDING_PROVIDER.strip().lower()
+        if provider == "gemini":
+            return self.GEMINI_API_KEY
+        return self.OPENAI_API_KEY or self.GEMINI_API_KEY
 
     @property
     def max_upload_size_bytes(self) -> int:

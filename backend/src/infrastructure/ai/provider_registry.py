@@ -371,6 +371,114 @@ class OllamaChatRunnable(Runnable[Any, str]):
         return asyncio.run(self.ainvoke(input, config=config, **kwargs))
 
 
+class GeminiGenerateContentChatRunnable(Runnable[Any, str]):
+    """LangChain Runnable adapter for Google Gemini generateContent API with JSON mode."""
+
+    def __init__(
+        self,
+        model_name: str = "gemini-2.5-flash",
+        base_url: str = "https://generativelanguage.googleapis.com/v1beta",
+        api_key: str | None = None,
+        temperature: float = 0.0,
+        timeout_seconds: float = 60.0,
+        http_client: httpx.AsyncClient | None = None,
+    ) -> None:
+        super().__init__()
+        clean_model = model_name.strip().removeprefix("models/")
+        self._model_id = clean_model
+        clean_base = base_url.strip().rstrip("/")
+        self._endpoint_url = f"{clean_base}/models/{self._model_id}:generateContent"
+        self._api_key = api_key
+        self._temperature = temperature
+        self._timeout_seconds = timeout_seconds
+        self._http_client = http_client
+
+    async def ainvoke(
+        self,
+        input: Any,  # noqa: A002
+        config: RunnableConfig | None = None,
+        **kwargs: Any,
+    ) -> str:
+        """Asynchronously invoke Gemini generateContent with application/json output."""
+        _ = config, kwargs
+        if not self._api_key:
+            raise ClauseAnalysisError(
+                "Missing API key for 'gemini' LLM provider. "
+                "Configure LLM_API_KEY or GEMINI_API_KEY."
+            )
+
+        system_prompt, user_prompt = extract_system_and_user_messages(input)
+        headers: dict[str, str] = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self._api_key,
+        }
+        payload: dict[str, Any] = {
+            "system_instruction": {"parts": [{"text": system_prompt}]},
+            "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+            "generationConfig": {
+                "temperature": self._temperature,
+                "responseMimeType": "application/json",
+            },
+        }
+
+        try:
+            if self._http_client is not None:
+                response = await self._http_client.post(
+                    self._endpoint_url,
+                    headers=headers,
+                    json=payload,
+                    timeout=self._timeout_seconds,
+                )
+            else:
+                async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
+                    response = await client.post(
+                        self._endpoint_url,
+                        headers=headers,
+                        json=payload,
+                    )
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as exc:
+            raise ClauseAnalysisError(
+                f"Gemini LLM request to '{self._endpoint_url}' failed: {exc}"
+            ) from exc
+        except ValueError as exc:
+            raise ClauseAnalysisError(
+                f"Gemini LLM endpoint '{self._endpoint_url}' returned invalid JSON: {exc}"
+            ) from exc
+
+        candidates = data.get("candidates") if isinstance(data, dict) else None
+        if not isinstance(candidates, list) or not candidates:
+            raise ClauseAnalysisError(
+                f"Gemini response from '{self._endpoint_url}' missing 'candidates' array."
+            )
+        first_candidate = candidates[0]
+        content_obj = (
+            first_candidate.get("content") if isinstance(first_candidate, dict) else None
+        )
+        parts = content_obj.get("parts") if isinstance(content_obj, dict) else None
+        if not isinstance(parts, list) or not parts:
+            raise ClauseAnalysisError(
+                f"Gemini response from '{self._endpoint_url}' missing 'parts' in candidate."
+            )
+        first_part = parts[0]
+        text = first_part.get("text") if isinstance(first_part, dict) else None
+        if not isinstance(text, str) or not text.strip():
+            raise ClauseAnalysisError(
+                f"Gemini response from '{self._endpoint_url}' contained empty text content."
+            )
+        return text
+
+    def invoke(
+        self,
+        input: Any,  # noqa: A002
+        config: RunnableConfig | None = None,
+        **kwargs: Any,
+    ) -> str:
+        """Synchronously invoke Google Gemini generateContent."""
+        return asyncio.run(self.ainvoke(input, config=config, **kwargs))
+
+
 LLMFactoryCallable = Callable[..., Runnable[Any, Any]]
 
 
@@ -558,6 +666,27 @@ def _build_openai_compatible_llm(
     )
 
 
+@register_llm_provider("gemini")
+def _build_gemini_llm(
+    settings: Settings,
+    http_client: httpx.AsyncClient | None = None,
+) -> Runnable[Any, str]:
+    model_name = (
+        "gemini-2.5-flash"
+        if settings.LLM_MODEL_NAME == "llama-3.3-70b-versatile"
+        else settings.LLM_MODEL_NAME
+    )
+    return GeminiGenerateContentChatRunnable(
+        model_name=model_name,
+        base_url=settings.LLM_BASE_URL
+        or "https://generativelanguage.googleapis.com/v1beta",
+        api_key=settings.resolve_llm_api_key(),
+        temperature=settings.LLM_TEMPERATURE,
+        timeout_seconds=settings.LLM_TIMEOUT_SECONDS,
+        http_client=http_client,
+    )
+
+
 def create_llm_runnable(
     settings: Settings,
     http_client: httpx.AsyncClient | None = None,
@@ -568,6 +697,7 @@ def create_llm_runnable(
 
 __all__ = [
     "AnthropicMessagesChatRunnable",
+    "GeminiGenerateContentChatRunnable",
     "JSON_SCHEMA_INSTRUCTION",
     "LLMFactoryCallable",
     "LLMProviderRegistry",
