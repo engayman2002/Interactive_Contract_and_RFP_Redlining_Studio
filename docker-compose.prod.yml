@@ -12,7 +12,10 @@ services:
       - backend
       - frontend
     deploy:
-      replicas: 2
+      # Nginx binds host ports 80 and 443; single-host Docker Compose cannot bind
+      # multiple container replicas to the same host port. Keep replicas: 1 on a single node.
+      # For high-availability multi-node deployments, use Docker Swarm or Kubernetes Ingress.
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 10s
@@ -56,6 +59,8 @@ services:
       JWT_SECRET_KEY_FILE: /run/secrets/jwt_secret_key
       GROQ_API_KEY_FILE: /run/secrets/groq_api_key
       OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
+      ANTHROPIC_API_KEY_FILE: /run/secrets/anthropic_api_key
+      GEMINI_API_KEY_FILE: /run/secrets/gemini_api_key
       LLM_PROVIDER: ${LLM_PROVIDER:-groq}
       LLM_MODEL_NAME: ${LLM_MODEL_NAME:-llama-3.3-70b-versatile}
       LLM_TEMPERATURE: "0.0"
@@ -67,6 +72,8 @@ services:
       - jwt_secret_key
       - groq_api_key
       - openai_api_key
+      - anthropic_api_key
+      - gemini_api_key
     volumes:
       - document_storage:/var/lib/redlining_studio/storage
     depends_on:
@@ -92,6 +99,9 @@ services:
         "--loglevel=info",
         "--concurrency=4",
       ]
+    # Override inherited Dockerfile HTTP healthcheck (celery does not run HTTP on port 8000)
+    healthcheck:
+      disable: true
     environment:
       APP_ENV: production
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be configured}
@@ -101,6 +111,8 @@ services:
       JWT_SECRET_KEY_FILE: /run/secrets/jwt_secret_key
       GROQ_API_KEY_FILE: /run/secrets/groq_api_key
       OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
+      ANTHROPIC_API_KEY_FILE: /run/secrets/anthropic_api_key
+      GEMINI_API_KEY_FILE: /run/secrets/gemini_api_key
       LLM_PROVIDER: ${LLM_PROVIDER:-groq}
       LLM_MODEL_NAME: ${LLM_MODEL_NAME:-llama-3.3-70b-versatile}
       LLM_TEMPERATURE: "0.0"
@@ -110,6 +122,8 @@ services:
       - jwt_secret_key
       - groq_api_key
       - openai_api_key
+      - anthropic_api_key
+      - gemini_api_key
     volumes:
       - document_storage:/var/lib/redlining_studio/storage
     depends_on:
@@ -156,6 +170,10 @@ secrets:
     file: ${GROQ_API_KEY_HOST_PATH:-./deploy/secrets/groq_api_key.txt}
   openai_api_key:
     file: ${OPENAI_API_KEY_HOST_PATH:-./deploy/secrets/openai_api_key.txt}
+  anthropic_api_key:
+    file: ${ANTHROPIC_API_KEY_HOST_PATH:-./deploy/secrets/anthropic_api_key.txt}
+  gemini_api_key:
+    file: ${GEMINI_API_KEY_HOST_PATH:-./deploy/secrets/gemini_api_key.txt}
   postgres_password:
     file: ${POSTGRES_PASSWORD_HOST_PATH:-./deploy/secrets/postgres_password.txt}
 

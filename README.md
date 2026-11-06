@@ -385,21 +385,24 @@ docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
 
 ### Mode C: Production Beta Deployment (Docker Swarm / Kubernetes + Nginx TLS 1.3 & Unbuffered SSE)
 
-#### 1. Provision Production Secrets & TLS Certificates
+#### 1. Idempotently Bootstrap Secrets & TLS Certificates
+
+Use the provided production bootstrap script to initialize directories, generate cryptographically random secrets with `0644` permissions (readable by non-root container `UID 10001`), and provision a self-signed TLS certificate if absent:
 
 ```bash
 cd /home/ayman/Interactive_Contract_and_RFP_Redlining_Studio
-cp .env.production.example .env.production
 
-# Create mounted secret files with strict 0600 permissions
-mkdir -p deploy/secrets deploy/nginx/certs
-openssl rand -hex 32 > deploy/secrets/jwt_secret_key.txt
-echo "gsk_YOUR_PRODUCTION_GROQ_API_KEY" > deploy/secrets/groq_api_key.txt
-echo "sk-YOUR_PRODUCTION_OPENAI_API_KEY" > deploy/secrets/openai_api_key.txt
-openssl rand -hex 24 > deploy/secrets/postgres_password.txt
-chmod 600 deploy/secrets/*.txt
+# 1. Run the idempotent bootstrap script
+bash deploy/scripts/bootstrap-prod-local.sh
 
-# Place your Let's Encrypt / Enterprise CA certificate and private key in deploy/nginx/certs/
+# 2. (Optional) Inject real AI provider API keys into deploy/secrets/
+# echo "gsk_YOUR_REAL_KEY" > deploy/secrets/groq_api_key.txt
+# echo "sk-YOUR_REAL_KEY" > deploy/secrets/openai_api_key.txt
+# echo "sk-ant-YOUR_REAL_KEY" > deploy/secrets/anthropic_api_key.txt
+# echo "YOUR_GEMINI_KEY" > deploy/secrets/gemini_api_key.txt
+# chmod 644 deploy/secrets/*.txt
+
+# 3. For custom domains, replace self-signed certs in deploy/nginx/certs/ with your Let's Encrypt / CA certs:
 # deploy/nginx/certs/fullchain.pem
 # deploy/nginx/certs/privkey.pem
 ```
@@ -407,13 +410,16 @@ chmod 600 deploy/secrets/*.txt
 #### 2. Option 1 — Deploy via Docker Compose Production / Docker Swarm
 
 ```bash
-# Build production images
-docker compose -f docker-compose.prod.yml --env-file .env.production build
+# 1. Build production images and start the stack (always use --env-file rather than 'source .env'):
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 
-# Start in Docker Compose production mode:
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+# 2. Apply database migrations inside the running backend container:
+docker compose --env-file .env.production -f docker-compose.prod.yml exec backend alembic upgrade head
 
-# OR deploy to a Docker Swarm cluster (2 replicas per stateless service with rolling updates):
+# 3. Verify service health and HTTPS endpoint:
+curl -k -fsS https://127.0.0.1/api/v1/health
+
+# OR deploy to a Docker Swarm cluster (with rolling updates):
 docker stack deploy -c docker-compose.prod.yml redlining-studio
 ```
 
@@ -991,7 +997,7 @@ cd /home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend
 # 2. Strict Static Type Checking (92 source & test files)
 ./.venv/bin/mypy --strict src tests
 
-# 3. Full Unit & Multi-Tenant Integration Test Suite (46 tests)
+# 3. Full Unit & Multi-Tenant Integration Test Suite (49 tests)
 ./.venv/bin/pytest -v
 ```
 
@@ -1017,9 +1023,13 @@ cd /home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend
 
 | Symptom / HTTP Error | Root Cause | Resolution |
 | :--- | :--- | :--- |
+| **`Bind for 0.0.0.0:80 failed: port is already allocated`** | `docker-compose.prod.yml` configured `replicas: 2` on the `nginx` service while publishing host ports `80` and `443` on a single Docker host. | Keep `nginx.deploy.replicas: 1` in [`docker-compose.prod.yml`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/docker-compose.prod.yml). Single-host Docker Compose cannot bind multiple container replicas to the same host port. Stateless app containers (`backend`, `frontend`, `celery-worker`) scale to multiple replicas while Nginx acts as the single edge ingress proxy. |
+| **`PermissionError: [Errno 13] Permission denied: '/run/secrets/jwt_secret_key'`** | Host secret files in `deploy/secrets/*.txt` were created with `0600` permissions (root/owner only), but the backend container runs as non-root user `redline` (`UID 10001`). | Run `chmod 644 deploy/secrets/*.txt` (or `chown 10001:10001 deploy/secrets/*.txt`) on the host, or run [`bash deploy/scripts/bootstrap-prod-local.sh`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/deploy/scripts/bootstrap-prod-local.sh) which automatically applies `0644`. |
+| **Celery Worker marked `unhealthy` by Docker** | `celery-worker` inherited the Dockerfile HTTP healthcheck (`curl http://127.0.0.1:8000/api/v1/health`), but the Celery worker process handles background tasks and does not bind port 8000. | Override the healthcheck in [`docker-compose.prod.yml`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/docker-compose.prod.yml#L98-L100) with `healthcheck: disable: true`. |
+| **Bash syntax errors when sourcing `.env` (e.g. `syntax error near unexpected token '['`)** | Sourcing `.env` directly in Bash (`. ./.env`) treats JSON array values (`CORS_ALLOWED_ORIGINS=["..."]`) as shell glob syntax. | Do not use `source .env`. Pass the environment file directly to Docker Compose via `docker compose --env-file .env.production -f docker-compose.prod.yml up -d`. |
 | **`409 Conflict` (`CONCURRENCY_CONFLICT`)** when accepting, modifying, or rejecting a redline | Another user (or tab) modified the target clause, incrementing `document_clauses.version` past your `expected_clause_version`. | Click **Dismiss** on the red `409 Conflict` banner in the Studio header and re-fetch the workspace (`GET /api/v1/documents/{id}/workspace`) so your editor reflects the latest `version`. |
 | **`429 Too Many Requests` (`RATE_LIMIT_EXCEEDED`)** | Client exceeded `RATE_LIMIT_REQUESTS_PER_MINUTE` (default `240` requests per `60s` sliding window). | Respect the `Retry-After` HTTP response header, or increase `RATE_LIMIT_REQUESTS_PER_MINUTE` in `.env` / [`config.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/config.py#L134). |
 | **SSE Audit Stream (`GET /api/v1/documents/{id}/stream`) arrives all at once instead of incrementally** | Reverse proxy in front of FastAPI is buffering `text/event-stream` responses. | Ensure Nginx includes `proxy_buffering off;`, `proxy_cache off;`, and `add_header X-Accel-Buffering "no" always;` on `/api/v1/documents/*/stream` as configured in [`deploy/nginx/nginx.conf`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/deploy/nginx/nginx.conf#L55-L71). |
 | **CORS Preflight Error in Browser Console** | Frontend origin is not listed in `CORS_ALLOWED_ORIGINS`, or wildcard `"*"` was used. | Add the exact scheme, host, and port (e.g. `["https://redline.example.com", "http://localhost:3000"]`) to `CORS_ALLOWED_ORIGINS`. Wildcard `"*"` is blocked by design for security. |
 | **`RuntimeError: CRITICAL: JWT_SECRET_KEY or JWT_SECRET_KEY_FILE must be configured in production`** | `APP_ENV=production` is set without a configured `JWT_SECRET_KEY` environment variable or `/run/secrets/jwt_secret_key` file mount. | Mount `/run/secrets/jwt_secret_key` and set `JWT_SECRET_KEY_FILE=/run/secrets/jwt_secret_key` (or export `JWT_SECRET_KEY`). |
-| **`UnsupportedAIProviderError` (`UNSUPPORTED_AI_PROVIDER`)** | `LLM_PROVIDER` or `EMBEDDING_PROVIDER` is set to a provider name not registered in [`LLMProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py) or [`EmbeddingProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py). | Use one of the built-in providers (`deterministic`, `groq`, `openai`, `anthropic`, `ollama`, `openai_compatible`) or register your custom plugin with `@register_llm_provider` / `@register_embedding_provider`. |
+| **`UnsupportedAIProviderError` (`UNSUPPORTED_AI_PROVIDER`)** | `LLM_PROVIDER` or `EMBEDDING_PROVIDER` is set to a provider name not registered in [`LLMProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py) or [`EmbeddingProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py). | Use one of the built-in providers (`deterministic`, `groq`, `openai`, `anthropic`, `gemini`, `ollama`, `openai_compatible`) or register your custom plugin with `@register_llm_provider` / `@register_embedding_provider`. |

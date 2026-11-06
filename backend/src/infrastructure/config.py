@@ -14,18 +14,31 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_optional_secret(env_var_name: str) -> str | None:
-    """Resolve an optional secret from environment variable or `*_FILE` secret mount."""
+    """Resolve an optional secret from environment variable or `*_FILE` secret mount.
+
+    Gracefully handles missing files, unreadable files (PermissionError/OSError),
+    and placeholder values.
+    """
     direct_value = os.getenv(env_var_name, "").strip()
-    if direct_value:
+    if direct_value and direct_value != "local-only-placeholder":
         return direct_value
 
     file_path_str = os.getenv(f"{env_var_name}_FILE", "").strip()
     if file_path_str:
         secret_path = Path(file_path_str)
-        if secret_path.is_file():
-            file_val = secret_path.read_text(encoding="utf-8").strip()
-            if file_val:
-                return file_val
+        try:
+            if secret_path.is_file():
+                file_val = secret_path.read_text(encoding="utf-8").strip()
+                if file_val and file_val != "local-only-placeholder":
+                    return file_val
+        except OSError as exc:
+            logger.warning(
+                "Unable to read optional secret file '%s' for %s (%s). Falling back to None.",
+                file_path_str,
+                env_var_name,
+                exc,
+            )
+            return None
     return None
 
 
@@ -33,14 +46,43 @@ def _resolve_jwt_secret() -> str:
     """Resolve JWT secret safely without hardcoded literals.
 
     Resolution order:
-    1. Environment variable `JWT_SECRET_KEY`
+    1. Environment variable `JWT_SECRET_KEY` (if non-empty and not placeholder)
     2. Mounted secret file `JWT_SECRET_KEY_FILE` (Docker Swarm / Kubernetes Secret volume)
     3. Local secret file `jwt_secret.txt` (non-production only)
     4. Ephemeral CSPRNG fallback for development/testing with warning
     """
-    resolved = _resolve_optional_secret("JWT_SECRET_KEY")
-    if resolved:
-        return resolved
+    direct_value = os.getenv("JWT_SECRET_KEY", "").strip()
+    if direct_value and direct_value != "local-only-placeholder":
+        return direct_value
+
+    file_path_str = os.getenv("JWT_SECRET_KEY_FILE", "").strip()
+    if file_path_str:
+        secret_path = Path(file_path_str)
+        try:
+            if secret_path.is_file():
+                file_val = secret_path.read_text(encoding="utf-8").strip()
+                if file_val and file_val != "local-only-placeholder":
+                    return file_val
+        except PermissionError as exc:
+            app_env = os.getenv("APP_ENV", "development").strip().lower()
+            if app_env == "production":
+                raise RuntimeError(
+                    f"Permission denied reading '{file_path_str}'. "
+                    "The backend container runs as non-root UID 10001 (redline). "
+                    "Run 'chmod 644 deploy/secrets/*.txt' or "
+                    "'chown 10001:10001 deploy/secrets/*.txt' on the host."
+                ) from exc
+            logger.warning(
+                "Permission denied reading secret file '%s' in %s mode. Falling back.",
+                file_path_str,
+                app_env,
+            )
+        except OSError as exc:
+            logger.warning(
+                "Unable to read secret file '%s' for JWT_SECRET_KEY (%s). Falling back.",
+                file_path_str,
+                exc,
+            )
 
     app_env = os.getenv("APP_ENV", "development").strip().lower()
     if app_env == "production":
@@ -49,10 +91,13 @@ def _resolve_jwt_secret() -> str:
         )
 
     secret_file = Path("jwt_secret.txt")
-    if secret_file.exists():
-        file_secret = secret_file.read_text(encoding="utf-8").strip()
-        if file_secret:
-            return file_secret
+    try:
+        if secret_file.exists():
+            file_secret = secret_file.read_text(encoding="utf-8").strip()
+            if file_secret and file_secret != "local-only-placeholder":  # noqa: S105
+                return file_secret
+    except OSError:
+        pass
 
     logger.warning(
         "Generating ephemeral JWT secret via CSPRNG. Instance-isolated; "

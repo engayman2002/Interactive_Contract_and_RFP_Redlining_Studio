@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import jwt
@@ -168,4 +169,87 @@ def test_production_secret_file_mount_resolution(
 
     gemini_embed_settings = Settings(EMBEDDING_PROVIDER="gemini")
     assert gemini_embed_settings.resolve_embedding_api_key() == "gemini-prod-mounted-key"
+
+
+def test_unreadable_optional_secret_files_and_placeholders_gracefully_ignored(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify unreadable or placeholder optional secret files do not crash Settings."""
+    unreadable_file = tmp_path / "unreadable_groq_key.txt"
+    unreadable_file.write_text("dummy", encoding="utf-8")
+
+    placeholder_file = tmp_path / "placeholder_gemini_key.txt"
+    placeholder_file.write_text("local-only-placeholder\n", encoding="utf-8")
+
+    original_read_text = Path.read_text
+
+    def mock_read_text(self: Path, *args: Any, **kwargs: Any) -> str:
+        if "unreadable" in str(self):
+            raise PermissionError(f"Permission denied: '{self}'")
+        return original_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", mock_read_text)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("GROQ_API_KEY_FILE", str(unreadable_file))
+    monkeypatch.setenv("GEMINI_API_KEY_FILE", str(placeholder_file))
+
+    settings = Settings(LLM_PROVIDER="deterministic")
+    assert settings.GROQ_API_KEY is None
+    assert settings.GEMINI_API_KEY is None
+
+
+def test_jwt_secret_file_permission_denied_in_production_raises_actionable_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify PermissionError on JWT_SECRET_KEY_FILE in production outputs actionable guidance."""
+    unreadable_jwt = tmp_path / "unreadable_jwt_secret"
+    unreadable_jwt.write_text("secret", encoding="utf-8")
+
+    original_read_text = Path.read_text
+
+    def mock_read_text(self: Path, *args: Any, **kwargs: Any) -> str:
+        if "unreadable" in str(self):
+            raise PermissionError(f"Permission denied: '{self}'")
+        return original_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", mock_read_text)
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("JWT_SECRET_KEY_FILE", str(unreadable_jwt))
+
+    with pytest.raises(RuntimeError) as exc_info:
+        Settings()
+
+    err_msg = str(exc_info.value)
+    assert "Permission denied reading" in err_msg
+    assert "UID 10001 (redline)" in err_msg
+    assert "chmod 644 deploy/secrets/*.txt" in err_msg
+
+
+def test_jwt_secret_env_var_prioritized_over_unreadable_secret_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify valid JWT_SECRET_KEY env var takes precedence and bypasses unreadable secret file."""
+    unreadable_jwt = tmp_path / "unreadable_jwt_secret"
+    unreadable_jwt.write_text("secret", encoding="utf-8")
+
+    original_read_text = Path.read_text
+
+    def mock_read_text(self: Path, *args: Any, **kwargs: Any) -> str:
+        if "unreadable" in str(self):
+            raise PermissionError(f"Permission denied: '{self}'")
+        return original_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", mock_read_text)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("JWT_SECRET_KEY", "direct-env-var-jwt-secret-with-sufficient-length")
+    monkeypatch.setenv("JWT_SECRET_KEY_FILE", str(unreadable_jwt))
+
+    settings = Settings()
+    assert settings.JWT_SECRET_KEY == "direct-env-var-jwt-secret-with-sufficient-length"  # noqa: S105
+
 
