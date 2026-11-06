@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redlining-postgres
+  namespace: redlining-studio
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: redlining-postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redlining-postgres
+  namespace: redlining-studio
+spec:
+  serviceName: "redlining-postgres"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redlining-postgres
+  template:
+    metadata:
+      labels:
+        app: redlining-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "redline_app"
+            - name: POSTGRES_DB
+              value: "redlining_studio"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redlining-studio-secrets
+                  key: postgres_password
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 50Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redlining-redis
+  namespace: redlining-studio
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: redlining-redis
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redlining-redis
+  namespace: redlining-studio
+spec:
+  serviceName: "redlining-redis"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redlining-redis
+  template:
+    metadata:
+      labels:
+        app: redlining-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server", "--appendonly", "yes"]
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: redis-storage
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+

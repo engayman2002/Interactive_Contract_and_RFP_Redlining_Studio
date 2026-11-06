@@ -29,6 +29,12 @@ coverage.xml
 .env.*
 !.env.example
 jwt_secret.txt
+.env.production
+deploy/secrets/
+deploy/nginx/certs/
+*.pem
+*.key
+*.crt
 
 # IDE & OS files
 .vscode/

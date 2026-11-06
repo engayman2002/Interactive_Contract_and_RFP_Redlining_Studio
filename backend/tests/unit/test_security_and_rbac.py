@@ -1,6 +1,7 @@
 """Unit tests for PasswordService, JwtTokenService, and RbacGuardService."""
 
 from datetime import timedelta
+from pathlib import Path
 from uuid import uuid4
 
 import jwt
@@ -18,6 +19,7 @@ from src.domain.exceptions import (
     TenantIsolationError,
     UnauthorizedError,
 )
+from src.infrastructure.config import Settings
 
 
 def test_password_service_hash_and_verify() -> None:
@@ -126,3 +128,31 @@ def test_rbac_guard_blocks_viewer_mutations_and_enforces_role_matrix() -> None:
     guard.enforce_tenant_isolation(actor_org_id=org_a, target_org_id=org_a)
     with pytest.raises(TenantIsolationError):
         guard.enforce_tenant_isolation(actor_org_id=org_a, target_org_id=org_b)
+
+
+def test_production_secret_file_mount_resolution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify Docker Swarm / Kubernetes `*_FILE` secret mounts resolve in production mode."""
+    jwt_file = tmp_path / "jwt_secret_key"
+    groq_file = tmp_path / "groq_api_key"
+    openai_file = tmp_path / "openai_api_key"
+
+    jwt_file.write_text("prod-mounted-jwt-secret-key-with-32-plus-bytes\n", encoding="utf-8")
+    groq_file.write_text("gsk_prod_mounted_groq_key\n", encoding="utf-8")
+    openai_file.write_text("sk-prod-mounted-openai-key\n", encoding="utf-8")
+
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("JWT_SECRET_KEY_FILE", str(jwt_file))
+    monkeypatch.setenv("GROQ_API_KEY_FILE", str(groq_file))
+    monkeypatch.setenv("OPENAI_API_KEY_FILE", str(openai_file))
+
+    prod_settings = Settings()
+    assert prod_settings.JWT_SECRET_KEY == "prod-mounted-jwt-secret-key-with-32-plus-bytes"  # noqa: S105
+    assert prod_settings.GROQ_API_KEY == "gsk_prod_mounted_groq_key"
+    assert prod_settings.OPENAI_API_KEY == "sk-prod-mounted-openai-key"
+

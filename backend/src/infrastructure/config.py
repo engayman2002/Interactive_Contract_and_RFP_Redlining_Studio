@@ -13,22 +13,39 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 logger = logging.getLogger(__name__)
 
 
+def _resolve_optional_secret(env_var_name: str) -> str | None:
+    """Resolve an optional secret from environment variable or `*_FILE` secret mount."""
+    direct_value = os.getenv(env_var_name, "").strip()
+    if direct_value:
+        return direct_value
+
+    file_path_str = os.getenv(f"{env_var_name}_FILE", "").strip()
+    if file_path_str:
+        secret_path = Path(file_path_str)
+        if secret_path.is_file():
+            file_val = secret_path.read_text(encoding="utf-8").strip()
+            if file_val:
+                return file_val
+    return None
+
+
 def _resolve_jwt_secret() -> str:
     """Resolve JWT secret safely without hardcoded literals.
 
     Resolution order:
     1. Environment variable `JWT_SECRET_KEY`
-    2. Local secret file `jwt_secret.txt` (non-production only)
-    3. Ephemeral CSPRNG fallback for development/testing with warning
+    2. Mounted secret file `JWT_SECRET_KEY_FILE` (Docker Swarm / Kubernetes Secret volume)
+    3. Local secret file `jwt_secret.txt` (non-production only)
+    4. Ephemeral CSPRNG fallback for development/testing with warning
     """
-    env_secret = os.getenv("JWT_SECRET_KEY", "").strip()
-    if env_secret:
-        return env_secret
+    resolved = _resolve_optional_secret("JWT_SECRET_KEY")
+    if resolved:
+        return resolved
 
     app_env = os.getenv("APP_ENV", "development").strip().lower()
     if app_env == "production":
         raise RuntimeError(
-            "CRITICAL: JWT_SECRET_KEY environment variable must be configured in production."
+            "CRITICAL: JWT_SECRET_KEY or JWT_SECRET_KEY_FILE must be configured in production."
         )
 
     secret_file = Path("jwt_secret.txt")
@@ -95,12 +112,16 @@ class Settings(BaseSettings):
     PLAYBOOK_DEFAULT_TOP_K: int = Field(default=3, ge=1, le=50)
     HYBRID_VECTOR_WEIGHT: float = Field(default=0.7, ge=0.0, le=1.0)
     HYBRID_KEYWORD_WEIGHT: float = Field(default=0.3, ge=0.0, le=1.0)
-    OPENAI_API_KEY: str | None = Field(default=None)
+    OPENAI_API_KEY: str | None = Field(
+        default_factory=lambda: _resolve_optional_secret("OPENAI_API_KEY")
+    )
     EMBEDDING_MODEL_NAME: str = Field(default="text-embedding-3-small")
 
     # Phase 4: LangChain Redlining Engine & Async Worker Pipeline Configuration
     LLM_PROVIDER: str = Field(default="deterministic")
-    GROQ_API_KEY: str | None = Field(default=None)
+    GROQ_API_KEY: str | None = Field(
+        default_factory=lambda: _resolve_optional_secret("GROQ_API_KEY")
+    )
     LLM_MODEL_NAME: str = Field(default="llama-3.3-70b-versatile")
     LLM_TEMPERATURE: float = Field(default=0.0, ge=0.0, le=1.0)
     REDLINE_BATCH_CONCURRENCY: int = Field(default=20, ge=1, le=100)

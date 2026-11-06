@@ -1,0 +1,166 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
+      - frontend
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api/v1}
+    image: redlining-studio-frontend:0.2.0-beta
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    depends_on:
+      - backend
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: redlining-studio-backend:0.2.0-beta
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be configured}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_TASK_ALWAYS_EAGER: "false"
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-["https://redline.example.com"]}
+      JWT_SECRET_KEY_FILE: /run/secrets/jwt_secret_key
+      GROQ_API_KEY_FILE: /run/secrets/groq_api_key
+      OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
+      LLM_PROVIDER: ${LLM_PROVIDER:-groq}
+      LLM_MODEL_NAME: ${LLM_MODEL_NAME:-llama-3.3-70b-versatile}
+      LLM_TEMPERATURE: "0.0"
+      REDLINE_BATCH_CONCURRENCY: "20"
+      STORAGE_ROOT_PATH: /var/lib/redlining_studio/storage
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_REQUESTS_PER_MINUTE: "${RATE_LIMIT_REQUESTS_PER_MINUTE:-240}"
+    secrets:
+      - jwt_secret_key
+      - groq_api_key
+      - openai_api_key
+    volumes:
+      - document_storage:/var/lib/redlining_studio/storage
+    depends_on:
+      - postgres
+      - redis
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+  celery-worker:
+    image: redlining-studio-backend:0.2.0-beta
+    restart: unless-stopped
+    command:
+      [
+        "celery",
+        "-A",
+        "src.infrastructure.ai.celery_worker:celery_app",
+        "worker",
+        "--loglevel=info",
+        "--concurrency=4",
+      ]
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be configured}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_TASK_ALWAYS_EAGER: "false"
+      JWT_SECRET_KEY_FILE: /run/secrets/jwt_secret_key
+      GROQ_API_KEY_FILE: /run/secrets/groq_api_key
+      OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
+      LLM_PROVIDER: ${LLM_PROVIDER:-groq}
+      LLM_MODEL_NAME: ${LLM_MODEL_NAME:-llama-3.3-70b-versatile}
+      LLM_TEMPERATURE: "0.0"
+      REDLINE_BATCH_CONCURRENCY: "20"
+      STORAGE_ROOT_PATH: /var/lib/redlining_studio/storage
+    secrets:
+      - jwt_secret_key
+      - groq_api_key
+      - openai_api_key
+    volumes:
+      - document_storage:/var/lib/redlining_studio/storage
+    depends_on:
+      - postgres
+      - redis
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-redline_app}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: ${POSTGRES_DB:-redlining_studio}
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-redline_app} -d $${POSTGRES_DB:-redlining_studio}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+secrets:
+  jwt_secret_key:
+    file: ${JWT_SECRET_KEY_HOST_PATH:-./deploy/secrets/jwt_secret_key.txt}
+  groq_api_key:
+    file: ${GROQ_API_KEY_HOST_PATH:-./deploy/secrets/groq_api_key.txt}
+  openai_api_key:
+    file: ${OPENAI_API_KEY_HOST_PATH:-./deploy/secrets/openai_api_key.txt}
+  postgres_password:
+    file: ${POSTGRES_PASSWORD_HOST_PATH:-./deploy/secrets/postgres_password.txt}
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:
+  document_storage:
+

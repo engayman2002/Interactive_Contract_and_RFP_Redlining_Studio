@@ -152,3 +152,48 @@ cd frontend
 ./node_modules/.bin/next build
 ```
 
+---
+
+## Production Beta Deployment (Docker Swarm, Kubernetes & Nginx TLS 1.3)
+
+### 1. Provision Secrets & Environment Variables
+
+Copy [.env.production.example](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/.env.production.example) to `.env.production` and populate mounted secret files for `JWT_SECRET_KEY`, `GROQ_API_KEY`, `OPENAI_API_KEY`, and `POSTGRES_PASSWORD`:
+
+```bash
+mkdir -p deploy/secrets deploy/nginx/certs
+openssl rand -hex 32 > deploy/secrets/jwt_secret_key.txt
+echo "gsk_your_production_groq_key" > deploy/secrets/groq_api_key.txt
+echo "sk-your_production_openai_key" > deploy/secrets/openai_api_key.txt
+openssl rand -hex 24 > deploy/secrets/postgres_password.txt
+chmod 600 deploy/secrets/*.txt
+```
+
+### 2. Deploy with Docker Compose / Docker Swarm
+
+[docker-compose.prod.yml](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/docker-compose.prod.yml) orchestrates:
+- **Nginx Reverse Proxy** ([deploy/nginx/nginx.conf](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/deploy/nginx/nginx.conf)) with TLS 1.2/1.3 termination, HSTS, `25M` upload ceiling, and zero-buffering Server-Sent Events (`proxy_buffering off;`) on `/api/v1/documents/*/stream`.
+- **Next.js 15 Standalone Frontend** ([frontend/Dockerfile](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/Dockerfile)) running as non-root `nextjs` user (`uid 10001`).
+- **FastAPI Backend & Celery Workers** ([backend/Dockerfile](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/Dockerfile)) running as non-root `redline` user (`uid 10001`) reading mounted secrets from `/run/secrets/*`.
+- **PostgreSQL 16 (`pgvector`) & Redis 7** with persistent volumes and healthchecks.
+
+```bash
+# Docker Compose Production Mode
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+
+# Or Docker Swarm Stack Deployment
+docker stack deploy -c docker-compose.prod.yml redlining-studio
+```
+
+### 3. Deploy to Kubernetes (`deploy/k8s/`)
+
+Apply the manifests in [deploy/k8s/](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/deploy/k8s/) in order:
+
+```bash
+kubectl apply -f deploy/k8s/00-namespace-and-config.yaml
+kubectl apply -f deploy/k8s/01-postgres-and-redis.yaml
+kubectl apply -f deploy/k8s/02-backend-and-worker.yaml
+kubectl apply -f deploy/k8s/03-frontend-and-nginx.yaml
+```
+
+

@@ -1,0 +1,146 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redlining-backend
+  namespace: redlining-studio
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: redlining-backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redlining-backend
+  namespace: redlining-studio
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: redlining-backend
+  template:
+    metadata:
+      labels:
+        app: redlining-backend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: backend
+          image: redlining-studio-backend:0.2.0-beta
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: redlining-studio-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redlining-studio-secrets
+                  key: DATABASE_URL
+          volumeMounts:
+            - name: secret-files
+              mountPath: /run/secrets
+              readOnly: true
+            - name: document-storage
+              mountPath: /var/lib/redlining_studio/storage
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+      volumes:
+        - name: secret-files
+          secret:
+            secretName: redlining-studio-secrets
+            items:
+              - key: jwt_secret_key
+                path: jwt_secret_key
+              - key: groq_api_key
+                path: groq_api_key
+              - key: openai_api_key
+                path: openai_api_key
+        - name: document-storage
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redlining-celery-worker
+  namespace: redlining-studio
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: redlining-celery-worker
+  template:
+    metadata:
+      labels:
+        app: redlining-celery-worker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      containers:
+        - name: celery-worker
+          image: redlining-studio-backend:0.2.0-beta
+          command:
+            - "celery"
+            - "-A"
+            - "src.infrastructure.ai.celery_worker:celery_app"
+            - "worker"
+            - "--loglevel=info"
+            - "--concurrency=4"
+          envFrom:
+            - configMapRef:
+                name: redlining-studio-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redlining-studio-secrets
+                  key: DATABASE_URL
+          volumeMounts:
+            - name: secret-files
+              mountPath: /run/secrets
+              readOnly: true
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+      volumes:
+        - name: secret-files
+          secret:
+            secretName: redlining-studio-secrets
+            items:
+              - key: jwt_secret_key
+                path: jwt_secret_key
+              - key: groq_api_key
+                path: groq_api_key
+              - key: openai_api_key
+                path: openai_api_key
+
