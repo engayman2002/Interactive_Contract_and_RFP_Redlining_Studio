@@ -10,12 +10,28 @@ from src.infrastructure.vector.hybrid_retriever import (
     HybridPlaybookRetriever,
     compute_cosine_similarity,
 )
+from src.infrastructure.vector.provider_registry import (
+    EmbeddingProviderRegistry,
+    OllamaEmbeddingAdapter,
+    OpenAICompatibleEmbeddingAdapter,
+    UnsupportedAIProviderError,
+    adapt_and_normalize_vector,
+    create_embedding_generator,
+    register_embedding_provider,
+)
 
 __all__ = [
     "DeterministicHashEmbeddingAdapter",
+    "EmbeddingProviderRegistry",
     "HybridPlaybookRetriever",
+    "OllamaEmbeddingAdapter",
+    "OpenAICompatibleEmbeddingAdapter",
+    "UnsupportedAIProviderError",
+    "adapt_and_normalize_vector",
     "compute_cosine_similarity",
+    "create_embedding_generator",
     "format_playbook_rule_for_embedding",
+    "register_embedding_provider",
     "stem_legal_token",
     "tokenize_legal_text",
 ]

@@ -8,13 +8,14 @@ from celery import Celery
 
 from src.domain.entities import DocumentClause
 from src.infrastructure.ai.batch_worker import BatchDocumentAuditWorker
+from src.infrastructure.ai.provider_registry import create_llm_runnable
 from src.infrastructure.ai.redline_chain import LangChainClauseAuditor
 from src.infrastructure.config import get_settings
 from src.infrastructure.db.repositories import SqlAlchemyUnitOfWork
 from src.infrastructure.db.session import AsyncSessionFactory
 from src.infrastructure.vector import (
-    DeterministicHashEmbeddingAdapter,
     HybridPlaybookRetriever,
+    create_embedding_generator,
 )
 
 
@@ -49,14 +50,16 @@ async def _run_batch_audit_for_clauses(
     settings = get_settings()
     async with AsyncSessionFactory() as session:
         uow = SqlAlchemyUnitOfWork(session)
-        embedder = DeterministicHashEmbeddingAdapter(dimension=settings.EMBEDDING_DIMENSION)
+        embedder = create_embedding_generator(settings)
         retriever = HybridPlaybookRetriever(
             repository=uow.playbooks,
             embedding_generator=embedder,
             vector_weight=settings.HYBRID_VECTOR_WEIGHT,
             keyword_weight=settings.HYBRID_KEYWORD_WEIGHT,
         )
+        llm_runnable = create_llm_runnable(settings)
         auditor = LangChainClauseAuditor(
+            llm_runnable=llm_runnable,
             max_retries=settings.REDLINE_MAX_RETRIES,
             temperature=settings.LLM_TEMPERATURE,
         )

@@ -177,9 +177,11 @@ Interactive_Contract_and_RFP_Redlining_Studio/
 │   │   │   │   └── docx_exporter.py                # NativeWordDocxExporter (<w:ins>, <w:del>, Clean Mode)
 │   │   │   ├── vector/
 │   │   │   │   ├── embedding_service.py            # DeterministicHashEmbeddingAdapter (1536-d Unit Vectors)
-│   │   │   │   └── hybrid_retriever.py             # HybridPlaybookRetriever (Cosine + BM25 Lexical Scorer)
+│   │   │   │   ├── hybrid_retriever.py             # HybridPlaybookRetriever (Cosine + BM25 Lexical Scorer)
+│   │   │   │   └── provider_registry.py            # EmbeddingProviderRegistry, Dimension Adapter, OpenAI/Ollama Adapters
 │   │   │   └── ai/
 │   │   │       ├── redline_chain.py                # RedlineOutput, SYSTEM_PROMPT, LangChainClauseAuditor
+│   │   │       ├── provider_registry.py            # LLMProviderRegistry (Deterministic, Groq, OpenAI, Anthropic, Ollama, vLLM)
 │   │   │       ├── batch_worker.py                 # BatchDocumentAuditWorker (Bounded Semaphore=20)
 │   │   │       └── celery_app.py                   # Celery Worker App & audit_document_celery_task
 │   │   └── presentation/                           # Delivery & HTTP Layer
@@ -195,7 +197,7 @@ Interactive_Contract_and_RFP_Redlining_Studio/
 │   │           └── rate_limiter.py                 # SlidingWindowRateLimitMiddleware (429 + Retry-After)
 │   └── tests/
 │       ├── conftest.py                             # Isolated In-Memory Async SQLite + Temp Storage Test Fixtures
-│       ├── unit/                                   # 6 Unit Test Suites (Domain, Security, Parsers, Vector, AI, DOCX)
+│       ├── unit/                                   # 7 Unit Test Suites (Domain, Security, Parsers, Vector, AI, Plugins, DOCX)
 │       └── integration/                            # 6 Full-Stack Multi-Tenant API Integration Test Suites
 └── frontend/
     ├── Dockerfile                                  # Multi-Stage Node 22 Alpine Standalone Production Image (uid 10001)
@@ -462,16 +464,24 @@ All backend configuration variables are defined and validated via Pydantic Setti
 | `ALLOWED_UPLOAD_EXTENSIONS` | — | `(".docx", ".pdf")` | No | Allow-listed contract file extensions. |
 | `ALLOWED_UPLOAD_MIME_TYPES` | — | `("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/pdf", "application/octet-stream")` | No | Allow-listed MIME types for document ingestion. |
 | `STORAGE_ROOT_PATH` | — | `Path("/tmp/redlining_studio_storage")` | **Yes** (`/var/lib/redlining_studio/storage`) | Filesystem root directory (outside web root) where tenant-isolated raw uploads are stored (`{org_id}/{document_id}/...`). |
+| `EMBEDDING_PROVIDER` | — | `"deterministic"` | No (`"openai"`, `"ollama"`, or `"openai_compatible"`) | Selects the playbook vector embedding adapter registered in [`EmbeddingProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py#L315-L373). |
+| `EMBEDDING_MODEL_NAME` | — | `"text-embedding-3-small"` | No | Target embedding model identifier (e.g., `"text-embedding-3-small"`, `"nomic-embed-text"`, `"mxbai-embed-large"`, `"bge-m3"`). |
+| `EMBEDDING_BASE_URL` | — | `None` | No | Optional custom base URL for local or self-hosted embedding servers (e.g., `"http://localhost:11434"` for Ollama or `"http://localhost:8080/v1"` for vLLM/TEI/LM Studio). |
+| `EMBEDDING_API_KEY` | `EMBEDDING_API_KEY_FILE` (`/run/secrets/embedding_api_key`) | `None` | Optional | Unified API key for the active embedding provider (falls back to `OPENAI_API_KEY`). |
+| `EMBEDDING_TIMEOUT_SECONDS` | — | `30.0` (`1.0`–`300.0`) | No | HTTP request timeout in seconds for external/local embedding calls. |
 | `EMBEDDING_DIMENSION` | — | `1536` (`128`–`4096`) | No | Vector dimensionality matching the PostgreSQL `vector(1536)` column on `playbook_rules`. |
 | `PLAYBOOK_DEFAULT_TOP_K` | — | `3` (`1`–`50`) | No | Number of top-ranked playbook rules retrieved per clause during hybrid search and AI auditing. |
 | `HYBRID_VECTOR_WEIGHT` | — | `0.7` (`0.0`–`1.0`) | No | Weight applied to dense vector cosine similarity in [`HybridPlaybookRetriever`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/hybrid_retriever.py#L34-L48). |
 | `HYBRID_KEYWORD_WEIGHT` | — | `0.3` (`0.0`–`1.0`) | No | Weight applied to normalized BM25 + lexical overlap score in [`HybridPlaybookRetriever`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/hybrid_retriever.py#L34-L48). |
 | `OPENAI_API_KEY` | `OPENAI_API_KEY_FILE` (`/run/secrets/openai_api_key`) | `None` | Optional (Required if using OpenAI embeddings/LLM) | API key for OpenAI `text-embedding-3-small` or `gpt-4o`. |
-| `EMBEDDING_MODEL_NAME` | — | `"text-embedding-3-small"` | No | Target embedding model identifier. |
-| `LLM_PROVIDER` | — | `"deterministic"` | No (`"groq"` or `"openai"` for cloud LLM) | Selects the clause auditing engine (`"deterministic"`, `"groq"`, or `"openai"`). |
+| `LLM_PROVIDER` | — | `"deterministic"` | No (`"groq"`, `"openai"`, `"anthropic"`, `"ollama"`, or `"openai_compatible"`) | Selects the clause auditing engine registered in [`LLMProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L365-L429). |
+| `LLM_MODEL_NAME` | — | `"llama-3.3-70b-versatile"` | No | Model identifier passed to the active LLM provider (e.g., `"llama-3.3-70b-versatile"`, `"gpt-4o-mini"`, `"claude-3-5-sonnet-latest"`, `"llama3.1:8b"`, `"qwen2.5:14b"`). |
+| `LLM_BASE_URL` | — | `None` | No | Optional base URL override for local or custom LLM servers (e.g., `"http://localhost:11434"` for Ollama, `"http://localhost:8000/v1"` for vLLM, `"http://localhost:1234/v1"` for LM Studio). |
+| `LLM_API_KEY` | `LLM_API_KEY_FILE` (`/run/secrets/llm_api_key`) | `None` | Optional | Unified API key for the active LLM provider (automatically falls back to `GROQ_API_KEY`, `OPENAI_API_KEY`, or `ANTHROPIC_API_KEY`). |
 | `GROQ_API_KEY` | `GROQ_API_KEY_FILE` (`/run/secrets/groq_api_key`) | `None` | Optional (Required when `LLM_PROVIDER=groq`) | API key for Groq Cloud inference (`llama-3.3-70b-versatile`). |
-| `LLM_MODEL_NAME` | — | `"llama-3.3-70b-versatile"` | No | Model name passed to the LangChain chat model adapter. |
+| `ANTHROPIC_API_KEY` | `ANTHROPIC_API_KEY_FILE` (`/run/secrets/anthropic_api_key`) | `None` | Optional (Required when `LLM_PROVIDER=anthropic`) | API key for Anthropic Claude inference (`claude-3-5-sonnet-latest`). |
 | `LLM_TEMPERATURE` | — | `0.0` (`0.0`–`1.0`) | No | Sampling temperature. Must remain `0.0` for deterministic legal redlining. |
+| `LLM_TIMEOUT_SECONDS` | — | `60.0` (`1.0`–`600.0`) | No | HTTP request timeout in seconds for external/local LLM chat completions. |
 | `REDLINE_BATCH_CONCURRENCY` | — | `20` (`1`–`100`) | No | Maximum concurrent clause evaluations per document (`asyncio.Semaphore`). |
 | `REDLINE_MAX_RETRIES` | — | `2` (`0`–`10`) | No | Number of automatic retry attempts on malformed LLM JSON before fallback. |
 | `CELERY_BROKER_URL` | — | `"redis://localhost:6379/0"` | **Yes** | Redis broker & backend URL for Celery worker tasks. |
@@ -490,45 +500,191 @@ All backend configuration variables are defined and validated via Pydantic Setti
 
 ## 5. Developer Customization & Extension Manual (How to Modify the Project)
 
-### 5.1 How to Switch to Real Groq / OpenAI LLM Inference or Customize the AI Redlining Prompt
+### 5.1 AI Provider Architecture: Cloud, Local LLMs, and Custom Provider Plugins
 
-All prompt templates, structured output schemas, and LCEL pipelines reside in [`backend/src/infrastructure/ai/redline_chain.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/redline_chain.py) and are injected via [`get_clause_auditor`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/presentation/dependencies/__init__.py#L92-L99) in [`backend/src/presentation/dependencies/__init__.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/presentation/dependencies/__init__.py).
+The backend implements a vendor-agnostic **Plugin Registry Architecture** strictly inside the Infrastructure layer ([`backend/src/infrastructure/ai/provider_registry.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py) and [`backend/src/infrastructure/vector/provider_registry.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py)). The Domain and Application layers depend exclusively on [`ClauseAuditorPort`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/domain/ports/ai_ports.py) and [`EmbeddingGeneratorPort`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/domain/ports/playbook_ports.py#L11-L21), allowing you to switch between offline deterministic evaluation, cloud APIs (Groq, OpenAI, Anthropic), **100% private local models (Ollama, vLLM, LM Studio, llama.cpp)**, or custom enterprise gateways via environment variables alone.
 
-1. **Customize the Legal/Technical System Prompt or Output Schema:**
-   Edit [`RedlineOutput`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/redline_chain.py#L31-L44) and [`SYSTEM_PROMPT`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/redline_chain.py#L46-L49) in [`backend/src/infrastructure/ai/redline_chain.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/redline_chain.py):
+#### 5.1.1 Supported Built-in Providers Matrix
+
+##### A. Built-in LLM Inference Providers (`LLM_PROVIDER`)
+
+| `LLM_PROVIDER` Value | Adapter Class | Default Endpoint (`LLM_BASE_URL`) | Recommended Models (`LLM_MODEL_NAME`) | API Key Required? |
+| :--- | :--- | :--- | :--- | :--- |
+| `"deterministic"` *(default)* | [`PolicyAwareDeterministicChatModel`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/redline_chain.py#L249-L440) | In-process (Offline / CI) | N/A | **No** |
+| `"groq"` | [`OpenAICompatibleChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L94-L198) | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile`, `qwen-qwq-32b`, `mixtral-8x7b-32768` | **Yes** (`LLM_API_KEY` or `GROQ_API_KEY`) |
+| `"openai"` | [`OpenAICompatibleChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L94-L198) | `https://api.openai.com/v1` | `gpt-4o-mini`, `gpt-4o` | **Yes** (`LLM_API_KEY` or `OPENAI_API_KEY`) |
+| `"anthropic"` | [`AnthropicMessagesChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L201-L289) | `https://api.anthropic.com` (`/v1/messages`) | `claude-3-5-sonnet-latest`, `claude-3-5-haiku-latest` | **Yes** (`LLM_API_KEY` or `ANTHROPIC_API_KEY`) |
+| `"ollama"` *(100% Local)* | [`OllamaChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L292-L360) | `http://localhost:11434` (`/api/chat`) | `llama3.1:8b`, `qwen2.5:14b`, `mistral:7b`, `deepseek-r1:14b` | **No** |
+| `"openai_compatible"` *(Local vLLM / LM Studio / llama.cpp)* | [`OpenAICompatibleChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L94-L198) | `http://localhost:8000/v1` (vLLM) or `http://localhost:1234/v1` (LM Studio) | `Qwen/Qwen2.5-14B-Instruct`, `meta-llama/Llama-3.1-8B-Instruct` | Optional (`LLM_API_KEY` if gated) |
+
+##### B. Built-in Vector Embedding Providers (`EMBEDDING_PROVIDER`)
+
+| `EMBEDDING_PROVIDER` Value | Adapter Class | Default Endpoint (`EMBEDDING_BASE_URL`) | Recommended Models (`EMBEDDING_MODEL_NAME`) | Native Dim -> Adapted DB Dim |
+| :--- | :--- | :--- | :--- | :--- |
+| `"deterministic"` *(default)* | [`DeterministicHashEmbeddingAdapter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/embedding_service.py#L265-L348) | In-process (`BLAKE2b` + Legal Stemming) | N/A | `1536 -> 1536` |
+| `"openai"` | [`OpenAICompatibleEmbeddingAdapter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py#L84-L202) | `https://api.openai.com/v1` (`/v1/embeddings`) | `text-embedding-3-small` (`1536-d`), `text-embedding-3-large` (`3072-d`) | `1536/3072 -> 1536` |
+| `"ollama"` *(100% Local)* | [`OllamaEmbeddingAdapter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py#L205-L310) | `http://localhost:11434` (`/api/embed`) | `nomic-embed-text` (`768-d`), `mxbai-embed-large` (`1024-d`), `bge-m3` (`1024-d`), `all-minilm` (`384-d`) | `384/768/1024 -> 1536` |
+| `"openai_compatible"` *(Local TEI / vLLM / LM Studio)* | [`OpenAICompatibleEmbeddingAdapter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py#L84-L202) | `http://localhost:8080/v1` (`/v1/embeddings`) | `BAAI/bge-large-en-v1.5` (`1024-d`), `sentence-transformers/all-MiniLM-L6-v2` (`384-d`) | `384/1024 -> 1536` |
+
+---
+
+#### 5.1.2 Configuration Recipes (`.env` Examples)
+
+##### Recipe 1: Groq Cloud (Ultra-Fast Cloud Inference) + OpenAI Embeddings
+```dotenv
+LLM_PROVIDER=groq
+LLM_MODEL_NAME=llama-3.3-70b-versatile
+GROQ_API_KEY=gsk_your_groq_api_key_here
+LLM_TEMPERATURE=0.0
+
+EMBEDDING_PROVIDER=openai
+EMBEDDING_MODEL_NAME=text-embedding-3-small
+OPENAI_API_KEY=sk-proj-your_openai_api_key_here
+EMBEDDING_DIMENSION=1536
+```
+
+##### Recipe 2: 100% Local & Private AI with Ollama (Zero Data Leaves Your Machine)
+First, pull a local reasoning LLM and a local embedding model with Ollama:
+```bash
+# Install & start Ollama on your workstation or GPU server, then pull models:
+ollama pull llama3.1:8b          # or: ollama pull qwen2.5:14b
+ollama pull nomic-embed-text     # 768-d local legal/technical semantic embedder
+```
+Then configure `backend/.env`:
+```dotenv
+LLM_PROVIDER=ollama
+LLM_MODEL_NAME=llama3.1:8b
+LLM_BASE_URL=http://localhost:11434
+LLM_TEMPERATURE=0.0
+LLM_TIMEOUT_SECONDS=120.0
+
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_MODEL_NAME=nomic-embed-text
+EMBEDDING_BASE_URL=http://localhost:11434
+EMBEDDING_DIMENSION=1536
+```
+
+##### Recipe 3: Local vLLM / LM Studio / llama.cpp (`openai_compatible`)
+```dotenv
+# Example: Local LM Studio server on port 1234 or vLLM server on port 8000
+LLM_PROVIDER=openai_compatible
+LLM_MODEL_NAME=Qwen/Qwen2.5-14B-Instruct
+LLM_BASE_URL=http://localhost:1234/v1
+LLM_TEMPERATURE=0.0
+
+EMBEDDING_PROVIDER=openai_compatible
+EMBEDDING_MODEL_NAME=BAAI/bge-large-en-v1.5
+EMBEDDING_BASE_URL=http://localhost:1234/v1
+EMBEDDING_DIMENSION=1536
+```
+
+##### Recipe 4: Anthropic Claude 3.5 Sonnet + Deterministic Offline Embeddings
+```dotenv
+LLM_PROVIDER=anthropic
+LLM_MODEL_NAME=claude-3-5-sonnet-latest
+ANTHROPIC_API_KEY=sk-ant-your_anthropic_api_key_here
+LLM_TEMPERATURE=0.0
+
+EMBEDDING_PROVIDER=deterministic
+EMBEDDING_DIMENSION=1536
+```
+
+---
+
+#### 5.1.3 How Automatic Vector Dimension Adaptation Works (`adapt_and_normalize_vector`)
+
+PostgreSQL stores Playbook embeddings in a `vector(1536)` column (`playbook_rules.embedding`), whereas local open-weights embedding models output varying dimensions (`384-d` for `all-MiniLM-L6-v2`, `768-d` for `nomic-embed-text`, `1024-d` for `mxbai-embed-large` / `bge-m3`).
+
+To allow **any** local or cloud embedding model to work immediately without destructive database migrations, [`adapt_and_normalize_vector`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py#L36-L74) in [`backend/src/infrastructure/vector/provider_registry.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py) automatically adapts every vector before persistence or similarity search:
+1. **Isometric Zero-Padding ($d < 1536$):** Maps $v \in \mathbb{R}^d \hookrightarrow \mathbb{R}^{1536}$ via $(v_1, \dots, v_d, 0, \dots, 0)$, which is a strict mathematical isometry ($\langle \iota(u), \iota(v) \rangle = \langle u, v \rangle$), preserving **100% of pairwise cosine similarity** across 384-d, 768-d, and 1024-d models.
+2. **Deterministic Feature Folding ($d > 1536$):** Folds higher-dimensional embeddings (such as `3072-d` `text-embedding-3-large`) modulo `1536` (`adapted[idx % 1536] += val`).
+3. **Unit L2-Normalization ($\|\tilde{v}\|_2 = 1.0$):** Normalizes every adapted vector to unit length so inner products equal cosine similarity.
+
+---
+
+#### 5.1.4 Step-by-Step Developer Guide: How to Register a Brand-New Custom AI Provider
+
+You can add a new AI vendor (e.g., **Mistral AI**, **Cohere**, **Azure OpenAI**, **AWS Bedrock**, or an internal corporate AI gateway) in **3 steps** using the `@register_llm_provider` and `@register_embedding_provider` decorators without modifying a single line of `domain/` or `application/`:
+
+1. **Step 1 — Create Your Adapter Module** (e.g. `backend/src/infrastructure/ai/custom_mistral_plugin.py`):
 
    ```python
-   # backend/src/infrastructure/ai/redline_chain.py
-   SYSTEM_PROMPT: Final[str] = """You are a Principal Legal and Technical Contract Auditor.
-   Compare the provided contract clause against the retrieved Company Playbook Rules.
-   If the clause violates policy or introduces unmitigated risk, generate a precise surgical redline
-   that protects the company while remaining commercially reasonable.
-   Respond strictly with a single JSON object matching the RedlineOutput schema."""
-   ```
+   # backend/src/infrastructure/ai/custom_mistral_plugin.py
+   import httpx
+   from langchain_core.runnables import Runnable
 
-2. **Wire Live `ChatGroq` or `ChatOpenAI` into Dependency Injection:**
-   Install `langchain-groq` (or `langchain-openai`) and update [`get_clause_auditor`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/presentation/dependencies/__init__.py#L92-L99) in [`backend/src/presentation/dependencies/__init__.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/presentation/dependencies/__init__.py):
+   from src.domain.ports.playbook_ports import EmbeddingGeneratorPort
+   from src.infrastructure.ai.provider_registry import (
+       OpenAICompatibleChatRunnable,
+       register_llm_provider,
+   )
+   from src.infrastructure.config import Settings
+   from src.infrastructure.vector.provider_registry import (
+       OpenAICompatibleEmbeddingAdapter,
+       register_embedding_provider,
+   )
 
-   ```python
-   # backend/src/presentation/dependencies/__init__.py
-   @lru_cache(maxsize=1)
-   def get_clause_auditor() -> ClauseAuditorPort:
-       settings = get_settings()
-       llm_runnable = None
-       if settings.LLM_PROVIDER == "groq" and settings.GROQ_API_KEY:
-           from langchain_groq import ChatGroq
 
-           llm_runnable = ChatGroq(
-               api_key=settings.GROQ_API_KEY,
-               model=settings.LLM_MODEL_NAME,
-               temperature=settings.LLM_TEMPERATURE,
-           )
-       return LangChainClauseAuditor(
-           llm_runnable=llm_runnable,
-           max_retries=settings.REDLINE_MAX_RETRIES,
+   @register_llm_provider("mistral")
+   def build_mistral_llm(
+       settings: Settings,
+       http_client: httpx.AsyncClient | None = None,
+   ) -> Runnable[object, str]:
+       """Register Mistral AI chat completions under LLM_PROVIDER='mistral'."""
+       return OpenAICompatibleChatRunnable(
+           provider_label="mistral",
+           model_name=settings.LLM_MODEL_NAME,
+           base_url=settings.LLM_BASE_URL or "https://api.mistral.ai/v1",
+           api_key=settings.resolve_llm_api_key(),
            temperature=settings.LLM_TEMPERATURE,
+           timeout_seconds=settings.LLM_TIMEOUT_SECONDS,
+           require_api_key=True,
+           http_client=http_client,
+       )
+
+
+   @register_embedding_provider("mistral")
+   def build_mistral_embeddings(
+       settings: Settings,
+       http_client: httpx.AsyncClient | None = None,
+   ) -> EmbeddingGeneratorPort:
+       """Register Mistral embeddings (1024-d -> auto-adapted to 1536-d) under EMBEDDING_PROVIDER='mistral'."""
+       return OpenAICompatibleEmbeddingAdapter(
+           model_name=settings.EMBEDDING_MODEL_NAME,
+           base_url=settings.EMBEDDING_BASE_URL or "https://api.mistral.ai/v1",
+           api_key=settings.resolve_embedding_api_key(),
+           dimension=settings.EMBEDDING_DIMENSION,
+           timeout_seconds=settings.EMBEDDING_TIMEOUT_SECONDS,
+           require_api_key=True,
+           http_client=http_client,
        )
    ```
+
+2. **Step 2 — Import the Plugin Module at Startup** in [`backend/src/infrastructure/ai/__init__.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/__init__.py) so the decorators execute when the package loads.
+3. **Step 3 — Select Your New Provider in `.env`:**
+   ```dotenv
+   LLM_PROVIDER=mistral
+   LLM_MODEL_NAME=mistral-large-latest
+   LLM_API_KEY=your_mistral_api_key
+
+   EMBEDDING_PROVIDER=mistral
+   EMBEDDING_MODEL_NAME=mistral-embed
+   EMBEDDING_API_KEY=your_mistral_api_key
+   ```
+
+---
+
+#### 5.1.5 How to Customize the Legal/Technical System Prompt or `RedlineOutput` Schema
+
+Edit [`RedlineOutput`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/redline_chain.py#L31-L44) and [`SYSTEM_PROMPT`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/redline_chain.py#L46-L49) in [`backend/src/infrastructure/ai/redline_chain.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/redline_chain.py):
+
+```python
+# backend/src/infrastructure/ai/redline_chain.py
+SYSTEM_PROMPT: Final[str] = """You are a Principal Legal and Technical Contract Auditor.
+Compare the provided contract clause against the retrieved Company Playbook Rules.
+If the clause violates policy or introduces unmitigated risk, generate a precise surgical redline
+that protects the company while remaining commercially reasonable."""
+```
 
 ---
 
@@ -816,10 +972,10 @@ cd /home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend
 # 1. Lint & Security Checks (pycodestyle, pyflakes, isort, bugbear, bandit)
 ./.venv/bin/ruff check .
 
-# 2. Strict Static Type Checking (89 source & test files)
+# 2. Strict Static Type Checking (92 source & test files)
 ./.venv/bin/mypy --strict src tests
 
-# 3. Full Unit & Multi-Tenant Integration Test Suite (38 tests)
+# 3. Full Unit & Multi-Tenant Integration Test Suite (44 tests)
 ./.venv/bin/pytest -v
 ```
 
@@ -850,3 +1006,4 @@ cd /home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend
 | **SSE Audit Stream (`GET /api/v1/documents/{id}/stream`) arrives all at once instead of incrementally** | Reverse proxy in front of FastAPI is buffering `text/event-stream` responses. | Ensure Nginx includes `proxy_buffering off;`, `proxy_cache off;`, and `add_header X-Accel-Buffering "no" always;` on `/api/v1/documents/*/stream` as configured in [`deploy/nginx/nginx.conf`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/deploy/nginx/nginx.conf#L55-L71). |
 | **CORS Preflight Error in Browser Console** | Frontend origin is not listed in `CORS_ALLOWED_ORIGINS`, or wildcard `"*"` was used. | Add the exact scheme, host, and port (e.g. `["https://redline.example.com", "http://localhost:3000"]`) to `CORS_ALLOWED_ORIGINS`. Wildcard `"*"` is blocked by design for security. |
 | **`RuntimeError: CRITICAL: JWT_SECRET_KEY or JWT_SECRET_KEY_FILE must be configured in production`** | `APP_ENV=production` is set without a configured `JWT_SECRET_KEY` environment variable or `/run/secrets/jwt_secret_key` file mount. | Mount `/run/secrets/jwt_secret_key` and set `JWT_SECRET_KEY_FILE=/run/secrets/jwt_secret_key` (or export `JWT_SECRET_KEY`). |
+| **`UnsupportedAIProviderError` (`UNSUPPORTED_AI_PROVIDER`)** | `LLM_PROVIDER` or `EMBEDDING_PROVIDER` is set to a provider name not registered in [`LLMProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py) or [`EmbeddingProviderRegistry`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py). | Use one of the built-in providers (`deterministic`, `groq`, `openai`, `anthropic`, `ollama`, `openai_compatible`) or register your custom plugin with `@register_llm_provider` / `@register_embedding_provider`. |

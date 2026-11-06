@@ -6,6 +6,15 @@ from src.infrastructure.ai.celery_app import (
     celery_app,
     create_celery_app,
 )
+from src.infrastructure.ai.provider_registry import (
+    AnthropicMessagesChatRunnable,
+    LLMProviderRegistry,
+    OllamaChatRunnable,
+    OpenAICompatibleChatRunnable,
+    UnsupportedAIProviderError,
+    create_llm_runnable,
+    register_llm_provider,
+)
 from src.infrastructure.ai.redline_chain import (
     SYSTEM_PROMPT,
     LangChainClauseAuditor,
@@ -17,15 +26,22 @@ from src.infrastructure.ai.redline_chain import (
 )
 
 __all__ = [
+    "AnthropicMessagesChatRunnable",
     "BatchDocumentAuditWorker",
+    "LLMProviderRegistry",
     "LangChainClauseAuditor",
+    "OllamaChatRunnable",
+    "OpenAICompatibleChatRunnable",
     "PolicyAwareDeterministicChatModel",
     "RedlineOutput",
     "SYSTEM_PROMPT",
+    "UnsupportedAIProviderError",
     "audit_document_celery_task",
     "build_redline_chain",
     "celery_app",
     "create_celery_app",
+    "create_llm_runnable",
     "format_playbook_rules_context",
     "parse_and_validate_redline_output",
+    "register_llm_provider",
 ]

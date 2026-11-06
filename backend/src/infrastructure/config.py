@@ -108,6 +108,13 @@ class Settings(BaseSettings):
     )
 
     # Phase 3: Company Playbook & Vector Knowledge Base Configuration
+    EMBEDDING_PROVIDER: str = Field(default="deterministic")
+    EMBEDDING_MODEL_NAME: str = Field(default="text-embedding-3-small")
+    EMBEDDING_BASE_URL: str | None = Field(default=None)
+    EMBEDDING_API_KEY: str | None = Field(
+        default_factory=lambda: _resolve_optional_secret("EMBEDDING_API_KEY")
+    )
+    EMBEDDING_TIMEOUT_SECONDS: float = Field(default=30.0, ge=1.0, le=300.0)
     EMBEDDING_DIMENSION: int = Field(default=1536, ge=128, le=4096)
     PLAYBOOK_DEFAULT_TOP_K: int = Field(default=3, ge=1, le=50)
     HYBRID_VECTOR_WEIGHT: float = Field(default=0.7, ge=0.0, le=1.0)
@@ -115,15 +122,22 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = Field(
         default_factory=lambda: _resolve_optional_secret("OPENAI_API_KEY")
     )
-    EMBEDDING_MODEL_NAME: str = Field(default="text-embedding-3-small")
 
     # Phase 4: LangChain Redlining Engine & Async Worker Pipeline Configuration
     LLM_PROVIDER: str = Field(default="deterministic")
+    LLM_MODEL_NAME: str = Field(default="llama-3.3-70b-versatile")
+    LLM_BASE_URL: str | None = Field(default=None)
+    LLM_API_KEY: str | None = Field(
+        default_factory=lambda: _resolve_optional_secret("LLM_API_KEY")
+    )
     GROQ_API_KEY: str | None = Field(
         default_factory=lambda: _resolve_optional_secret("GROQ_API_KEY")
     )
-    LLM_MODEL_NAME: str = Field(default="llama-3.3-70b-versatile")
+    ANTHROPIC_API_KEY: str | None = Field(
+        default_factory=lambda: _resolve_optional_secret("ANTHROPIC_API_KEY")
+    )
     LLM_TEMPERATURE: float = Field(default=0.0, ge=0.0, le=1.0)
+    LLM_TIMEOUT_SECONDS: float = Field(default=60.0, ge=1.0, le=600.0)
     REDLINE_BATCH_CONCURRENCY: int = Field(default=20, ge=1, le=100)
     REDLINE_MAX_RETRIES: int = Field(default=2, ge=0, le=10)
     CELERY_BROKER_URL: str = Field(default="redis://localhost:6379/0")
@@ -133,6 +147,25 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = Field(default=True)
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = Field(default=240, ge=1, le=10000)
     RATE_LIMIT_WINDOW_SECONDS: int = Field(default=60, ge=1, le=3600)
+
+    def resolve_llm_api_key(self) -> str | None:
+        """Resolve the effective LLM API key with provider-specific fallback."""
+        if self.LLM_API_KEY:
+            return self.LLM_API_KEY
+        provider = self.LLM_PROVIDER.strip().lower()
+        if provider == "groq":
+            return self.GROQ_API_KEY
+        if provider in ("openai", "openai_compatible"):
+            return self.OPENAI_API_KEY or self.GROQ_API_KEY
+        if provider == "anthropic":
+            return self.ANTHROPIC_API_KEY
+        return self.GROQ_API_KEY or self.OPENAI_API_KEY or self.ANTHROPIC_API_KEY
+
+    def resolve_embedding_api_key(self) -> str | None:
+        """Resolve the effective Embedding API key with fallback to OPENAI_API_KEY."""
+        if self.EMBEDDING_API_KEY:
+            return self.EMBEDDING_API_KEY
+        return self.OPENAI_API_KEY
 
     @property
     def max_upload_size_bytes(self) -> int:

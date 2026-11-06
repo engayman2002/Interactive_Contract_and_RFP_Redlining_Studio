@@ -22,7 +22,7 @@ from src.domain.ports import (
     PlaybookRetrieverPort,
     UnitOfWorkPort,
 )
-from src.infrastructure.ai import LangChainClauseAuditor
+from src.infrastructure.ai import LangChainClauseAuditor, create_llm_runnable
 from src.infrastructure.config import get_settings
 from src.infrastructure.db.repositories import SqlAlchemyUnitOfWork
 from src.infrastructure.db.session import get_async_db_session
@@ -33,8 +33,8 @@ from src.infrastructure.parsers import (
     SemanticClauseSegmenter,
 )
 from src.infrastructure.vector import (
-    DeterministicHashEmbeddingAdapter,
     HybridPlaybookRetriever,
+    create_embedding_generator,
 )
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -84,16 +84,18 @@ def get_file_storage() -> FileStoragePort:
 
 @lru_cache(maxsize=1)
 def get_embedding_generator() -> EmbeddingGeneratorPort:
-    """Provide singleton DeterministicHashEmbeddingAdapter configured with 1536 dimensions."""
+    """Provide singleton EmbeddingGeneratorPort resolved via EmbeddingProviderRegistry."""
     settings = get_settings()
-    return DeterministicHashEmbeddingAdapter(dimension=settings.EMBEDDING_DIMENSION)
+    return create_embedding_generator(settings)
 
 
 @lru_cache(maxsize=1)
 def get_clause_auditor() -> ClauseAuditorPort:
-    """Provide singleton LangChainClauseAuditor configured from settings."""
+    """Provide singleton LangChainClauseAuditor resolved via LLMProviderRegistry."""
     settings = get_settings()
+    llm_runnable = create_llm_runnable(settings)
     return LangChainClauseAuditor(
+        llm_runnable=llm_runnable,
         max_retries=settings.REDLINE_MAX_RETRIES,
         temperature=settings.LLM_TEMPERATURE,
     )
