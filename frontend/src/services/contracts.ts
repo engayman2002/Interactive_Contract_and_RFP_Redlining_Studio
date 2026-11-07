@@ -160,3 +160,66 @@ export type CreateClauseCommentRequestDTO = z.infer<
   typeof CreateClauseCommentRequestDTOSchema
 >;
 
+export const PlaybookRuleDTOSchema = z.object({
+  id: z.string(),
+  org_id: z.string(),
+  category: z.string(),
+  standard_position: z.string(),
+  fallback_position: z.string(),
+  unacceptable_triggers: z.string(),
+  embedding_dim: z.number().int().optional(),
+});
+export type PlaybookRuleDTO = z.infer<typeof PlaybookRuleDTOSchema>;
+
+export const CreatePlaybookRuleRequestDTOSchema = z.object({
+  category: z.string().min(1),
+  standard_position: z.string().min(1),
+  fallback_position: z.string().min(1),
+  unacceptable_triggers: z.string().min(1),
+});
+export type CreatePlaybookRuleRequestDTO = z.infer<
+  typeof CreatePlaybookRuleRequestDTOSchema
+>;
+
+export const DocumentListItemDTOSchema = z.object({
+  id: z.string(),
+  org_id: z.string(),
+  title: z.string(),
+  status: z.string(),
+  version: z.number().int().positive(),
+  created_by: z.string(),
+  created_at: z.string(),
+  clause_count: z.number().int().optional(),
+});
+export type DocumentListItemDTO = z.infer<typeof DocumentListItemDTOSchema>;
+
+export const UserResponseDTOSchema = z.object({
+  id: z.string(),
+  org_id: z.string(),
+  email: z.string(),
+  role: z.string(),
+  created_at: z.string(),
+});
+export type UserResponseDTO = z.infer<typeof UserResponseDTOSchema>;
+
+export const TokenResponseDTOSchema = z.object({
+  access_token: z.string(),
+  token_type: z.string(),
+  expires_in: z.number().int().optional(),
+  user: UserResponseDTOSchema.optional(),
+});
+export type TokenResponseDTO = z.infer<typeof TokenResponseDTOSchema>;
+
+export const OnboardingResponseDTOSchema = z.object({
+  organization: z.object({
+    id: z.string(),
+    name: z.string(),
+    created_at: z.string(),
+  }),
+  admin_user: UserResponseDTOSchema,
+  access_token: z.string(),
+  token_type: z.string(),
+});
+export type OnboardingResponseDTO = z.infer<typeof OnboardingResponseDTOSchema>;
+
+

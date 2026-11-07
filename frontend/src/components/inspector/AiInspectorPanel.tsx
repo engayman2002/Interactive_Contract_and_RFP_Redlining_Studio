@@ -26,6 +26,7 @@ export interface AiInspectorPanelProps {
   onAddComment?: (clauseId: string, body: string) => Promise<void> | void;
   onLocalApplyPreview?: (clauseId: string, proposedText: string) => void;
   onLocalRejectPreview?: (suggestionId: string) => void;
+  onTriggerAudit?: () => void;
 }
 
 const FILTER_TABS: { mode: RiskFilterMode; label: string }[] = [
@@ -35,6 +36,8 @@ const FILTER_TABS: { mode: RiskFilterMode; label: string }[] = [
   { mode: "MEDIUM", label: "Medium" },
   { mode: "COMPLIANT", label: "Compliant" },
 ];
+
+const EMPTY_COMMENTS: ClauseCommentDTO[] = [];
 
 export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
   clauses,
@@ -47,6 +50,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
   onAddComment,
   onLocalApplyPreview,
   onLocalRejectPreview,
+  onTriggerAudit,
 }) => {
   const activeClauseId = useWorkspaceStore((state) => state.activeClauseId);
   const selectionSource = useWorkspaceStore((state) => state.selectionSource);
@@ -111,7 +115,13 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
     }
     const cardEl = cardContainerRefs.current.get(activeClauseId);
     if (cardEl && typeof cardEl.scrollIntoView === "function") {
-      cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+        window.requestAnimationFrame(() => {
+          cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+      } else {
+        cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
     }
   }, [activeClauseId, selectionSource]);
 
@@ -122,8 +132,14 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
     return clauses[0] ?? null;
   }, [activeClauseId, clauses, clausesById]);
 
-  const criticalCount = redlines.filter((r) => r.risk === "CRITICAL").length;
-  const highCount = redlines.filter((r) => r.risk === "HIGH").length;
+  const criticalCount = useMemo(
+    () => redlines.filter((r) => r.risk === "CRITICAL").length,
+    [redlines]
+  );
+  const highCount = useMemo(
+    () => redlines.filter((r) => r.risk === "HIGH").length,
+    [redlines]
+  );
 
   return (
     <aside
@@ -247,87 +263,119 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
         <AuditTrailPanel auditLogs={resolvedAuditLogs} />
       ) : (
         <>
-          {/* Scrollable Redline Cards List */}
-          <div className="flex-1 space-y-3 overflow-y-auto p-4">
-            {riskFilter !== "COMPLIANT" &&
-              filteredRedlines.map((suggestion) => {
-                const clause = clausesById.get(suggestion.clause_id);
-                if (!clause) {
-                  return null;
-                }
-                const clauseComments = commentsByClauseId.get(clause.id) ?? [];
-                return (
-                  <div
-                    key={suggestion.id}
-                    ref={(el) => {
-                      if (el) {
-                        cardContainerRefs.current.set(clause.id, el);
-                      } else {
-                        cardContainerRefs.current.delete(clause.id);
-                      }
-                    }}
-                  >
-                    <RedlineCard
-                      clause={clause}
-                      suggestion={suggestion}
-                      commentCount={clauseComments.length}
-                      onAcceptSuggestion={onAcceptSuggestion}
-                      onModifySuggestion={onModifySuggestion}
-                      onRejectSuggestion={onRejectSuggestion}
-                      onLocalApplyPreview={onLocalApplyPreview}
-                      onLocalRejectPreview={onLocalRejectPreview}
-                    />
-                  </div>
-                );
-              })}
-
-            {(riskFilter === "ALL" || riskFilter === "COMPLIANT") &&
-              compliantClauses.map((clause) => {
-                const isSelected = activeClauseId === clause.id;
-                return (
-                  <div
-                    key={clause.id}
-                    ref={(el) => {
-                      if (el) {
-                        cardContainerRefs.current.set(clause.id, el);
-                      } else {
-                        cardContainerRefs.current.delete(clause.id);
-                      }
-                    }}
-                    data-testid={`redline-card-${clause.id}`}
-                    data-clause-id={clause.id}
-                    data-risk-level="COMPLIANT"
-                    data-active={isSelected ? "true" : "false"}
-                    onClick={() => selectClause(clause.id, "inspector")}
-                    className={`cursor-pointer rounded-lg border p-3.5 transition-colors ${
-                      isSelected
-                        ? "border-indigo-500 bg-indigo-950/35 ring-2 ring-indigo-500/80"
-                        : "border-slate-800/80 bg-slate-900/40 hover:border-slate-700"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-200">
-                        Clause #{clause.clause_index + 1}:{" "}
-                        {clause.heading ?? "Provision"}
-                      </span>
-                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
-                        COMPLIANT
-                      </span>
+          {redlines.length === 0 ? (
+            <div
+              data-testid="empty-redlines-guide"
+              className="m-4 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-indigo-500/30 bg-indigo-950/20 p-8 text-center"
+            >
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600/20 text-2xl text-indigo-400">
+                ✨
+              </div>
+              <h3 className="text-base font-bold text-slate-100">
+                Ready for AI Redlining
+              </h3>
+              <p className="mt-2 max-w-sm text-xs leading-relaxed text-slate-300">
+                This document contains {clauses.length} extracted clauses.
+                Benchmarking against your corporate playbook will surface
+                critical liability, indemnification, SLA, and privacy risks.
+              </p>
+              <button
+                type="button"
+                data-testid="empty-state-analyze-btn"
+                onClick={onTriggerAudit}
+                disabled={streamProgress.isStreaming}
+                className="mt-5 flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-600/30 transition-all hover:bg-indigo-500 disabled:opacity-50"
+              >
+                <span>✨</span>
+                <span>
+                  {streamProgress.isStreaming
+                    ? "Auditing Clauses..."
+                    : "Analyze Contract with AI"}
+                </span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+              {riskFilter !== "COMPLIANT" &&
+                filteredRedlines.map((suggestion) => {
+                  const clause = clausesById.get(suggestion.clause_id);
+                  if (!clause) {
+                    return null;
+                  }
+                  const clauseComments = commentsByClauseId.get(clause.id) ?? [];
+                  return (
+                    <div
+                      key={suggestion.id}
+                      ref={(el) => {
+                        if (el) {
+                          cardContainerRefs.current.set(clause.id, el);
+                        } else {
+                          cardContainerRefs.current.delete(clause.id);
+                        }
+                      }}
+                    >
+                      <RedlineCard
+                        clause={clause}
+                        suggestion={suggestion}
+                        commentCount={clauseComments.length}
+                        onAcceptSuggestion={onAcceptSuggestion}
+                        onModifySuggestion={onModifySuggestion}
+                        onRejectSuggestion={onRejectSuggestion}
+                        onLocalApplyPreview={onLocalApplyPreview}
+                        onLocalRejectPreview={onLocalRejectPreview}
+                      />
                     </div>
-                    <p className="mt-1 text-xs text-slate-400">
-                      Satisfies company playbook standards with zero
-                      unacceptable triggers.
-                    </p>
-                  </div>
-                );
-              })}
-          </div>
+                  );
+                })}
+
+              {(riskFilter === "ALL" || riskFilter === "COMPLIANT") &&
+                compliantClauses.map((clause) => {
+                  const isSelected = activeClauseId === clause.id;
+                  return (
+                    <div
+                      key={clause.id}
+                      ref={(el) => {
+                        if (el) {
+                          cardContainerRefs.current.set(clause.id, el);
+                        } else {
+                          cardContainerRefs.current.delete(clause.id);
+                        }
+                      }}
+                      data-testid={`redline-card-${clause.id}`}
+                      data-clause-id={clause.id}
+                      data-risk-level="COMPLIANT"
+                      data-active={isSelected ? "true" : "false"}
+                      onClick={() => selectClause(clause.id, "inspector")}
+                      className={`cursor-pointer rounded-lg border p-3.5 transition-colors ${
+                        isSelected
+                          ? "border-indigo-500 bg-indigo-950/35 ring-2 ring-indigo-500/80"
+                          : "border-slate-800/80 bg-slate-900/40 hover:border-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-200">
+                          Clause #{clause.clause_index + 1}:{" "}
+                          {clause.heading ?? "Provision"}
+                        </span>
+                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                          COMPLIANT
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Satisfies company playbook standards with zero
+                        unacceptable triggers.
+                      </p>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
 
           {/* Threaded Clause Comments Panel */}
           {activeClauseForComments && onAddComment ? (
             <ClauseCommentThread
               clause={activeClauseForComments}
-              comments={commentsByClauseId.get(activeClauseForComments.id) ?? []}
+              comments={commentsByClauseId.get(activeClauseForComments.id) ?? EMPTY_COMMENTS}
               onAddComment={onAddComment}
             />
           ) : null}

@@ -58,6 +58,17 @@ describe("Phase 5 Split-Screen Interactive Editor & Clause Binding", () => {
     const leftPaneBefore = splitContainer.children[0] as HTMLElement;
     const widthBefore = leftPaneBefore.style.width;
 
+    // Warm-up synthetic event dispatcher in jsdom
+    const firstClauseEl = screen.getByTestId(
+      `editor-clause-${DEMO_WORKSPACE_DATA.clauses[0].id}`
+    );
+    act(() => {
+      fireEvent.click(firstClauseEl);
+    });
+    act(() => {
+      useWorkspaceStore.getState().selectClause(null, "editor");
+    });
+
     for (const clause of DEMO_WORKSPACE_DATA.clauses) {
       const editorClauseEl = screen.getByTestId(`editor-clause-${clause.id}`);
       const inspectorCardEl = screen.getByTestId(`redline-card-${clause.id}`);

@@ -1,12 +1,18 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ContractEditorCanvas } from "@/components/editor/ContractEditorCanvas";
 import { AiInspectorPanel } from "@/components/inspector/AiInspectorPanel";
 import { useDocumentStream } from "@/hooks/useDocumentStream";
-import { DEMO_WORKSPACE_DATA } from "@/services/apiClient";
+import {
+  DEMO_WORKSPACE_DATA,
+  fetchDocumentWorkspace,
+  triggerDocumentAnalysis,
+} from "@/services/apiClient";
 import type { DocumentWorkspaceDTO, ExportMode } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
+import { UploadModal } from "./UploadModal";
 
 export interface RedliningStudioWorkspaceProps {
   documentId?: string;
@@ -43,15 +49,57 @@ export const RedliningStudioWorkspace: React.FC<
   const isDraggingRef = useRef<boolean>(false);
   const resolvedDocId = documentId ?? initialWorkspace.document_id;
 
+  const currentTitle = initialWorkspace.title;
+  const [currentStatus, setCurrentStatus] = useState<string>(
+    initialWorkspace.status
+  );
+  const [isGuideDismissed, setIsGuideDismissed] = useState<boolean>(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
+
+  // Load document workspace if a specific documentId is provided
   useEffect(() => {
-    hydrateWorkspace(initialWorkspace);
-  }, [initialWorkspace, hydrateWorkspace]);
+    let isMounted = true;
+
+    if (
+      documentId &&
+      documentId !== DEMO_WORKSPACE_DATA.document_id &&
+      documentId !== "demo"
+    ) {
+      void fetchDocumentWorkspace(documentId, token).then((data) => {
+        if (isMounted) {
+          hydrateWorkspace(data);
+        }
+      });
+    } else {
+      hydrateWorkspace(initialWorkspace);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [documentId, initialWorkspace, hydrateWorkspace, token]);
+
+  const handleStreamComplete = useCallback(async () => {
+    const updated = await fetchDocumentWorkspace(resolvedDocId, token);
+    hydrateWorkspace(updated);
+    setCurrentStatus("ANALYZED");
+  }, [resolvedDocId, token, hydrateWorkspace]);
 
   const { startStream, streamProgress } = useDocumentStream({
     documentId: resolvedDocId,
     totalClauses: clauses.length,
     token,
+    onStreamComplete: handleStreamComplete,
   });
+
+  const handleTriggerAiAnalysis = useCallback(async () => {
+    try {
+      void triggerDocumentAnalysis(resolvedDocId, token);
+    } catch {
+      // Non-fatal, stream fallback handles demo
+    }
+    startStream();
+  }, [resolvedDocId, token, startStream]);
 
   const handleAcceptSuggestion = useCallback(
     async (suggestionId: string) => {
@@ -119,23 +167,52 @@ export const RedliningStudioWorkspace: React.FC<
       className="flex h-screen w-screen flex-col overflow-hidden bg-slate-950 text-slate-100"
     >
       {/* Top Studio Header */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900/90 px-6">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900/90 px-4 md:px-6">
         <div className="flex items-center gap-3">
-          <span className="rounded bg-indigo-600 px-2 py-1 text-xs font-bold tracking-wider text-white">
-            REDLINE STUDIO
-          </span>
+          <Link
+            href="/"
+            data-testid="back-to-dashboard-btn"
+            className="flex items-center gap-1 rounded-md border border-slate-800 bg-slate-800/80 px-2.5 py-1 text-xs font-semibold text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+          >
+            <span>←</span>
+            <span>Dashboard</span>
+          </Link>
+
+          <Link
+            href="/playbooks"
+            data-testid="header-playbook-link"
+            className="hidden rounded-md border border-slate-800 bg-slate-800/60 px-2.5 py-1 text-xs font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-white sm:inline-block"
+          >
+            Playbook
+          </Link>
+
+          <div className="h-4 w-px bg-slate-800" />
+
           <div>
             <h1 className="text-sm font-semibold text-slate-100">
-              {initialWorkspace.title}
+              {currentTitle}
             </h1>
             <p className="text-[11px] text-slate-400">
               Document v{documentVersion} · {clauses.length} Clauses · Status:{" "}
-              {initialWorkspace.status}
+              <span className="font-medium text-indigo-300">
+                {currentStatus}
+              </span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          {/* Quick In-Studio Upload Modal Button */}
+          <button
+            type="button"
+            data-testid="studio-upload-new-btn"
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-1 rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-200 transition-colors hover:bg-slate-700 hover:text-white"
+          >
+            <span>+</span>
+            <span>Upload New File</span>
+          </button>
+
           {lastExportedFilename ? (
             <span
               data-testid="export-status-badge"
@@ -165,23 +242,70 @@ export const RedliningStudioWorkspace: React.FC<
             Export Clean (.docx)
           </button>
 
-          <span className="font-mono text-xs text-slate-400">
-            Split: {splitRatio}% / {100 - splitRatio}%
-          </span>
-
           <button
             type="button"
             data-testid="trigger-sse-audit-btn"
-            onClick={() => startStream()}
+            onClick={handleTriggerAiAnalysis}
             disabled={streamProgress.isStreaming}
-            className="rounded-md bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-md bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 transition-colors hover:bg-indigo-500 disabled:opacity-50"
           >
-            {streamProgress.isStreaming
-              ? "Auditing Clauses..."
-              : "Run Live SSE Audit"}
+            <span>✨</span>
+            <span>
+              {streamProgress.isStreaming
+                ? "Auditing Clauses..."
+                : "Analyze Contract with AI"}
+            </span>
           </button>
         </div>
       </header>
+
+      {/* Dismissible 3-Step Quick Guide Banner */}
+      {!isGuideDismissed ? (
+        <div
+          data-testid="studio-quick-guide-banner"
+          className="flex items-center justify-between border-b border-indigo-500/20 bg-indigo-950/40 px-6 py-2 text-xs text-indigo-200"
+        >
+          <div className="flex items-center gap-6 overflow-x-auto py-0.5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+                1
+              </span>
+              <span className="text-slate-300">
+                Click any clause or Risk Heatmap bar to focus
+              </span>
+            </div>
+            <span className="text-slate-600">→</span>
+            <div className="flex items-center gap-2">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+                2
+              </span>
+              <span className="text-slate-300">
+                Hover over <strong>Apply Redline</strong> to preview word diffs
+                inline
+              </span>
+            </div>
+            <span className="text-slate-600">→</span>
+            <div className="flex items-center gap-2">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+                3
+              </span>
+              <span className="text-slate-300">
+                Accept or Modify wording, then{" "}
+                <strong>Export Track Changes (.docx)</strong>
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            data-testid="dismiss-quick-guide-btn"
+            onClick={() => setIsGuideDismissed(true)}
+            className="ml-4 rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white"
+            title="Dismiss Guide"
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
 
       {/* Optimistic Concurrency Version Conflict (409) Banner */}
       {conflictError ? (
@@ -229,9 +353,13 @@ export const RedliningStudioWorkspace: React.FC<
           aria-label="Resize Split Screen"
           data-testid="split-pane-resizer"
           onMouseDown={handleDividerMouseDown}
-          className="flex w-1.5 shrink-0 cursor-col-resize items-center justify-center bg-slate-800 transition-colors hover:bg-indigo-500"
+          className="group flex w-2 shrink-0 cursor-col-resize items-center justify-center bg-slate-900 transition-colors hover:bg-indigo-600/80"
         >
-          <span className="h-8 w-0.5 rounded bg-slate-600" />
+          <div className="flex flex-col gap-1 opacity-40 group-hover:opacity-100">
+            <span className="h-1 w-1 rounded-full bg-slate-400 group-hover:bg-white" />
+            <span className="h-1 w-1 rounded-full bg-slate-400 group-hover:bg-white" />
+            <span className="h-1 w-1 rounded-full bg-slate-400 group-hover:bg-white" />
+          </div>
         </div>
 
         {/* Right Pane: AI Redline Inspector */}
@@ -249,9 +377,18 @@ export const RedliningStudioWorkspace: React.FC<
             onModifySuggestion={handleModifySuggestion}
             onRejectSuggestion={handleRejectSuggestion}
             onAddComment={handleAddComment}
+            onTriggerAudit={handleTriggerAiAnalysis}
           />
         </section>
       </div>
+
+      {/* Quick Upload Modal */}
+      {isUploadModalOpen ? (
+        <UploadModal
+          isOpen={isUploadModalOpen}
+          onClose={() => setIsUploadModalOpen(false)}
+        />
+      ) : null}
     </div>
   );
 };

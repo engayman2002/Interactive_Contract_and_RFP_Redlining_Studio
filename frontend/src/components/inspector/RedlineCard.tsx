@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type {
   ClauseDTO,
   RedlineSuggestionDTO,
@@ -44,7 +44,7 @@ function splitRationaleAndTalkingPoint(rawRationale: string): {
   };
 }
 
-export const RedlineCard: React.FC<RedlineCardProps> = ({
+export const RedlineCard: React.FC<RedlineCardProps> = React.memo(({
   clause,
   suggestion,
   commentCount = 0,
@@ -54,9 +54,11 @@ export const RedlineCard: React.FC<RedlineCardProps> = ({
   onLocalApplyPreview,
   onLocalRejectPreview,
 }) => {
-  const activeClauseId = useWorkspaceStore((state) => state.activeClauseId);
-  const hoveredSuggestionId = useWorkspaceStore(
-    (state) => state.hoveredSuggestionId
+  const isSelected = useWorkspaceStore(
+    (state) => state.activeClauseId === clause.id
+  );
+  const isHoveringApply = useWorkspaceStore(
+    (state) => state.hoveredSuggestionId === suggestion.id
   );
   const selectClause = useWorkspaceStore((state) => state.selectClause);
   const setHoveredSuggestion = useWorkspaceStore(
@@ -72,10 +74,9 @@ export const RedlineCard: React.FC<RedlineCardProps> = ({
     setModifiedDraft(suggestion.proposed_text);
   }, [suggestion.proposed_text]);
 
-  const isSelected = activeClauseId === clause.id;
-  const isHoveringApply = hoveredSuggestionId === suggestion.id;
-  const { rationale, talkingPoint } = splitRationaleAndTalkingPoint(
-    suggestion.rationale
+  const { rationale, talkingPoint } = useMemo(
+    () => splitRationaleAndTalkingPoint(suggestion.rationale),
+    [suggestion.rationale]
   );
 
   const handleSaveModified = async (e: React.MouseEvent) => {
@@ -257,4 +258,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = ({
       </div>
     </article>
   );
-};
+});
+
+RedlineCard.displayName = "RedlineCard";
+

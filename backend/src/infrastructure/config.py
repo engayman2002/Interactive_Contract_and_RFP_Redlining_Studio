@@ -42,6 +42,9 @@ def _resolve_optional_secret(env_var_name: str) -> str | None:
     return None
 
 
+_ephemeral_jwt_secret: str | None = None
+
+
 def _resolve_jwt_secret() -> str:
     """Resolve JWT secret safely without hardcoded literals.
 
@@ -51,6 +54,7 @@ def _resolve_jwt_secret() -> str:
     3. Local secret file `jwt_secret.txt` (non-production only)
     4. Ephemeral CSPRNG fallback for development/testing with warning
     """
+    global _ephemeral_jwt_secret
     direct_value = os.getenv("JWT_SECRET_KEY", "").strip()
     if direct_value and direct_value != "local-only-placeholder":
         return direct_value
@@ -99,11 +103,13 @@ def _resolve_jwt_secret() -> str:
     except OSError:
         pass
 
-    logger.warning(
-        "Generating ephemeral JWT secret via CSPRNG. Instance-isolated; "
-        "do not use across multiple replicas without configuring JWT_SECRET_KEY."
-    )
-    return secrets.token_hex(32)
+    if _ephemeral_jwt_secret is None:
+        logger.warning(
+            "Generating ephemeral JWT secret via CSPRNG. Instance-isolated; "
+            "do not use across multiple replicas without configuring JWT_SECRET_KEY."
+        )
+        _ephemeral_jwt_secret = secrets.token_hex(32)
+    return _ephemeral_jwt_secret
 
 
 class Settings(BaseSettings):
