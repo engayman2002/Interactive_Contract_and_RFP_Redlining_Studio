@@ -222,4 +222,91 @@ export const OnboardingResponseDTOSchema = z.object({
 });
 export type OnboardingResponseDTO = z.infer<typeof OnboardingResponseDTOSchema>;
 
+export const ProviderCatalogItemDTOSchema = z.object({
+  provider_id: z.string(),
+  display_name: z.string(),
+  supports_llm: z.boolean(),
+  supports_embeddings: z.boolean(),
+  requires_api_key: z.boolean(),
+  supports_base_url: z.boolean(),
+  default_llm_model: z.string().nullable().optional(),
+  recommended_llm_models: z.array(z.string()).default([]),
+  default_embedding_model: z.string().nullable().optional(),
+  recommended_embedding_models: z.array(z.string()).default([]),
+});
+export type ProviderCatalogItemDTO = z.infer<
+  typeof ProviderCatalogItemDTOSchema
+>;
+
+export const AISettingsResponseDTOSchema = z.object({
+  llm_provider: z.string(),
+  llm_model_name: z.string(),
+  llm_base_url: z.string().nullable().optional(),
+  llm_has_api_key: z.boolean(),
+  llm_api_key_masked: z.string().nullable().optional(),
+  llm_temperature: z.number(),
+  embedding_provider: z.string(),
+  embedding_model_name: z.string(),
+  embedding_base_url: z.string().nullable().optional(),
+  embedding_has_api_key: z.boolean(),
+  embedding_api_key_masked: z.string().nullable().optional(),
+  available_providers: z.array(ProviderCatalogItemDTOSchema).default([]),
+});
+export type AISettingsResponseDTO = z.infer<typeof AISettingsResponseDTOSchema>;
+
+export const UpdateAISettingsRequestDTOSchema = z.object({
+  llm_provider: z.string().optional(),
+  llm_model_name: z.string().optional(),
+  llm_base_url: z.string().nullable().optional(),
+  llm_api_key: z.string().nullable().optional(),
+  llm_temperature: z.number().min(0).max(1).optional(),
+  embedding_provider: z.string().optional(),
+  embedding_model_name: z.string().optional(),
+  embedding_base_url: z.string().nullable().optional(),
+  embedding_api_key: z.string().nullable().optional(),
+});
+export type UpdateAISettingsRequestDTO = z.infer<
+  typeof UpdateAISettingsRequestDTOSchema
+>;
+
+export const TestAIConnectionTargetSchema = z.enum([
+  "llm",
+  "embedding",
+  "both",
+]);
+export type TestAIConnectionTarget = z.infer<
+  typeof TestAIConnectionTargetSchema
+>;
+
+export const TestAIConnectionRequestDTOSchema = z.object({
+  target: TestAIConnectionTargetSchema.default("both"),
+  llm_provider: z.string().optional(),
+  llm_model_name: z.string().optional(),
+  llm_base_url: z.string().nullable().optional(),
+  llm_api_key: z.string().nullable().optional(),
+  llm_temperature: z.number().min(0).max(1).optional(),
+  embedding_provider: z.string().optional(),
+  embedding_model_name: z.string().optional(),
+  embedding_base_url: z.string().nullable().optional(),
+  embedding_api_key: z.string().nullable().optional(),
+});
+export type TestAIConnectionRequestDTO = z.infer<
+  typeof TestAIConnectionRequestDTOSchema
+>;
+
+export const TestAIConnectionResponseDTOSchema = z.object({
+  success: z.boolean(),
+  llm_ok: z.boolean().nullable().optional(),
+  embedding_ok: z.boolean().nullable().optional(),
+  latency_ms: z.number(),
+  provider_tested: z.string(),
+  model_tested: z.string(),
+  message: z.string(),
+  sample_output_preview: z.string().nullable().optional(),
+});
+export type TestAIConnectionResponseDTO = z.infer<
+  typeof TestAIConnectionResponseDTOSchema
+>;
+
+
 

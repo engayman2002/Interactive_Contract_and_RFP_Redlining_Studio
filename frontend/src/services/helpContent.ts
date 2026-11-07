@@ -282,6 +282,45 @@ export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
       },
     ],
   },
+  {
+    id: "ai-engine-switcher",
+    number: 7,
+    title: "Dynamic AI Provider & Model Switcher (Cloud & Local LLMs)",
+    badge: "Zero-Restart AI Switcher",
+    summary:
+      "Configure, test live connectivity, and hot-swap LLM Inference and 1536-d Vector Embedding providers directly from the header pill without restarting containers.",
+    keywords: [
+      "ai settings",
+      "provider",
+      "gemini",
+      "groq",
+      "openai",
+      "anthropic",
+      "ollama",
+      "vllm",
+      "deterministic",
+      "api key",
+      "test connection",
+      "embeddings",
+    ],
+    steps: [
+      {
+        title: "Open the AI Engine Switcher from Any Header",
+        description:
+          "Click the active 'AI: ...' pill button in the top navigation bar or inside the Redlining Studio toolbar to inspect active LLM and Vector Embedding engines.",
+      },
+      {
+        title: "Select Cloud Presets or 100% Private Local Models",
+        description:
+          "Click any preset card—Offline Deterministic Engine, Google Gemini, Groq Cloud LPU, OpenAI, Anthropic Claude, Local Ollama (localhost:11434), or an OpenAI-Compatible vLLM/LM Studio endpoint—to auto-populate recommended models.",
+      },
+      {
+        title: "Run Live Connection Diagnostics Before Saving",
+        description:
+          "Click 'Test Connection' to verify 1536-dimensional vector adaptation, structured clause auditing, and round-trip latency in milliseconds before clicking 'Save & Activate Engine' (Admin role required for saving).",
+      },
+    ],
+  },
 ];
 
 export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
@@ -450,6 +489,25 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
       "libreoffice",
       "track changes",
       "docx",
+    ],
+  },
+  {
+    id: "faq-ai-engine-switcher",
+    question:
+      "Can I switch between Google Gemini, Groq, OpenAI, or Local Ollama without restarting Docker?",
+    answer:
+      "Yes. Click the 'AI: ...' badge in the top navigation bar or Studio toolbar to open the AI Engine Switcher. Select a provider preset, enter your API key (masked server-side and never returned in plaintext) or local Ollama/vLLM Base URL, click 'Test Connection' to verify latency and 1536-d vector embeddings, and click 'Save & Activate Engine' to switch immediately.",
+    category: "workflow",
+    keywords: [
+      "ai switcher",
+      "gemini",
+      "ollama",
+      "groq",
+      "openai",
+      "anthropic",
+      "api key",
+      "test connection",
+      "hot swap",
     ],
   },
 ];

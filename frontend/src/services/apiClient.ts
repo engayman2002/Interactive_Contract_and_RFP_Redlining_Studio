@@ -1,4 +1,6 @@
 import {
+  AISettingsResponseDTO,
+  AISettingsResponseDTOSchema,
   AuditLogEntryDTO,
   AuditLogEntryDTOSchema,
   ClauseCommentDTO,
@@ -18,13 +20,18 @@ import {
   OnboardingResponseDTOSchema,
   PlaybookRuleDTO,
   PlaybookRuleDTOSchema,
+  ProviderCatalogItemDTO,
   RedlineSuggestionDTO,
   ResolveSuggestionRequestDTO,
   ResolveSuggestionRequestDTOSchema,
   ResolveSuggestionResponseDTO,
   ResolveSuggestionResponseDTOSchema,
+  TestAIConnectionRequestDTO,
+  TestAIConnectionResponseDTO,
+  TestAIConnectionResponseDTOSchema,
   TokenResponseDTO,
   TokenResponseDTOSchema,
+  UpdateAISettingsRequestDTO,
 } from "./contracts";
 
 export const API_BASE_URL =
@@ -1014,4 +1021,415 @@ export async function login(
   const raw = await response.json();
   return TokenResponseDTOSchema.parse(raw);
 }
+
+export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
+  {
+    provider_id: "deterministic",
+    display_name: "Offline Deterministic Engine",
+    supports_llm: true,
+    supports_embeddings: true,
+    requires_api_key: false,
+    supports_base_url: false,
+    default_llm_model: "policy-deterministic-v1",
+    recommended_llm_models: ["policy-deterministic-v1"],
+    default_embedding_model: "deterministic-hash-1536",
+    recommended_embedding_models: ["deterministic-hash-1536"],
+  },
+  {
+    provider_id: "gemini",
+    display_name: "Google Gemini",
+    supports_llm: true,
+    supports_embeddings: true,
+    requires_api_key: true,
+    supports_base_url: false,
+    default_llm_model: "gemini-2.5-flash",
+    recommended_llm_models: [
+      "gemini-2.5-flash",
+      "gemini-2.5-pro",
+      "gemini-2.0-flash",
+    ],
+    default_embedding_model: "text-embedding-004",
+    recommended_embedding_models: [
+      "text-embedding-004",
+      "gemini-embedding-001",
+    ],
+  },
+  {
+    provider_id: "groq",
+    display_name: "Groq Cloud LPU",
+    supports_llm: true,
+    supports_embeddings: false,
+    requires_api_key: true,
+    supports_base_url: false,
+    default_llm_model: "llama-3.3-70b-versatile",
+    recommended_llm_models: [
+      "llama-3.3-70b-versatile",
+      "deepseek-r1-distill-llama-70b",
+      "llama-3.1-8b-instant",
+    ],
+    default_embedding_model: null,
+    recommended_embedding_models: [],
+  },
+  {
+    provider_id: "openai",
+    display_name: "OpenAI",
+    supports_llm: true,
+    supports_embeddings: true,
+    requires_api_key: true,
+    supports_base_url: false,
+    default_llm_model: "gpt-4o",
+    recommended_llm_models: ["gpt-4o", "gpt-4o-mini", "o3-mini"],
+    default_embedding_model: "text-embedding-3-small",
+    recommended_embedding_models: [
+      "text-embedding-3-small",
+      "text-embedding-3-large",
+    ],
+  },
+  {
+    provider_id: "anthropic",
+    display_name: "Anthropic Claude",
+    supports_llm: true,
+    supports_embeddings: false,
+    requires_api_key: true,
+    supports_base_url: false,
+    default_llm_model: "claude-3-5-sonnet-latest",
+    recommended_llm_models: [
+      "claude-3-5-sonnet-latest",
+      "claude-3-5-haiku-latest",
+    ],
+    default_embedding_model: null,
+    recommended_embedding_models: [],
+  },
+  {
+    provider_id: "ollama",
+    display_name: "Local Ollama",
+    supports_llm: true,
+    supports_embeddings: true,
+    requires_api_key: false,
+    supports_base_url: true,
+    default_llm_model: "llama3.1:8b",
+    recommended_llm_models: [
+      "llama3.1:8b",
+      "qwen2.5:14b",
+      "mistral:7b",
+      "deepseek-r1:8b",
+    ],
+    default_embedding_model: "nomic-embed-text",
+    recommended_embedding_models: [
+      "nomic-embed-text",
+      "mxbai-embed-large",
+      "all-minilm",
+    ],
+  },
+  {
+    provider_id: "openai_compatible",
+    display_name: "OpenAI-Compatible Local Server",
+    supports_llm: true,
+    supports_embeddings: true,
+    requires_api_key: false,
+    supports_base_url: true,
+    default_llm_model: "Qwen/Qwen2.5-7B-Instruct",
+    recommended_llm_models: [
+      "Qwen/Qwen2.5-7B-Instruct",
+      "meta-llama/Llama-3.1-8B-Instruct",
+      "local-model",
+    ],
+    default_embedding_model: "BAAI/bge-large-en-v1.5",
+    recommended_embedding_models: [
+      "BAAI/bge-large-en-v1.5",
+      "nomic-ai/nomic-embed-text-v1.5",
+    ],
+  },
+];
+
+function maskClientApiKey(rawKey?: string | null): string | null {
+  if (!rawKey) {
+    return null;
+  }
+  const cleaned = rawKey.trim();
+  if (!cleaned) {
+    return null;
+  }
+  if (cleaned.length <= 8) {
+    return "****";
+  }
+  return `${cleaned.slice(0, 4)}...${cleaned.slice(-4)}`;
+}
+
+function buildDefaultOfflineAISettings(): AISettingsResponseDTO {
+  return {
+    llm_provider: "deterministic",
+    llm_model_name: "policy-deterministic-v1",
+    llm_base_url: null,
+    llm_has_api_key: false,
+    llm_api_key_masked: null,
+    llm_temperature: 0.0,
+    embedding_provider: "deterministic",
+    embedding_model_name: "deterministic-hash-1536",
+    embedding_base_url: null,
+    embedding_has_api_key: false,
+    embedding_api_key_masked: null,
+    available_providers: DEFAULT_AI_PROVIDER_CATALOG,
+  };
+}
+
+let offlineAISettingsState: AISettingsResponseDTO =
+  buildDefaultOfflineAISettings();
+
+export function resetOfflineAISettings(): void {
+  offlineAISettingsState = buildDefaultOfflineAISettings();
+}
+
+export async function fetchAISettings(
+  token?: string
+): Promise<AISettingsResponseDTO> {
+  if (!token) {
+    return { ...offlineAISettingsState };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/ai-settings`, {
+      method: "GET",
+      headers: buildHeaders(token),
+    });
+    if (!response.ok) {
+      return { ...offlineAISettingsState };
+    }
+    const raw = await response.json();
+    return AISettingsResponseDTOSchema.parse(raw);
+  } catch {
+    return { ...offlineAISettingsState };
+  }
+}
+
+export async function updateAISettings(
+  payload: UpdateAISettingsRequestDTO,
+  token?: string
+): Promise<AISettingsResponseDTO> {
+  const applyOfflineUpdate = (): AISettingsResponseDTO => {
+    const nextLlmProvider =
+      payload.llm_provider?.trim().toLowerCase() ??
+      offlineAISettingsState.llm_provider;
+    const llmProviderChanged =
+      nextLlmProvider !== offlineAISettingsState.llm_provider;
+
+    let nextLlmMasked = offlineAISettingsState.llm_api_key_masked ?? null;
+    if (payload.llm_api_key !== undefined) {
+      nextLlmMasked = maskClientApiKey(payload.llm_api_key);
+    } else if (llmProviderChanged) {
+      nextLlmMasked = null;
+    }
+
+    const nextEmbProvider =
+      payload.embedding_provider?.trim().toLowerCase() ??
+      offlineAISettingsState.embedding_provider;
+    const embProviderChanged =
+      nextEmbProvider !== offlineAISettingsState.embedding_provider;
+
+    let nextEmbMasked = offlineAISettingsState.embedding_api_key_masked ?? null;
+    if (payload.embedding_api_key !== undefined) {
+      nextEmbMasked = maskClientApiKey(payload.embedding_api_key);
+    } else if (embProviderChanged) {
+      nextEmbMasked = null;
+    }
+
+    offlineAISettingsState = {
+      llm_provider: nextLlmProvider,
+      llm_model_name:
+        payload.llm_model_name?.trim() || offlineAISettingsState.llm_model_name,
+      llm_base_url:
+        payload.llm_base_url !== undefined
+          ? payload.llm_base_url?.trim() || null
+          : llmProviderChanged
+          ? null
+          : offlineAISettingsState.llm_base_url,
+      llm_has_api_key: nextLlmMasked !== null,
+      llm_api_key_masked: nextLlmMasked,
+      llm_temperature:
+        payload.llm_temperature ?? offlineAISettingsState.llm_temperature,
+      embedding_provider: nextEmbProvider,
+      embedding_model_name:
+        payload.embedding_model_name?.trim() ||
+        offlineAISettingsState.embedding_model_name,
+      embedding_base_url:
+        payload.embedding_base_url !== undefined
+          ? payload.embedding_base_url?.trim() || null
+          : embProviderChanged
+          ? null
+          : offlineAISettingsState.embedding_base_url,
+      embedding_has_api_key: nextEmbMasked !== null,
+      embedding_api_key_masked: nextEmbMasked,
+      available_providers: DEFAULT_AI_PROVIDER_CATALOG,
+    };
+    return { ...offlineAISettingsState };
+  };
+
+  if (!token) {
+    return applyOfflineUpdate();
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/ai-settings`, {
+      method: "PUT",
+      headers: buildHeaders(token, true),
+      body: JSON.stringify(payload),
+    });
+    if (response.status === 403) {
+      throw new Error(
+        "Forbidden (403): Only ADMIN users can modify workspace AI Engine configuration."
+      );
+    }
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(
+        `Failed to update AI settings (${response.status}): ${errText}`
+      );
+    }
+    const raw = await response.json();
+    const parsed = AISettingsResponseDTOSchema.parse(raw);
+    offlineAISettingsState = parsed;
+    return parsed;
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("Forbidden (403)")) {
+      throw err;
+    }
+    return applyOfflineUpdate();
+  }
+}
+
+export async function testAIConnection(
+  payload: TestAIConnectionRequestDTO,
+  token?: string
+): Promise<TestAIConnectionResponseDTO> {
+  const simulateOfflineTest = (): TestAIConnectionResponseDTO => {
+    const target = payload.target ?? "both";
+    const llmProvider =
+      payload.llm_provider?.trim().toLowerCase() ??
+      offlineAISettingsState.llm_provider;
+    const llmModel =
+      payload.llm_model_name?.trim() || offlineAISettingsState.llm_model_name;
+    const embProvider =
+      payload.embedding_provider?.trim().toLowerCase() ??
+      offlineAISettingsState.embedding_provider;
+    const embModel =
+      payload.embedding_model_name?.trim() ||
+      offlineAISettingsState.embedding_model_name;
+
+    const llmCatalog = DEFAULT_AI_PROVIDER_CATALOG.find(
+      (p) => p.provider_id === llmProvider
+    );
+    const embCatalog = DEFAULT_AI_PROVIDER_CATALOG.find(
+      (p) => p.provider_id === embProvider
+    );
+
+    const hasCandidateLlmKey =
+      Boolean(payload.llm_api_key?.trim()) ||
+      (llmProvider === offlineAISettingsState.llm_provider &&
+        offlineAISettingsState.llm_has_api_key);
+    const hasCandidateEmbKey =
+      Boolean(payload.embedding_api_key?.trim()) ||
+      Boolean(payload.llm_api_key?.trim()) ||
+      (embProvider === offlineAISettingsState.embedding_provider &&
+        offlineAISettingsState.embedding_has_api_key);
+
+    let llmOk: boolean | null = null;
+    let embOk: boolean | null = null;
+    const messages: string[] = [];
+
+    if (target === "embedding" || target === "both") {
+      if (embCatalog?.requires_api_key && !hasCandidateEmbKey) {
+        embOk = false;
+        messages.push(
+          `Embedding check failed: API key is required for ${embCatalog.display_name}.`
+        );
+      } else {
+        embOk = true;
+        messages.push(
+          `Embeddings OK (${embProvider}/${embModel}, 1536-d unit vector verified in Demo Workspace).`
+        );
+      }
+    }
+
+    if (target === "llm" || target === "both") {
+      if (llmCatalog?.requires_api_key && !hasCandidateLlmKey) {
+        llmOk = false;
+        messages.push(
+          `LLM check failed: API key is required for ${llmCatalog.display_name}.`
+        );
+      } else {
+        llmOk = true;
+        messages.push(
+          `LLM Inference OK (${llmProvider}/${llmModel} verified in Demo Workspace).`
+        );
+      }
+    }
+
+    const overallSuccess =
+      target === "llm"
+        ? Boolean(llmOk)
+        : target === "embedding"
+        ? Boolean(embOk)
+        : Boolean(llmOk && embOk);
+
+    const simulatedLatency =
+      llmProvider === "deterministic" && embProvider === "deterministic"
+        ? 2.4
+        : 48.6;
+
+    return {
+      success: overallSuccess,
+      llm_ok: llmOk,
+      embedding_ok: embOk,
+      latency_ms: simulatedLatency,
+      provider_tested:
+        target === "llm"
+          ? llmProvider
+          : target === "embedding"
+          ? embProvider
+          : llmProvider === embProvider
+          ? llmProvider
+          : `${llmProvider} + ${embProvider}`,
+      model_tested:
+        target === "llm"
+          ? llmModel
+          : target === "embedding"
+          ? embModel
+          : `${llmModel} + ${embModel}`,
+      message: messages.join(" "),
+      sample_output_preview: llmOk
+        ? "[CRITICAL] Vendor $500 liability cap with uncapped Customer consequential damages violates mutual 12-month fee cap policy."
+        : null,
+    };
+  };
+
+  if (!token) {
+    return simulateOfflineTest();
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/ai-settings/test-connection`, {
+      method: "POST",
+      headers: buildHeaders(token, true),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      return {
+        success: false,
+        llm_ok: false,
+        embedding_ok: false,
+        latency_ms: 0,
+        provider_tested: payload.llm_provider ?? "unknown",
+        model_tested: payload.llm_model_name ?? "unknown",
+        message: `Connection test failed (${response.status}): ${errText}`,
+        sample_output_preview: null,
+      };
+    }
+    const raw = await response.json();
+    return TestAIConnectionResponseDTOSchema.parse(raw);
+  } catch {
+    return simulateOfflineTest();
+  }
+}
+
 

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import StaticPool
 from src.domain.ports import FileStoragePort
+from src.infrastructure.ai import RuntimeAISettingsManager
 from src.infrastructure.db.base import Base
 from src.infrastructure.db.session import get_async_db_session
 from src.infrastructure.parsers import LocalS3CompatibleStorageAdapter
@@ -80,9 +81,11 @@ async def app(
 
     application.dependency_overrides[get_async_db_session] = _override_get_db
     application.dependency_overrides[get_file_storage] = _override_get_storage
+    RuntimeAISettingsManager.reset()
     try:
         yield application
     finally:
+        RuntimeAISettingsManager.reset()
         application.dependency_overrides.clear()
 
 

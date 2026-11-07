@@ -1,16 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Scale, ShieldCheck, X } from "lucide-react";
+import { Cpu, Scale, ShieldCheck, X } from "lucide-react";
+import {
+  AISettingsModal,
+  formatActiveAIBadge,
+} from "@/components/workspace/AISettingsModal";
+import { fetchAISettings } from "@/services/apiClient";
 import { useAuthSession } from "@/services/authSession";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import { ThemeToggle } from "./ThemeToggle";
 
 export const TopNavBar: React.FC = () => {
   const pathname = usePathname();
   const { session, connectionStatus, login, logout } = useAuthSession();
+  const activeLLMProvider = useWorkspaceStore(
+    (state) => state.activeLLMProvider
+  );
+  const activeLLMModel = useWorkspaceStore((state) => state.activeLLMModel);
+  const setActiveAIEngine = useWorkspaceStore(
+    (state) => state.setActiveAIEngine
+  );
 
+  const [isAISettingsOpen, setIsAISettingsOpen] = useState<boolean>(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [emailInput, setEmailInput] = useState<string>(
     "counsel@redlinestudio.local"
@@ -18,6 +32,20 @@ export const TopNavBar: React.FC = () => {
   const [passInput, setPassInput] = useState<string>("RedlineStudio2026!");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!session.token) {
+      return;
+    }
+    void fetchAISettings(session.token).then((settings) => {
+      setActiveAIEngine({
+        llmProvider: settings.llm_provider,
+        llmModel: settings.llm_model_name,
+        embeddingProvider: settings.embedding_provider,
+        embeddingModel: settings.embedding_model_name,
+      });
+    });
+  }, [session.token, setActiveAIEngine]);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +129,19 @@ export const TopNavBar: React.FC = () => {
 
         {/* Right: Workspace Status & Controls */}
         <div className="flex items-center gap-2.5">
+          {/* Active AI Engine Switcher Pill */}
+          <button
+            type="button"
+            data-testid="open-ai-settings-btn"
+            onClick={() => setIsAISettingsOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/90 bg-indigo-50/70 px-3 py-1 text-[11px] font-semibold text-indigo-700 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-100/80 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:border-indigo-500/50 dark:hover:bg-indigo-900/50"
+          >
+            <Cpu className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>
+              {formatActiveAIBadge(activeLLMProvider, activeLLMModel)}
+            </span>
+          </button>
+
           {/* Connection Status Badge */}
           <div
             data-testid="backend-connection-badge"
@@ -148,6 +189,16 @@ export const TopNavBar: React.FC = () => {
           </div>
         </div>
       </nav>
+
+      {/* AI Engine & Model Switcher Modal */}
+      {isAISettingsOpen ? (
+        <AISettingsModal
+          isOpen={isAISettingsOpen}
+          onClose={() => setIsAISettingsOpen(false)}
+          token={session.token}
+          userRole={session.userRole}
+        />
+      ) : null}
 
       {/* Account / Login Modal */}
       {isLoginModalOpen ? (

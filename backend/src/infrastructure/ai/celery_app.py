@@ -10,6 +10,7 @@ from src.domain.entities import DocumentClause
 from src.infrastructure.ai.batch_worker import BatchDocumentAuditWorker
 from src.infrastructure.ai.provider_registry import create_llm_runnable
 from src.infrastructure.ai.redline_chain import LangChainClauseAuditor
+from src.infrastructure.ai.runtime_settings import RuntimeAISettingsManager
 from src.infrastructure.config import get_settings
 from src.infrastructure.db.repositories import SqlAlchemyUnitOfWork
 from src.infrastructure.db.session import AsyncSessionFactory
@@ -47,7 +48,7 @@ async def _run_batch_audit_for_clauses(
     document_id: UUID,
     clauses: list[DocumentClause],
 ) -> list[dict[str, Any]]:
-    settings = get_settings()
+    settings = RuntimeAISettingsManager.get_effective_settings()
     async with AsyncSessionFactory() as session:
         uow = SqlAlchemyUnitOfWork(session)
         embedder = create_embedding_generator(settings)

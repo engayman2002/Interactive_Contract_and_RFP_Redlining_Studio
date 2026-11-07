@@ -25,6 +25,11 @@ from src.infrastructure.ai.redline_chain import (
     format_playbook_rules_context,
     parse_and_validate_redline_output,
 )
+from src.infrastructure.ai.runtime_settings import (
+    RuntimeAISettingsManager,
+    mask_api_key,
+    sanitize_secret_from_text,
+)
 
 __all__ = [
     "AnthropicMessagesChatRunnable",
@@ -36,6 +41,7 @@ __all__ = [
     "OpenAICompatibleChatRunnable",
     "PolicyAwareDeterministicChatModel",
     "RedlineOutput",
+    "RuntimeAISettingsManager",
     "SYSTEM_PROMPT",
     "UnsupportedAIProviderError",
     "audit_document_celery_task",
@@ -44,6 +50,8 @@ __all__ = [
     "create_celery_app",
     "create_llm_runnable",
     "format_playbook_rules_context",
+    "mask_api_key",
     "parse_and_validate_redline_output",
     "register_llm_provider",
+    "sanitize_secret_from_text",
 ]

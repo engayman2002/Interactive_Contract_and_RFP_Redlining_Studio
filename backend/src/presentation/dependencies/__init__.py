@@ -22,7 +22,7 @@ from src.domain.ports import (
     PlaybookRetrieverPort,
     UnitOfWorkPort,
 )
-from src.infrastructure.ai import LangChainClauseAuditor, create_llm_runnable
+from src.infrastructure.ai import RuntimeAISettingsManager
 from src.infrastructure.config import get_settings
 from src.infrastructure.db.repositories import SqlAlchemyUnitOfWork
 from src.infrastructure.db.session import get_async_db_session
@@ -32,10 +32,7 @@ from src.infrastructure.parsers import (
     NativeWordDocxExporter,
     SemanticClauseSegmenter,
 )
-from src.infrastructure.vector import (
-    HybridPlaybookRetriever,
-    create_embedding_generator,
-)
+from src.infrastructure.vector import HybridPlaybookRetriever
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -82,23 +79,14 @@ def get_file_storage() -> FileStoragePort:
     return LocalS3CompatibleStorageAdapter(root_path=settings.STORAGE_ROOT_PATH)
 
 
-@lru_cache(maxsize=1)
 def get_embedding_generator() -> EmbeddingGeneratorPort:
-    """Provide singleton EmbeddingGeneratorPort resolved via EmbeddingProviderRegistry."""
-    settings = get_settings()
-    return create_embedding_generator(settings)
+    """Provide active EmbeddingGeneratorPort resolved dynamically via RuntimeAISettingsManager."""
+    return RuntimeAISettingsManager.get_active_embedding_generator()
 
 
-@lru_cache(maxsize=1)
 def get_clause_auditor() -> ClauseAuditorPort:
-    """Provide singleton LangChainClauseAuditor resolved via LLMProviderRegistry."""
-    settings = get_settings()
-    llm_runnable = create_llm_runnable(settings)
-    return LangChainClauseAuditor(
-        llm_runnable=llm_runnable,
-        max_retries=settings.REDLINE_MAX_RETRIES,
-        temperature=settings.LLM_TEMPERATURE,
-    )
+    """Provide active ClauseAuditorPort resolved dynamically via RuntimeAISettingsManager."""
+    return RuntimeAISettingsManager.get_active_clause_auditor()
 
 
 @lru_cache(maxsize=1)

@@ -50,6 +50,16 @@ export interface WorkspaceStoreState {
   conflictError: string | null;
   isExporting: boolean;
   lastExportedFilename: string | null;
+  activeLLMProvider: string;
+  activeLLMModel: string;
+  activeEmbeddingProvider: string;
+  activeEmbeddingModel: string;
+  setActiveAIEngine: (config: {
+    llmProvider: string;
+    llmModel: string;
+    embeddingProvider: string;
+    embeddingModel: string;
+  }) => void;
   selectClause: (clauseId: string | null, source: SelectionSource) => void;
   setHoveredSuggestion: (suggestionId: string | null) => void;
   setRiskFilter: (filter: RiskFilterMode) => void;
@@ -134,6 +144,23 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   conflictError: null,
   isExporting: false,
   lastExportedFilename: null,
+  activeLLMProvider: "deterministic",
+  activeLLMModel: "policy-deterministic-v1",
+  activeEmbeddingProvider: "deterministic",
+  activeEmbeddingModel: "deterministic-hash-1536",
+
+  setActiveAIEngine: ({
+    llmProvider,
+    llmModel,
+    embeddingProvider,
+    embeddingModel,
+  }) =>
+    set({
+      activeLLMProvider: llmProvider,
+      activeLLMModel: llmModel,
+      activeEmbeddingProvider: embeddingProvider,
+      activeEmbeddingModel: embeddingModel,
+    }),
 
   selectClause: (clauseId, source) =>
     set({
@@ -544,5 +571,9 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       conflictError: null,
       isExporting: false,
       lastExportedFilename: null,
+      activeLLMProvider: "deterministic",
+      activeLLMModel: "policy-deterministic-v1",
+      activeEmbeddingProvider: "deterministic",
+      activeEmbeddingModel: "deterministic-hash-1536",
     }),
 }));

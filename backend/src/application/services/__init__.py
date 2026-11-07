@@ -199,7 +199,10 @@ class JwtTokenService:
                 token,
                 self._secret_key,
                 algorithms=[self._algorithm],
-                options={"require": ["sub", "org_id", "role", "exp"]},
+                options={
+                    "require": ["sub", "org_id", "role", "exp"],
+                    "verify_iat": False,
+                },
             )
             payload = TokenPayloadDTO.model_validate(decoded)
         except jwt.ExpiredSignatureError as exc:

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ChevronRight,
+  Cpu,
   Download,
   FileCheck2,
   HelpCircle,
@@ -18,11 +19,14 @@ import { ThemeToggle } from "@/components/navigation/ThemeToggle";
 import { useDocumentStream } from "@/hooks/useDocumentStream";
 import {
   DEMO_WORKSPACE_DATA,
+  fetchAISettings,
   fetchDocumentWorkspace,
   triggerDocumentAnalysis,
 } from "@/services/apiClient";
+import { useAuthSession } from "@/services/authSession";
 import type { DocumentWorkspaceDTO, ExportMode } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
+import { AISettingsModal, formatActiveAIBadge } from "./AISettingsModal";
 import { QuickHelpModal } from "./QuickHelpModal";
 import { UploadModal } from "./UploadModal";
 
@@ -56,6 +60,15 @@ export const RedliningStudioWorkspace: React.FC<
   const rejectSuggestion = useWorkspaceStore((state) => state.rejectSuggestion);
   const addClauseComment = useWorkspaceStore((state) => state.addClauseComment);
   const exportDocument = useWorkspaceStore((state) => state.exportDocument);
+  const activeLLMProvider = useWorkspaceStore(
+    (state) => state.activeLLMProvider
+  );
+  const activeLLMModel = useWorkspaceStore((state) => state.activeLLMModel);
+  const setActiveAIEngine = useWorkspaceStore(
+    (state) => state.setActiveAIEngine
+  );
+  const { session } = useAuthSession();
+  const effectiveToken = token ?? session.token ?? undefined;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef<boolean>(false);
@@ -70,6 +83,21 @@ export const RedliningStudioWorkspace: React.FC<
   const [isGuideDismissed, setIsGuideDismissed] = useState<boolean>(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
   const [isQuickHelpOpen, setIsQuickHelpOpen] = useState<boolean>(false);
+  const [isAISettingsOpen, setIsAISettingsOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!effectiveToken) {
+      return;
+    }
+    void fetchAISettings(effectiveToken).then((settings) => {
+      setActiveAIEngine({
+        llmProvider: settings.llm_provider,
+        llmModel: settings.llm_model_name,
+        embeddingProvider: settings.embedding_provider,
+        embeddingModel: settings.embedding_model_name,
+      });
+    });
+  }, [effectiveToken, setActiveAIEngine]);
 
   // Load document workspace if a specific documentId is provided
   useEffect(() => {
@@ -236,6 +264,18 @@ export const RedliningStudioWorkspace: React.FC<
 
         {/* Right: Organized Action Group */}
         <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            data-testid="open-ai-settings-btn"
+            onClick={() => setIsAISettingsOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200/90 bg-indigo-50/70 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-100/80 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+          >
+            <Cpu className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">
+              {formatActiveAIBadge(activeLLMProvider, activeLLMModel)}
+            </span>
+          </button>
+
           <ThemeToggle />
 
           {/* Secondary Subtle Buttons */}
@@ -447,6 +487,16 @@ export const RedliningStudioWorkspace: React.FC<
         <QuickHelpModal
           isOpen={isQuickHelpOpen}
           onClose={() => setIsQuickHelpOpen(false)}
+        />
+      ) : null}
+
+      {/* AI Engine & Model Switcher Modal */}
+      {isAISettingsOpen ? (
+        <AISettingsModal
+          isOpen={isAISettingsOpen}
+          onClose={() => setIsAISettingsOpen(false)}
+          token={effectiveToken}
+          userRole={session.userRole}
         />
       ) : null}
     </div>

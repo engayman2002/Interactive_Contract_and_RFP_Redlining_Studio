@@ -25,6 +25,7 @@ from src.application.use_cases import (
 )
 from src.domain.enums import UserRole
 from src.domain.ports import UnitOfWorkPort
+from src.presentation.api.v1.ai_settings import ai_settings_router
 from src.presentation.api.v1.collaboration import (
     clauses_router,
     suggestions_router,
@@ -200,6 +201,7 @@ api_v1_router.include_router(documents_router)
 api_v1_router.include_router(playbooks_router)
 api_v1_router.include_router(suggestions_router)
 api_v1_router.include_router(clauses_router)
+api_v1_router.include_router(ai_settings_router)
 
 __all__ = ["api_v1_router"]
 

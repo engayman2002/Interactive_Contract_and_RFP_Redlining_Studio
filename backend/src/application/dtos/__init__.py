@@ -188,6 +188,13 @@ class DocumentResponseDTO(ImmutableDTO):
     created_at: datetime
 
 
+from src.application.dtos.ai_settings_dtos import (  # noqa: E402
+    AISettingsResponseDTO,
+    ProviderCatalogItemDTO,
+    TestAIConnectionRequestDTO,
+    TestAIConnectionResponseDTO,
+    UpdateAISettingsRequestDTO,
+)
 from src.application.dtos.collaboration_dtos import (  # noqa: E402
     ClauseCommentResponseDTO,
     ClauseResolutionStateDTO,
@@ -223,6 +230,7 @@ from src.application.dtos.redline_dtos import (  # noqa: E402
 )
 
 __all__ = [
+    "AISettingsResponseDTO",
     "AuditLogEntryResponseDTO",
     "ClauseCommentResponseDTO",
     "ClauseResolutionStateDTO",
@@ -246,14 +254,18 @@ __all__ = [
     "PlaybookRuleResponseDTO",
     "PlaybookSearchRequestDTO",
     "PlaybookSearchResponseDTO",
+    "ProviderCatalogItemDTO",
     "RedlineSuggestionResponseDTO",
     "RegisterOrganizationRequestDTO",
     "ResolutionAction",
     "ResolveSuggestionCommand",
     "ResolveSuggestionRequestDTO",
     "ResolveSuggestionResponseDTO",
+    "TestAIConnectionRequestDTO",
+    "TestAIConnectionResponseDTO",
     "TokenPayloadDTO",
     "TokenResponseDTO",
+    "UpdateAISettingsRequestDTO",
     "UpdateDocumentRequestDTO",
     "UpdatePlaybookRuleCommand",
     "UpdatePlaybookRuleRequestDTO",

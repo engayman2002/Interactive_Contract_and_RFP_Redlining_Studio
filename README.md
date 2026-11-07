@@ -143,6 +143,7 @@ Interactive_Contract_and_RFP_Redlining_Studio/
 │   │   ├── application/                            # Application Orchestration, DTOs & Security Services
 │   │   │   ├── dtos/
 │   │   │   │   ├── __init__.py                     # ImmutableDTO, Auth/User/Org/Document Foundation DTOs
+│   │   │   │   ├── ai_settings_dtos.py             # ProviderCatalogItemDTO, AISettingsResponse/Update/Test DTOs
 │   │   │   │   ├── ingestion_dtos.py               # IngestDocumentCommand, ClauseResponseDTO,
 │   │   │   │   │                                   # DocumentUploadResponseDTO, DocumentWorkspaceResponseDTO
 │   │   │   │   ├── playbook_dtos.py                # Create/UpdatePlaybookRuleDTO, PlaybookSearchRequest/ResponseDTO
@@ -181,12 +182,14 @@ Interactive_Contract_and_RFP_Redlining_Studio/
 │   │   │   │   └── provider_registry.py            # EmbeddingProviderRegistry, Dimension Adapter, OpenAI/Ollama Adapters
 │   │   │   └── ai/
 │   │   │       ├── redline_chain.py                # RedlineOutput, SYSTEM_PROMPT, LangChainClauseAuditor
-│   │   │       ├── provider_registry.py            # LLMProviderRegistry (Deterministic, Groq, OpenAI, Anthropic, Ollama, vLLM)
+│   │   │       ├── provider_registry.py            # LLMProviderRegistry (Deterministic, Groq, OpenAI, Anthropic, Gemini, Ollama, vLLM)
+│   │   │       ├── runtime_settings.py             # Thread-Safe RuntimeAISettingsManager & Secret Key Masking
 │   │   │       ├── batch_worker.py                 # BatchDocumentAuditWorker (Bounded Semaphore=20)
 │   │   │       └── celery_app.py                   # Celery Worker App & audit_document_celery_task
 │   │   └── presentation/                           # Delivery & HTTP Layer
 │   │       ├── api/v1/
 │   │       │   ├── __init__.py                     # /health, /auth/*, /users/* Routers
+│   │       │   ├── ai_settings.py                  # /ai-settings (GET, PUT Admin Hot-Swap, POST /test-connection)
 │   │       │   ├── documents.py                    # /documents/upload, /workspace, /analyze, /stream, /export, /audit-trail
 │   │       │   ├── playbooks.py                    # /playbooks/rules CRUD & /playbooks/search
 │   │       │   └── collaboration.py                # /suggestions/{id}/resolve & /clauses/{id}/comments
@@ -219,6 +222,7 @@ Interactive_Contract_and_RFP_Redlining_Studio/
         │   │   └── ThemeToggle.tsx                 # Persistent Dual-Theme Toggle (Executive Light / Slate Dark)
         │   ├── workspace/
         │   │   ├── RedliningStudioWorkspace.tsx    # Resizable Split-Screen Container, Export Controls & 409 Banner
+        │   │   ├── AISettingsModal.tsx             # In-App AI Provider & Model Switcher + Live Connection Tester
         │   │   ├── ContractUploadDropzone.tsx      # Drag-and-Drop .docx/.pdf Dropzone with Multi-Stage Progress
         │   │   ├── UploadModal.tsx                 # In-Studio Quick File Upload Modal
         │   │   └── QuickHelpModal.tsx              # In-Studio Contextual Quick-Help & Risk Heatmap Reference Drawer
@@ -244,7 +248,7 @@ Interactive_Contract_and_RFP_Redlining_Studio/
         │   └── helpContent.ts                      # Structured User Guide Modules, Playbook Templates & FAQ Library
         ├── store/
         │   └── workspaceStore.ts                   # Zustand Store (Bidirectional Sync, Optimistic Edits & Rollback)
-        └── __tests__/                              # 6 Vitest + React Testing Library Test Suites (20 Tests)
+        └── __tests__/                              # 7 Vitest + React Testing Library Test Suites (22 Tests)
 ```
 
 ### 1.4 Frontend User Journey, Multi-Page Routes & Automatic Session Bootstrapper
@@ -538,7 +542,9 @@ All backend configuration variables are defined and validated via Pydantic Setti
 
 ### 5.1 AI Provider Architecture: Cloud, Local LLMs, and Custom Provider Plugins
 
-The backend implements a vendor-agnostic **Plugin Registry Architecture** strictly inside the Infrastructure layer ([`backend/src/infrastructure/ai/provider_registry.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py) and [`backend/src/infrastructure/vector/provider_registry.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py)). The Domain and Application layers depend exclusively on [`ClauseAuditorPort`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/domain/ports/ai_ports.py) and [`EmbeddingGeneratorPort`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/domain/ports/playbook_ports.py#L11-L21), allowing you to switch between offline deterministic evaluation, cloud APIs (Groq, OpenAI, Anthropic), **100% private local models (Ollama, vLLM, LM Studio, llama.cpp)**, or custom enterprise gateways via environment variables alone.
+The backend implements a vendor-agnostic **Plugin Registry Architecture** strictly inside the Infrastructure layer ([`backend/src/infrastructure/ai/provider_registry.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py) and [`backend/src/infrastructure/vector/provider_registry.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py)). The Domain and Application layers depend exclusively on [`ClauseAuditorPort`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/domain/ports/ai_ports.py) and [`EmbeddingGeneratorPort`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/domain/ports/playbook_ports.py#L11-L21), allowing you to switch between offline deterministic evaluation, cloud APIs (Google Gemini, Groq, OpenAI, Anthropic), **100% private local models (Ollama, vLLM, LM Studio, llama.cpp)**, or custom enterprise gateways either via `.env` variables **or live at runtime via the In-App AI Provider & Model Switcher**.
+
+> **Zero-Restart In-App AI Switcher:** Click the **`AI: ...`** pill button in the global navigation bar ([`TopNavBar.tsx`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/navigation/TopNavBar.tsx)) or Redlining Studio toolbar to open [`AISettingsModal.tsx`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/workspace/AISettingsModal.tsx). Workspace administrators can select any cloud or local preset, paste an API key (masked server-side via [`mask_api_key`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/runtime_settings.py) and never exposed in `GET` responses), run **`Test Connection`** (`POST /api/v1/ai-settings/test-connection`) to verify `1536-d` vector generation and structured LLM auditing latency in milliseconds, and hot-swap the active engine via [`RuntimeAISettingsManager`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/runtime_settings.py) (`PUT /api/v1/ai-settings`) without restarting containers.
 
 #### 5.1.1 Supported Built-in Providers Matrix
 
@@ -859,6 +865,9 @@ The OpenXML `.docx` reconstruction engine is located in [`backend/src/infrastruc
 | 21 | `GET /api/v1/clauses/{clause_id}/comments` | All Authenticated Roles | `200 OK` | List chronological comments on a clause |
 | 22 | `GET /api/v1/documents/{document_id}/audit-trail` | All Authenticated Roles | `200 OK` | Retrieve chronological immutable compliance audit trail for `document_id` |
 | 23 | `GET /api/v1/documents/{document_id}/export` | All Authenticated Roles | `200 OK` (`.docx` binary) | Export `.docx` in `mode=track_changes` (`<w:ins>`/`<w:del>`) or `mode=clean` |
+| 24 | `GET /api/v1/ai-settings` | All Authenticated Roles | `200 OK` | Inspect active LLM & Embedding providers, masked API key flags, and provider catalog |
+| 25 | `PUT /api/v1/ai-settings` | `ADMIN` | `200 OK` (`403` non-admin) | Hot-swap active runtime LLM & Vector Embedding providers/models without restart |
+| 26 | `POST /api/v1/ai-settings/test-connection` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Live probe candidate LLM & 1536-d Embedding settings and report `latency_ms` |
 
 ---
 
@@ -1023,10 +1032,10 @@ cd /home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend
 # 1. Lint & Security Checks (pycodestyle, pyflakes, isort, bugbear, bandit)
 ./.venv/bin/ruff check .
 
-# 2. Strict Static Type Checking (92 source & test files)
+# 2. Strict Static Type Checking (96 source & test files)
 ./.venv/bin/mypy --strict src tests
 
-# 3. Full Unit & Multi-Tenant Integration Test Suite (49 tests)
+# 3. Full Unit & Multi-Tenant Integration Test Suite (52 tests)
 ./.venv/bin/pytest -v
 ```
 
@@ -1041,7 +1050,7 @@ node ./node_modules/.bin/tsc --noEmit
 # 2. Next.js ESLint Verification
 node ./node_modules/.bin/next lint
 
-# 3. Vitest + React Testing Library Suite (6 test files, 20 tests)
+# 3. Vitest + React Testing Library Suite (7 test files, 22 tests)
 node ./node_modules/.bin/vitest run
 
 # 4. Next.js 15 Standalone Production Build Verification (/, /playbooks, /documents/[id], /help)
