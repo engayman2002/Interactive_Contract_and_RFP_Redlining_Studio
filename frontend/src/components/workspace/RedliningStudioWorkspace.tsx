@@ -12,6 +12,7 @@ import {
 } from "@/services/apiClient";
 import type { DocumentWorkspaceDTO, ExportMode } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
+import { QuickHelpModal } from "./QuickHelpModal";
 import { UploadModal } from "./UploadModal";
 
 export interface RedliningStudioWorkspaceProps {
@@ -55,6 +56,7 @@ export const RedliningStudioWorkspace: React.FC<
   );
   const [isGuideDismissed, setIsGuideDismissed] = useState<boolean>(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
+  const [isQuickHelpOpen, setIsQuickHelpOpen] = useState<boolean>(false);
 
   // Load document workspace if a specific documentId is provided
   useEffect(() => {
@@ -202,6 +204,17 @@ export const RedliningStudioWorkspace: React.FC<
         </div>
 
         <div className="flex items-center gap-2">
+          {/* In-Studio Quick Help Guide Button */}
+          <button
+            type="button"
+            data-testid="open-quick-help-btn"
+            onClick={() => setIsQuickHelpOpen(true)}
+            className="flex items-center gap-1 rounded-md border border-indigo-500/40 bg-indigo-950/50 px-2.5 py-1.5 text-xs font-semibold text-indigo-200 transition-colors hover:bg-indigo-900/60 hover:text-white"
+          >
+            <span>?</span>
+            <span>Help Guide</span>
+          </button>
+
           {/* Quick In-Studio Upload Modal Button */}
           <button
             type="button"
@@ -387,6 +400,14 @@ export const RedliningStudioWorkspace: React.FC<
         <UploadModal
           isOpen={isUploadModalOpen}
           onClose={() => setIsUploadModalOpen(false)}
+        />
+      ) : null}
+
+      {/* Contextual Quick Help Modal */}
+      {isQuickHelpOpen ? (
+        <QuickHelpModal
+          isOpen={isQuickHelpOpen}
+          onClose={() => setIsQuickHelpOpen(false)}
         />
       ) : null}
     </div>

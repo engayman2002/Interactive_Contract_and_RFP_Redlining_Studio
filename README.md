@@ -208,10 +208,19 @@ Interactive_Contract_and_RFP_Redlining_Studio/
     │   ├── playwright-shim.ts                      # Strict TypeScript Playwright Harness Types
     │   └── redliningStudio.spec.ts                 # End-to-End Redlining Studio Lifecycle E2E Spec
     └── src/
-        ├── app/                                    # Next.js 15 App Router Entrypoint (/ and /documents/[id])
+        ├── app/
+        │   ├── page.tsx                            # / — Contract Dashboard & Drag-and-Drop .docx/.pdf Upload Hub
+        │   ├── playbooks/page.tsx                  # /playbooks — Company Playbook Rules Manager (CRUD & Triggers)
+        │   ├── documents/[id]/page.tsx             # /documents/[id] — Split-Screen Interactive Redlining Studio
+        │   └── help/page.tsx                       # /help — Interactive In-App Help Center, Playbook Templates & FAQ
         ├── components/
+        │   ├── navigation/
+        │   │   └── TopNavBar.tsx                   # Global Navigation Bar, Live/Offline Status Badge & Org Login Modal
         │   ├── workspace/
-        │   │   └── RedliningStudioWorkspace.tsx    # Resizable Split-Screen Container, Export Controls & 409 Banner
+        │   │   ├── RedliningStudioWorkspace.tsx    # Resizable Split-Screen Container, Export Controls & 409 Banner
+        │   │   ├── ContractUploadDropzone.tsx      # Drag-and-Drop .docx/.pdf Dropzone with Multi-Stage Progress
+        │   │   ├── UploadModal.tsx                 # In-Studio Quick File Upload Modal
+        │   │   └── QuickHelpModal.tsx              # In-Studio Contextual Quick-Help & Risk Heatmap Reference Drawer
         │   ├── editor/
         │   │   ├── ClauseNodeExtension.ts          # Custom ProseMirror Node with persistent data-clause-id
         │   │   ├── ContractEditorCanvas.tsx        # TipTap Editor Canvas + Bidirectional Scroll/Focus Sync
@@ -222,17 +231,35 @@ Interactive_Contract_and_RFP_Redlining_Studio/
         │   └── inspector/
         │       ├── AiInspectorPanel.tsx            # Right-Hand Inspector, Risk Filters & Redlines/Audit Tab Switcher
         │       ├── RedlineCard.tsx                 # AI Suggestion Card (Apply, Modify Inline, Reject)
-        │       ├── ClauseCommentThread.tsx         # Per-Clause Threaded Discussion Panel
+        │       ├── ClauseCommentThread.tsx         # Collapsible Per-Clause Threaded Discussion Panel
         │       └── AuditTrailPanel.tsx             # Chronological Immutable Compliance Audit Trail Viewer
         ├── hooks/
         │   └── useDocumentStream.ts                # Real-Time SSE Client Hook with Demo Stream Simulation
         ├── services/
         │   ├── contracts.ts                        # Strict Zod Schemas & TypeScript DTO Types
-        │   └── apiClient.ts                        # Typed Fetch Client, 409 VersionConflictError & Demo Fallback
+        │   ├── apiClient.ts                        # Typed Fetch Client, 409 VersionConflictError & Offline Storage
+        │   ├── authSession.ts                      # Seamless Workspace Session Bootstrapper & Default Playbook Seeder
+        │   └── helpContent.ts                      # Structured User Guide Modules, Playbook Templates & FAQ Library
         ├── store/
         │   └── workspaceStore.ts                   # Zustand Store (Bidirectional Sync, Optimistic Edits & Rollback)
-        └── __tests__/                              # 4 Vitest + React Testing Library Test Suites (13 Tests)
+        └── __tests__/                              # 6 Vitest + React Testing Library Test Suites (19 Tests)
 ```
+
+### 1.4 Frontend User Journey, Multi-Page Routes & Automatic Session Bootstrapper
+
+End-users (legal counsel, contract managers, procurement leads, and technical leads) interact strictly through four purpose-built web routes:
+
+| Route | Component | Core Capabilities & User Workflow |
+| :--- | :--- | :--- |
+| **`/`** | [`DashboardPage`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/app/page.tsx) | **Contract Dashboard & Upload Hub:** Drag-and-drop `.docx` or `.pdf` agreements up to 25MB via [`ContractUploadDropzone`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/workspace/ContractUploadDropzone.tsx) with multi-stage ingestion progress (`Uploading file` -> `Parsing & segmenting clauses` -> `Opening Redlining Studio`), sample contract quick-launch CTA, and a **My Documents** table displaying status (`READY` / `ANALYZED`), version, and clause counts. |
+| **`/playbooks`** | [`PlaybooksPage`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/app/playbooks/page.tsx) | **Company Playbook Rules Manager:** Create, inspect, and delete corporate negotiation rules (`Category`, `Standard Position`, `Fallback Position`, and `Unacceptable Red-Flag Triggers`). Pre-seeded with 5 enterprise baseline rules (Limitation of Liability, Indemnification, SLA, Data Privacy, Governing Law). |
+| **`/documents/[id]`** | [`RedliningStudioWorkspace`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/workspace/RedliningStudioWorkspace.tsx) | **Split-Screen Interactive Redlining Studio:** Left-hand [`RiskHeatmapGutter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/RiskHeatmapGutter.tsx) + TipTap [`ContractEditorCanvas`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/ContractEditorCanvas.tsx) paired with right-hand [`AiInspectorPanel`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/inspector/AiInspectorPanel.tsx), one-click **Analyze Contract with AI**, hover inline word diffs, collapsible [`ClauseCommentThread`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/inspector/ClauseCommentThread.tsx), in-studio [`UploadModal`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/workspace/UploadModal.tsx), contextual [`QuickHelpModal`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/workspace/QuickHelpModal.tsx), and native `.docx` exports. |
+| **`/help`** | [`HelpCenterPage`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/app/help/page.tsx) | **Interactive In-App Help Center & User Manual:** Instant keyword search across 6 structured guide modules, visual Risk Heatmap & Inline Diff legend, 3 one-click copyable Playbook Rule Templates, Track Changes vs. Clean `.docx` comparison table, and an interactive FAQ accordion. |
+
+- **Seamless Session Bootstrapper ([`authSession.ts`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/services/authSession.ts)):**
+  - On first load, `ensureWorkspaceSession()` checks backend availability (`/api/v1/health`).
+  - When the FastAPI backend is reachable (`connectionStatus = "live"`), it automatically registers or logs into a default organization workspace and seeds standard Playbook rules if none exist—allowing immediate `.docx`/`.pdf` uploads and AI redlining without manual `curl` token setup.
+  - When running without a backend (`connectionStatus = "demo_fallback"`), it transparently falls back to client-side workspace persistence so every route, upload, playbook rule, and simulated SSE audit works offline out of the box.
 
 ---
 
@@ -1006,17 +1033,17 @@ cd /home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend
 ```bash
 cd /home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend
 
-# 1. Strict TypeScript Type Checking
-./node_modules/.bin/tsc --noEmit
+# 1. Strict TypeScript Type Checking (via native Linux Node runtime)
+node ./node_modules/.bin/tsc --noEmit
 
 # 2. Next.js ESLint Verification
-./node_modules/.bin/next lint
+node ./node_modules/.bin/next lint
 
-# 3. Vitest + React Testing Library Suite (4 test files, 13 tests)
-./node_modules/.bin/vitest run
+# 3. Vitest + React Testing Library Suite (6 test files, 19 tests)
+node ./node_modules/.bin/vitest run
 
-# 4. Next.js 15 Standalone Production Build Verification
-./node_modules/.bin/next build
+# 4. Next.js 15 Standalone Production Build Verification (/, /playbooks, /documents/[id], /help)
+node ./node_modules/.bin/next build
 ```
 
 ### 7.3 Troubleshooting Guide

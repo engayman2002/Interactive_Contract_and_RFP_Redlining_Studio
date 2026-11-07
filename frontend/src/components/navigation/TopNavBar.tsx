@@ -35,6 +35,7 @@ export const TopNavBar: React.FC = () => {
     { label: "Dashboard", href: "/" },
     { label: "Company Playbook", href: "/playbooks" },
     { label: "Sample Studio", href: "/documents/demo" },
+    { label: "Help & Guide", href: "/help" },
   ];
 
   return (
