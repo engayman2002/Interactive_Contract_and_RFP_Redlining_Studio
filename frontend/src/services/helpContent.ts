@@ -288,8 +288,9 @@ export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
   {
     level: "CRITICAL",
     colorName: "Crimson",
-    badgeClass: "border-rose-500/40 bg-rose-500/20 text-rose-300",
-    dotClass: "bg-rose-500 border-rose-400 shadow-rose-500/40",
+    badgeClass:
+      "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300",
+    dotClass: "bg-rose-500 border-rose-600/30 dark:border-rose-400",
     meaning:
       "Severe policy violation or uncapped legal/financial exposure (e.g., unlimited liability, unilateral IP assignment, or training public AI models on confidential data).",
     recommendedAction:
@@ -298,8 +299,9 @@ export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
   {
     level: "HIGH",
     colorName: "Amber",
-    badgeClass: "border-amber-500/40 bg-amber-500/20 text-amber-300",
-    dotClass: "bg-amber-500 border-amber-400 shadow-amber-500/40",
+    badgeClass:
+      "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300",
+    dotClass: "bg-amber-500 border-amber-600/30 dark:border-amber-400",
     meaning:
       "Material deviation from company standard position (e.g., one-sided indemnification, missing service credits, or non-standard governing venue).",
     recommendedAction:
@@ -308,8 +310,9 @@ export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
   {
     level: "MEDIUM / LOW",
     colorName: "Sky Blue",
-    badgeClass: "border-sky-500/40 bg-sky-500/20 text-sky-300",
-    dotClass: "bg-sky-400 border-sky-300 shadow-sky-400/30",
+    badgeClass:
+      "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300",
+    dotClass: "bg-sky-500 border-sky-600/30 dark:bg-sky-400 dark:border-sky-300",
     meaning:
       "Minor commercial deviation, ambiguous phrasing, or advisory note that benefits from clarifying language.",
     recommendedAction:
@@ -318,8 +321,9 @@ export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
   {
     level: "COMPLIANT",
     colorName: "Emerald",
-    badgeClass: "border-emerald-500/40 bg-emerald-500/20 text-emerald-300",
-    dotClass: "bg-emerald-500 border-emerald-400 shadow-emerald-500/40",
+    badgeClass:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300",
+    dotClass: "bg-emerald-500 border-emerald-600/30 dark:border-emerald-400",
     meaning:
       "Clause satisfies corporate Playbook requirements with zero unacceptable triggers, or its redline has been resolved (ACCEPTED / MODIFIED).",
     recommendedAction: "No further action required; ready for export.",

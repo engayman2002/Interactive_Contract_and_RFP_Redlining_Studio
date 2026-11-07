@@ -7,9 +7,9 @@ import { InlineDiffPreview } from "@/components/diff/InlineDiffPreview";
 import type { ClauseDTO, RedlineSuggestionDTO } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import {
+  buildTipTapDocumentFromClauses,
   ClauseNodeExtension,
   ClauseRiskBadge,
-  buildTipTapDocumentFromClauses,
   resolveClauseRiskBadge,
 } from "./ClauseNodeExtension";
 import { RiskHeatmapGutter } from "./RiskHeatmapGutter";
@@ -17,44 +17,50 @@ import { RiskHeatmapGutter } from "./RiskHeatmapGutter";
 export interface ContractEditorCanvasProps {
   clauses: ClauseDTO[];
   redlines: RedlineSuggestionDTO[];
+  documentTitle?: string;
 }
 
-const CLAUSE_BORDER_MAP: Record<ClauseRiskBadge, string> = {
+const CLAUSE_ACCENT_BAR_MAP: Record<ClauseRiskBadge, string> = {
   CRITICAL: "border-l-4 border-l-rose-500",
   HIGH: "border-l-4 border-l-amber-500",
-  MEDIUM: "border-l-4 border-l-sky-400",
-  LOW: "border-l-4 border-l-sky-500/60",
+  MEDIUM: "border-l-4 border-l-sky-500",
+  LOW: "border-l-4 border-l-sky-400",
   COMPLIANT: "border-l-4 border-l-emerald-500",
 };
 
 const RISK_PILL_STYLE_MAP: Record<ClauseRiskBadge, string> = {
-  CRITICAL: "bg-rose-500/15 text-rose-300 border-rose-500/30",
-  HIGH: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-  MEDIUM: "bg-sky-500/15 text-sky-300 border-sky-500/30",
-  LOW: "bg-slate-700/60 text-slate-300 border-slate-600",
-  COMPLIANT: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  CRITICAL:
+    "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300",
+  HIGH: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300",
+  MEDIUM:
+    "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300",
+  LOW: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300",
+  COMPLIANT:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300",
 };
 
-interface EditorClauseItemProps {
-  clause: ClauseDTO;
-  suggestion?: RedlineSuggestionDTO;
-  onRef: (el: HTMLDivElement | null) => void;
-  onSelect: (clauseId: string) => void;
-}
-
-const EditorClauseItem: React.FC<EditorClauseItemProps> = React.memo(
-  ({ clause, suggestion, onRef, onSelect }) => {
+const EditorClauseItem = React.memo(
+  ({
+    clause,
+    suggestion,
+    onRef,
+    onSelect,
+  }: {
+    clause: ClauseDTO;
+    suggestion?: RedlineSuggestionDTO;
+    onRef: (el: HTMLDivElement | null) => void;
+    onSelect: (clauseId: string) => void;
+  }) => {
     const isSelected = useWorkspaceStore(
       (state) => state.activeClauseId === clause.id
     );
-    const hoveredSuggestionId = useWorkspaceStore(
-      (state) => state.hoveredSuggestionId
+    const isHoverDiffActive = useWorkspaceStore(
+      (state) =>
+        Boolean(suggestion) &&
+        state.hoveredSuggestionId !== null &&
+        suggestion?.id === state.hoveredSuggestionId
     );
     const riskBadge = resolveClauseRiskBadge(suggestion);
-    const isHoverDiffActive =
-      Boolean(suggestion) &&
-      hoveredSuggestionId !== null &&
-      suggestion?.id === hoveredSuggestionId;
 
     return (
       <div
@@ -73,32 +79,32 @@ const EditorClauseItem: React.FC<EditorClauseItemProps> = React.memo(
             onSelect(clause.id);
           }
         }}
-        className={`cursor-pointer rounded-r-lg border border-slate-800/90 p-4 transition-colors ${
-          CLAUSE_BORDER_MAP[riskBadge]
+        className={`cursor-pointer border-b border-slate-100 py-5 pl-5 pr-4 transition-all last:border-b-0 dark:border-slate-800/60 ${
+          CLAUSE_ACCENT_BAR_MAP[riskBadge]
         } ${
           isSelected
-            ? "bg-indigo-950/40 ring-2 ring-indigo-500/80"
-            : "bg-slate-900/60 hover:bg-slate-900"
+            ? "rounded-lg bg-indigo-50/50 ring-1 ring-indigo-500/20 dark:bg-indigo-950/25 dark:ring-indigo-500/30"
+            : "hover:bg-slate-50/80 dark:hover:bg-slate-800/30"
         }`}
       >
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-slate-400">
+        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="rounded-md border border-slate-200/90 bg-slate-100/80 px-2 py-0.5 font-mono text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
               #{clause.clause_index + 1}
             </span>
             {clause.heading ? (
-              <h3 className="text-sm font-semibold text-slate-100">
+              <h3 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                 {clause.heading}
               </h3>
             ) : null}
           </div>
           <div className="flex items-center gap-2">
             <span
-              className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${RISK_PILL_STYLE_MAP[riskBadge]}`}
+              className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wider ${RISK_PILL_STYLE_MAP[riskBadge]}`}
             >
               {riskBadge}
             </span>
-            <span className="font-mono text-[11px] text-slate-500">
+            <span className="rounded border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-400">
               v{clause.version}
             </span>
           </div>
@@ -111,7 +117,7 @@ const EditorClauseItem: React.FC<EditorClauseItemProps> = React.memo(
             proposedText={suggestion.proposed_text}
           />
         ) : (
-          <p className="text-sm leading-relaxed text-slate-200">
+          <p className="legal-document-prose text-slate-800 dark:text-slate-200">
             {clause.current_text}
           </p>
         )}
@@ -125,6 +131,7 @@ EditorClauseItem.displayName = "EditorClauseItem";
 export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
   clauses,
   redlines,
+  documentTitle = "Master Commercial Agreement — Review Copy",
 }) => {
   const selectClause = useWorkspaceStore((state) => state.selectClause);
   const clauseElementRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -179,33 +186,52 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
   return (
     <div
       data-testid="contract-editor-canvas"
-      className="flex h-full w-full overflow-hidden bg-slate-950"
+      className="flex h-full w-full overflow-hidden bg-slate-100/70 dark:bg-[#0B0F19]"
     >
       <RiskHeatmapGutter
         clauses={clauses}
         redlinesByClauseId={redlinesByClauseId}
       />
 
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-8">
         {/* Backing TipTap ProseMirror instance with ClauseNodeExtension */}
         {editor ? <EditorContent editor={editor} /> : null}
 
-        <div className="mx-auto max-w-3xl space-y-4">
-          {clauses.map((clause) => (
-            <EditorClauseItem
-              key={clause.id}
-              clause={clause}
-              suggestion={redlinesByClauseId.get(clause.id)}
-              onRef={(el) => {
-                if (el) {
-                  clauseElementRefs.current.set(clause.id, el);
-                } else {
-                  clauseElementRefs.current.delete(clause.id);
-                }
-              }}
-              onSelect={handleSelectClause}
-            />
-          ))}
+        {/* Elevated Legal Document Sheet */}
+        <div className="mx-auto my-6 max-w-4xl rounded-2xl border border-slate-200/90 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-10">
+          {/* Formal Legal Sheet Header */}
+          <div className="mb-6 border-b border-slate-200/80 pb-6 dark:border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+                Confidential Legal Review Instrument
+              </span>
+              <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                {clauses.length} Segmented Provisions
+              </span>
+            </div>
+            <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
+              {documentTitle}
+            </h2>
+          </div>
+
+          {/* Cohesive Clause Sections */}
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+            {clauses.map((clause) => (
+              <EditorClauseItem
+                key={clause.id}
+                clause={clause}
+                suggestion={redlinesByClauseId.get(clause.id)}
+                onRef={(el) => {
+                  if (el) {
+                    clauseElementRefs.current.set(clause.id, el);
+                  } else {
+                    clauseElementRefs.current.delete(clause.id);
+                  }
+                }}
+                onSelect={handleSelectClause}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

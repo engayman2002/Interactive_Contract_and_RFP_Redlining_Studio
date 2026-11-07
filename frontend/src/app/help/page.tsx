@@ -2,6 +2,14 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  Copy,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { TopNavBar } from "@/components/navigation/TopNavBar";
 import {
   EXPORT_MODE_COMPARISON,
@@ -106,26 +114,26 @@ export default function HelpCenterPage() {
   return (
     <div
       data-testid="help-center-page"
-      className="flex min-h-screen flex-col bg-slate-950 text-slate-100"
+      className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-[#0B0F19] dark:text-slate-100"
     >
       <TopNavBar />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-10 px-6 py-8">
-        {/* Hero Banner & Search Bar */}
-        <section className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900/95 to-indigo-950/30 p-6 md:p-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-6 py-8">
+        {/* Executive Hero Banner & Search Bar */}
+        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/90 md:p-8">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
             <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-300">
-                <span>📖</span> Interactive User Guide & LegalTech Manual
+              <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>Interactive User Guide &amp; LegalTech Manual</span>
               </span>
-              <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-white md:text-3xl">
-                How to Master the Contract & RFP Redlining Studio
+              <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white md:text-3xl">
+                Master the Contract &amp; RFP Redlining Studio
               </h1>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                Everything legal counsel, contract managers, procurement leads,
-                and technical reviewers need to upload agreements, craft
-                high-impact Company Playbooks, review surgical AI redlines, and
-                export native Microsoft Word Track Changes documents.
+              <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                Practical guidance for legal counsel, contract managers,
+                procurement leads, and technical reviewers on Playbook authoring,
+                surgical redlining, and OpenXML Word exports.
               </p>
             </div>
 
@@ -134,30 +142,36 @@ export default function HelpCenterPage() {
               <Link
                 href="/"
                 data-testid="help-cta-dashboard"
-                className="rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-600/25 transition-colors hover:bg-indigo-500"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500"
               >
-                Go to Upload Dashboard →
+                <span>Go to Upload Dashboard</span>
+                <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link
                 href="/playbooks"
                 data-testid="help-cta-playbooks"
-                className="rounded-xl border border-slate-700 bg-slate-800/90 px-4 py-2.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-slate-700 hover:text-white"
+                className="rounded-xl border border-slate-200/90 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 Manage Company Playbook
               </Link>
               <Link
                 href="/documents/demo"
                 data-testid="help-cta-sample-studio"
-                className="rounded-xl border border-indigo-500/40 bg-indigo-950/40 px-4 py-2.5 text-xs font-semibold text-indigo-300 transition-colors hover:bg-indigo-900/50"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/70 px-4 py-2.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
               >
-                Launch Sample Studio
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Launch Sample Studio</span>
               </Link>
             </div>
           </div>
 
           {/* Instant Search Input */}
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
+          <div className="mt-6">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+              />
               <input
                 type="search"
                 data-testid="help-search-input"
@@ -165,14 +179,14 @@ export default function HelpCenterPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search guide topics, Playbook templates, heatmap colors, Track Changes, or 409 conflicts..."
                 aria-label="Search Help Center"
-                className="w-full rounded-xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-300 bg-slate-50/60 py-3 pl-10 pr-20 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950/90 dark:text-slate-100 dark:placeholder-slate-500"
               />
               {searchQuery ? (
                 <button
                   type="button"
                   data-testid="clear-help-search-btn"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-400 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-white"
                 >
                   Clear
                 </button>
@@ -185,23 +199,29 @@ export default function HelpCenterPage() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           {/* Left Navigation Sidebar */}
           <aside className="space-y-4 lg:col-span-3">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+              <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Guide Modules
               </h2>
-              <div className="mt-3 flex flex-col gap-1.5">
+              <div className="mt-3 flex flex-col gap-1">
                 <button
                   type="button"
                   data-testid="filter-module-ALL"
                   onClick={() => setSelectedModuleId("ALL")}
-                  className={`flex items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors ${
+                  className={`flex items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium transition-colors ${
                     selectedModuleId === "ALL"
-                      ? "bg-indigo-600 text-white font-semibold"
-                      : "text-slate-300 hover:bg-slate-800"
+                      ? "bg-indigo-600 font-semibold text-white shadow-sm"
+                      : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                   }`}
                 >
                   <span>All 6 Core Modules</span>
-                  <span className="rounded-full bg-slate-950/40 px-2 py-0.5 text-[10px]">
+                  <span
+                    className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${
+                      selectedModuleId === "ALL"
+                        ? "bg-white/20 text-white"
+                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                    }`}
+                  >
                     {HELP_GUIDE_MODULES.length}
                   </span>
                 </button>
@@ -212,10 +232,10 @@ export default function HelpCenterPage() {
                     type="button"
                     data-testid={`filter-module-${mod.id}`}
                     onClick={() => setSelectedModuleId(mod.id)}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors ${
+                    className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium transition-colors ${
                       selectedModuleId === mod.id
-                        ? "bg-indigo-600 text-white font-semibold"
-                        : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                        ? "bg-indigo-600 font-semibold text-white shadow-sm"
+                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                     }`}
                   >
                     <span className="font-mono text-[11px] opacity-75">
@@ -228,17 +248,17 @@ export default function HelpCenterPage() {
             </div>
 
             {/* Quick Pro-Tip Card */}
-            <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/20 p-4">
-              <div className="text-xs font-bold uppercase tracking-wider text-indigo-300">
-                💡 Reviewer Pro-Tip
+            <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/50 p-4 dark:border-indigo-500/25 dark:bg-indigo-950/20">
+              <div className="text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                Reviewer Pro-Tip
               </div>
-              <p className="mt-2 text-xs leading-relaxed text-slate-300">
-                Inside the Redlining Studio, click the{" "}
-                <span className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 font-mono text-[11px] text-indigo-300">
-                  ? Help Guide
+              <p className="mt-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                Inside the Redlining Studio, click{" "}
+                <span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[11px] font-medium text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-indigo-300">
+                  Help Guide
                 </span>{" "}
-                button in the top header at any time to open a compact reference
-                drawer without losing your active clause focus.
+                in the top toolbar to open a compact reference drawer without
+                losing your active clause focus.
               </p>
             </div>
           </aside>
@@ -254,7 +274,7 @@ export default function HelpCenterPage() {
               {filteredModules.length === 0 ? (
                 <div
                   data-testid="help-no-modules-match"
-                  className="rounded-xl border border-slate-800 bg-slate-900/40 p-8 text-center text-sm text-slate-400"
+                  className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                 >
                   No user guide modules matched &ldquo;{searchQuery}&rdquo;. Try
                   clearing the search filter.
@@ -264,23 +284,23 @@ export default function HelpCenterPage() {
                   <article
                     key={mod.id}
                     data-testid={`help-module-card-${mod.id}`}
-                    className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 transition-colors hover:border-slate-700"
+                    className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm transition-all hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/90 dark:hover:border-slate-700"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600/20 font-mono text-xs font-bold text-indigo-300 border border-indigo-500/30">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 font-mono text-xs font-bold text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-300">
                           0{mod.number}
                         </span>
-                        <h2 className="text-base font-bold text-white md:text-lg">
+                        <h2 className="text-base font-semibold tracking-tight text-slate-900 dark:text-white md:text-lg">
                           {mod.title}
                         </h2>
                       </div>
-                      <span className="rounded-full border border-slate-700 bg-slate-800 px-3 py-0.5 text-[11px] font-semibold text-slate-300">
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-0.5 text-[11px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                         {mod.badge}
                       </span>
                     </div>
 
-                    <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                    <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                       {mod.summary}
                     </p>
 
@@ -288,16 +308,16 @@ export default function HelpCenterPage() {
                       {mod.steps.map((step, idx) => (
                         <div
                           key={idx}
-                          className="rounded-lg border border-slate-800/90 bg-slate-950/60 p-4"
+                          className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-slate-800/90 dark:bg-slate-950/60"
                         >
-                          <h3 className="text-xs font-bold text-slate-100">
+                          <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                             {step.title}
                           </h3>
-                          <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
+                          <p className="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                             {step.description}
                           </p>
                           {step.tip ? (
-                            <p className="mt-2 rounded border border-indigo-500/20 bg-indigo-950/30 px-2.5 py-1.5 text-[11px] text-indigo-200">
+                            <p className="mt-2.5 rounded-lg border border-indigo-200/80 bg-indigo-50/70 px-2.5 py-1.5 text-[11px] text-indigo-800 dark:border-indigo-500/20 dark:bg-indigo-950/30 dark:text-indigo-200">
                               <strong>Tip:</strong> {step.tip}
                             </p>
                           ) : null}
@@ -312,42 +332,44 @@ export default function HelpCenterPage() {
             {/* Visual Reference: Risk Heatmap Legend & Live Inline Diff Demo */}
             <section
               data-testid="help-heatmap-legend"
-              className="rounded-xl border border-slate-800 bg-slate-900/60 p-6"
+              className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/90"
             >
-              <h2 className="text-lg font-bold text-white">
-                Visual Guide: Risk Heatmap Gutter & Surgical Inline Diffs
+              <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+                Visual Guide: Risk Heatmap Gutter &amp; Surgical Inline Diffs
               </h2>
-              <p className="mt-1 text-xs text-slate-400">
-                Understand what each color in the left-hand Risk Heatmap Gutter
-                represents and how word-level redlines are previewed.
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Understand what each severity indicator in the left-hand Risk
+                Map represents and how word-level redlines are previewed.
               </p>
 
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {RISK_HEATMAP_LEGEND.map((item) => (
                   <div
                     key={item.level}
-                    className="rounded-lg border border-slate-800 bg-slate-950/70 p-4"
+                    className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/70"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`h-4 w-2.5 rounded-sm border ${item.dotClass}`}
+                          className={`h-4 w-2 rounded-full border ${item.dotClass}`}
                         />
-                        <span className="text-xs font-bold text-white">
+                        <span className="text-xs font-semibold text-slate-900 dark:text-white">
                           {item.colorName}
                         </span>
                       </div>
                       <span
-                        className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${item.badgeClass}`}
+                        className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${item.badgeClass}`}
                       >
                         {item.level}
                       </span>
                     </div>
-                    <p className="mt-2 text-xs leading-relaxed text-slate-300">
+                    <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                       {item.meaning}
                     </p>
-                    <p className="mt-1.5 text-[11px] text-slate-400">
-                      <strong className="text-slate-200">Action:</strong>{" "}
+                    <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      <strong className="text-slate-800 dark:text-slate-200">
+                        Action:
+                      </strong>{" "}
                       {item.recommendedAction}
                     </p>
                   </div>
@@ -357,28 +379,28 @@ export default function HelpCenterPage() {
               {/* Interactive Inline Diff Visual Demo */}
               <div
                 data-testid="help-inline-diff-demo"
-                className="mt-5 rounded-lg border border-indigo-500/30 bg-slate-950 p-4"
+                className="mt-5 rounded-xl border border-emerald-200/90 bg-emerald-50/35 p-5 dark:border-emerald-500/25 dark:bg-slate-950"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                     Live Inline Word-Diff Preview Example (When Hovering
                     &ldquo;Apply Redline&rdquo;)
                   </span>
-                  <span className="font-mono text-[11px] text-slate-400">
+                  <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
                     Clause #1 · Limitation of Liability
                   </span>
                 </div>
-                <p className="mt-3 text-sm leading-relaxed text-slate-200">
+                <p className="legal-document-prose mt-3 text-slate-800 dark:text-slate-200">
                   Total aggregate liability shall not exceed{" "}
-                  <span className="rounded bg-rose-500/25 px-1.5 py-0.5 text-rose-200 line-through decoration-rose-400">
+                  <span className="rounded bg-rose-100/90 px-1.5 py-0.5 text-rose-800 line-through decoration-rose-500 dark:bg-rose-500/25 dark:text-rose-200 dark:decoration-rose-400">
                     five hundred dollars ($500)
                   </span>{" "}
-                  <span className="rounded bg-emerald-500/25 px-1.5 py-0.5 font-medium text-emerald-200 underline decoration-emerald-400">
+                  <span className="rounded bg-emerald-100/90 px-1.5 py-0.5 font-medium text-emerald-900 underline decoration-emerald-500 dark:bg-emerald-500/25 dark:text-emerald-200 dark:decoration-emerald-400">
                     twelve (12) months of fees paid immediately preceding the
                     claim
                   </span>
                   , and neither party shall be liable for{" "}
-                  <span className="rounded bg-emerald-500/25 px-1.5 py-0.5 font-medium text-emerald-200 underline decoration-emerald-400">
+                  <span className="rounded bg-emerald-100/90 px-1.5 py-0.5 font-medium text-emerald-900 underline decoration-emerald-500 dark:bg-emerald-500/25 dark:text-emerald-200 dark:decoration-emerald-400">
                     indirect, special, or
                   </span>{" "}
                   consequential damages.
@@ -389,25 +411,22 @@ export default function HelpCenterPage() {
             {/* Copyable Playbook Rule Templates */}
             <section
               data-testid="help-playbook-templates"
-              className="rounded-xl border border-slate-800 bg-slate-900/60 p-6"
+              className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/90"
             >
-              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-                <div>
-                  <h2 className="text-lg font-bold text-white">
-                    Copyable Company Playbook Rule Templates
-                  </h2>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Use these battle-tested corporate policy templates when
-                    adding rules in the{" "}
-                    <Link
-                      href="/playbooks"
-                      className="font-semibold text-indigo-400 underline hover:text-indigo-300"
-                    >
-                      Playbook Manager (/playbooks)
-                    </Link>
-                    .
-                  </p>
-                </div>
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+                  Copyable Company Playbook Rule Templates
+                </h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Use these enterprise policy templates when adding rules in the{" "}
+                  <Link
+                    href="/playbooks"
+                    className="font-semibold text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400"
+                  >
+                    Playbook Manager (/playbooks)
+                  </Link>
+                  .
+                </p>
               </div>
 
               <div className="mt-4 space-y-4">
@@ -415,14 +434,14 @@ export default function HelpCenterPage() {
                   <div
                     key={tpl.id}
                     data-testid={`playbook-template-${tpl.id}`}
-                    className="rounded-lg border border-slate-800 bg-slate-950/70 p-4"
+                    className="rounded-xl border border-slate-200/90 bg-slate-50/50 p-5 dark:border-slate-800 dark:bg-slate-950/70"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <span className="rounded bg-indigo-500/15 px-2 py-0.5 text-[11px] font-semibold text-indigo-300 border border-indigo-500/30">
+                        <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-300">
                           {tpl.category}
                         </span>
-                        <h3 className="mt-1.5 text-sm font-bold text-white">
+                        <h3 className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
                           {tpl.title}
                         </h3>
                       </div>
@@ -430,42 +449,53 @@ export default function HelpCenterPage() {
                         type="button"
                         data-testid={`copy-template-btn-${tpl.id}`}
                         onClick={() => void handleCopyTemplate(tpl)}
-                        className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-slate-700 hover:text-white"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                       >
-                        {copiedTemplateId === tpl.id
-                          ? "✓ Copied to Clipboard"
-                          : "Copy Template"}
+                        {copiedTemplateId === tpl.id ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                            <span>Copied to Clipboard</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>Copy Template</span>
+                          </>
+                        )}
                       </button>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-1 gap-3 text-xs md:grid-cols-3">
-                      <div className="rounded border border-slate-800/80 bg-slate-900/60 p-2.5">
-                        <span className="font-semibold text-emerald-300">
+                    <div className="mt-3.5 grid grid-cols-1 gap-3 text-xs md:grid-cols-3">
+                      <div className="rounded-lg border border-slate-200/80 bg-white p-3 dark:border-slate-800/80 dark:bg-slate-900/60">
+                        <span className="font-semibold text-emerald-700 dark:text-emerald-300">
                           Standard Position:
                         </span>
-                        <p className="mt-1 text-slate-300">
+                        <p className="mt-1 leading-relaxed text-slate-600 dark:text-slate-300">
                           {tpl.standard_position}
                         </p>
                       </div>
-                      <div className="rounded border border-slate-800/80 bg-slate-900/60 p-2.5">
-                        <span className="font-semibold text-amber-300">
+                      <div className="rounded-lg border border-slate-200/80 bg-white p-3 dark:border-slate-800/80 dark:bg-slate-900/60">
+                        <span className="font-semibold text-amber-800 dark:text-amber-300">
                           Fallback Position:
                         </span>
-                        <p className="mt-1 text-slate-300">
+                        <p className="mt-1 leading-relaxed text-slate-600 dark:text-slate-300">
                           {tpl.fallback_position}
                         </p>
                       </div>
-                      <div className="rounded border border-slate-800/80 bg-slate-900/60 p-2.5">
-                        <span className="font-semibold text-rose-300">
+                      <div className="rounded-lg border border-rose-200/70 bg-rose-50/40 p-3 dark:border-slate-800/80 dark:bg-slate-900/60">
+                        <span className="font-semibold text-rose-700 dark:text-rose-300">
                           Unacceptable Triggers:
                         </span>
-                        <p className="mt-1 font-mono text-[11px] text-rose-200">
+                        <p className="mt-1 font-mono text-[11px] text-rose-800 dark:text-rose-200">
                           {tpl.unacceptable_triggers}
                         </p>
                       </div>
                     </div>
-                    <p className="mt-2 text-[11px] text-slate-400">
-                      <strong>Why it works:</strong> {tpl.why_it_works}
+                    <p className="mt-2.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      <strong className="text-slate-700 dark:text-slate-300">
+                        Why it works:
+                      </strong>{" "}
+                      {tpl.why_it_works}
                     </p>
                   </div>
                 ))}
@@ -475,39 +505,44 @@ export default function HelpCenterPage() {
             {/* Export Mode Comparison Table */}
             <section
               data-testid="help-export-comparison-table"
-              className="rounded-xl border border-slate-800 bg-slate-900/60 p-6"
+              className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/90"
             >
-              <h2 className="text-lg font-bold text-white">
-                Word Export Modes: Track Changes (.docx) vs. Clean (.docx)
-              </h2>
-              <p className="mt-1 text-xs text-slate-400">
-                Choose the right Microsoft Word export mode at the end of your
-                review cycle.
-              </p>
+              <div className="border-b border-slate-200/80 px-6 py-5 dark:border-slate-800">
+                <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+                  Word Export Modes: Track Changes (.docx) vs. Clean (.docx)
+                </h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Choose the right Microsoft Word export mode at the end of your
+                  review cycle.
+                </p>
+              </div>
 
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/60 text-[11px] uppercase tracking-wider text-slate-400">
-                      <th className="py-3 px-4">Capability / Dimension</th>
-                      <th className="py-3 px-4 text-teal-300">
+                    <tr className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
+                      <th className="px-6 py-3.5">Capability / Dimension</th>
+                      <th className="px-6 py-3.5 text-indigo-700 dark:text-indigo-300">
                         Export Track Changes (.docx)
                       </th>
-                      <th className="py-3 px-4 text-slate-200">
+                      <th className="px-6 py-3.5 text-emerald-700 dark:text-emerald-300">
                         Export Clean (.docx)
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800/60">
                     {EXPORT_MODE_COMPARISON.map((row) => (
-                      <tr key={row.feature} className="hover:bg-slate-800/30">
-                        <td className="py-3 px-4 font-semibold text-slate-200">
+                      <tr
+                        key={row.feature}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30"
+                      >
+                        <td className="px-6 py-3.5 font-semibold text-slate-900 dark:text-slate-200">
                           {row.feature}
                         </td>
-                        <td className="py-3 px-4 text-slate-300">
+                        <td className="px-6 py-3.5 text-slate-600 dark:text-slate-300">
                           {row.trackChanges}
                         </td>
-                        <td className="py-3 px-4 text-slate-300">
+                        <td className="px-6 py-3.5 text-slate-600 dark:text-slate-300">
                           {row.cleanCopy}
                         </td>
                       </tr>
@@ -520,19 +555,19 @@ export default function HelpCenterPage() {
             {/* Frequently Asked Questions (FAQ Accordion) */}
             <section
               data-testid="help-faq-section"
-              className="rounded-xl border border-slate-800 bg-slate-900/60 p-6"
+              className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/90"
             >
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
                 Frequently Asked Questions (FAQ)
               </h2>
-              <p className="mt-1 text-xs text-slate-400">
-                Quick answers to common questions about offline mode, playbook
-                indexing, concurrency locks, and Word compatibility.
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Quick answers on workspace sessions, Playbook indexing,
+                optimistic concurrency locks, and Word compatibility.
               </p>
 
               <div className="mt-4 space-y-2.5">
                 {filteredFaqs.length === 0 ? (
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     No FAQ items matched &ldquo;{searchQuery}&rdquo;.
                   </p>
                 ) : (
@@ -542,21 +577,21 @@ export default function HelpCenterPage() {
                       <div
                         key={faq.id}
                         data-testid={`faq-item-${faq.id}`}
-                        className="rounded-lg border border-slate-800 bg-slate-950/60"
+                        className="rounded-xl border border-slate-200/90 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-950/60"
                       >
                         <button
                           type="button"
                           data-testid={`faq-toggle-${faq.id}`}
                           onClick={() => toggleFaq(faq.id)}
-                          className="flex w-full items-center justify-between px-4 py-3 text-left text-xs font-bold text-slate-100 hover:text-white"
+                          className="flex w-full items-center justify-between px-4 py-3.5 text-left text-xs font-semibold text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-white"
                         >
                           <span>{faq.question}</span>
-                          <span className="ml-2 text-slate-400">
+                          <span className="ml-2 font-mono text-sm text-slate-400">
                             {isOpen ? "−" : "+"}
                           </span>
                         </button>
                         {isOpen ? (
-                          <div className="border-t border-slate-800/80 px-4 py-3 text-xs leading-relaxed text-slate-300">
+                          <div className="border-t border-slate-200/70 px-4 py-3.5 text-xs leading-relaxed text-slate-600 dark:border-slate-800/80 dark:text-slate-300">
                             {faq.answer}
                           </div>
                         ) : null}
@@ -572,4 +607,3 @@ export default function HelpCenterPage() {
     </div>
   );
 }
-

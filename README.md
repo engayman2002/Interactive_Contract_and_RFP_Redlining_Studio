@@ -215,7 +215,8 @@ Interactive_Contract_and_RFP_Redlining_Studio/
         │   └── help/page.tsx                       # /help — Interactive In-App Help Center, Playbook Templates & FAQ
         ├── components/
         │   ├── navigation/
-        │   │   └── TopNavBar.tsx                   # Global Navigation Bar, Live/Offline Status Badge & Org Login Modal
+        │   │   ├── TopNavBar.tsx                   # Sticky Enterprise Header, Segmented Nav, Status & Auth Modal
+        │   │   └── ThemeToggle.tsx                 # Persistent Dual-Theme Toggle (Executive Light / Slate Dark)
         │   ├── workspace/
         │   │   ├── RedliningStudioWorkspace.tsx    # Resizable Split-Screen Container, Export Controls & 409 Banner
         │   │   ├── ContractUploadDropzone.tsx      # Drag-and-Drop .docx/.pdf Dropzone with Multi-Stage Progress
@@ -223,18 +224,19 @@ Interactive_Contract_and_RFP_Redlining_Studio/
         │   │   └── QuickHelpModal.tsx              # In-Studio Contextual Quick-Help & Risk Heatmap Reference Drawer
         │   ├── editor/
         │   │   ├── ClauseNodeExtension.ts          # Custom ProseMirror Node with persistent data-clause-id
-        │   │   ├── ContractEditorCanvas.tsx        # TipTap Editor Canvas + Bidirectional Scroll/Focus Sync
-        │   │   └── RiskHeatmapGutter.tsx           # Vertical Risk Heatmap Bar (Crimson, Amber, Sky, Emerald)
+        │   │   ├── ContractEditorCanvas.tsx        # Elevated Legal Document Sheet + Bidirectional Scroll/Focus Sync
+        │   │   └── RiskHeatmapGutter.tsx           # Vertical Risk Navigator Rail (Rose, Amber, Sky, Emerald)
         │   ├── diff/
         │   │   ├── wordDiff.ts                     # LCS Word-Level Diff Algorithm (equal, delete, insert)
         │   │   └── InlineDiffPreview.tsx           # Live Surgical Redline Preview Overlay
         │   └── inspector/
-        │       ├── AiInspectorPanel.tsx            # Right-Hand Inspector, Risk Filters & Redlines/Audit Tab Switcher
-        │       ├── RedlineCard.tsx                 # AI Suggestion Card (Apply, Modify Inline, Reject)
+        │       ├── AiInspectorPanel.tsx            # Right-Hand Inspector, Risk Pill Filters & Segmented Tab Switcher
+        │       ├── RedlineCard.tsx                 # Executive Suggestion Card (Talking Point Copy, Apply, Modify, Reject)
         │       ├── ClauseCommentThread.tsx         # Collapsible Per-Clause Threaded Discussion Panel
         │       └── AuditTrailPanel.tsx             # Chronological Immutable Compliance Audit Trail Viewer
         ├── hooks/
-        │   └── useDocumentStream.ts                # Real-Time SSE Client Hook with Demo Stream Simulation
+        │   ├── useDocumentStream.ts                # Real-Time SSE Client Hook with Demo Stream Simulation
+        │   └── useTheme.ts                         # Dual-Theme State Hook (Executive Light Default + Slate Dark)
         ├── services/
         │   ├── contracts.ts                        # Strict Zod Schemas & TypeScript DTO Types
         │   ├── apiClient.ts                        # Typed Fetch Client, 409 VersionConflictError & Offline Storage
@@ -242,7 +244,7 @@ Interactive_Contract_and_RFP_Redlining_Studio/
         │   └── helpContent.ts                      # Structured User Guide Modules, Playbook Templates & FAQ Library
         ├── store/
         │   └── workspaceStore.ts                   # Zustand Store (Bidirectional Sync, Optimistic Edits & Rollback)
-        └── __tests__/                              # 6 Vitest + React Testing Library Test Suites (19 Tests)
+        └── __tests__/                              # 6 Vitest + React Testing Library Test Suites (20 Tests)
 ```
 
 ### 1.4 Frontend User Journey, Multi-Page Routes & Automatic Session Bootstrapper
@@ -1039,7 +1041,7 @@ node ./node_modules/.bin/tsc --noEmit
 # 2. Next.js ESLint Verification
 node ./node_modules/.bin/next lint
 
-# 3. Vitest + React Testing Library Suite (6 test files, 19 tests)
+# 3. Vitest + React Testing Library Suite (6 test files, 20 tests)
 node ./node_modules/.bin/vitest run
 
 # 4. Next.js 15 Standalone Production Build Verification (/, /playbooks, /documents/[id], /help)

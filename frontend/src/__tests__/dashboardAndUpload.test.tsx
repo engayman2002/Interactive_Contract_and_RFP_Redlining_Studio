@@ -167,5 +167,44 @@ describe("Dashboard, Upload Hub & Ergonomic Studio UI", () => {
     expect(threadBody).toHaveClass("hidden");
     expect(toggleBtn).toHaveTextContent("▼ Expand");
   });
+
+  it("toggles between Executive Light Mode (default) and Refined Slate Dark Mode and copies Negotiation Talking Points", async () => {
+    window.localStorage.removeItem("redline_studio_theme");
+    document.documentElement.classList.remove("dark");
+
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: {
+        writeText: writeTextMock,
+      },
+      configurable: true,
+    });
+
+    render(<RedliningStudioWorkspace initialWorkspace={DEMO_WORKSPACE_DATA} />);
+
+    // 1. Executive Light Mode is default
+    const themeToggleBtn = screen.getByTestId("theme-toggle-btn");
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+
+    // Switch to Refined Slate Dark Mode
+    fireEvent.click(themeToggleBtn);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(window.localStorage.getItem("redline_studio_theme")).toBe("dark");
+
+    // Switch back to Executive Light Mode
+    fireEvent.click(themeToggleBtn);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(window.localStorage.getItem("redline_studio_theme")).toBe("light");
+
+    // 2. Copy Negotiation Talking Point button in RedlineCard
+    const firstClauseId = DEMO_WORKSPACE_DATA.clauses[0].id;
+    const copyBtn = screen.getByTestId(`copy-talking-point-btn-${firstClauseId}`);
+    fireEvent.click(copyBtn);
+
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+      expect(copyBtn).toHaveTextContent("Copied");
+    });
+  });
 });
 
