@@ -310,9 +310,9 @@ export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
           "Click the active 'AI: ...' pill button in the top navigation bar or inside the Redlining Studio toolbar to inspect active LLM and Vector Embedding engines.",
       },
       {
-        title: "Select Cloud Presets or 100% Private Local Models",
+        title: "Configure Models via Live API Discovery or Manual Entry",
         description:
-          "Click any preset card—Offline Deterministic Engine, Google Gemini, Groq Cloud LPU, OpenAI, Anthropic Claude, Local Ollama (localhost:11434), or an OpenAI-Compatible vLLM/LM Studio endpoint—to auto-populate recommended models.",
+          "Select any provider—Offline Deterministic Engine, Google Gemini, Groq Cloud LPU, OpenAI, Anthropic Claude, Local Ollama (localhost:11434), or an OpenAI-Compatible vLLM/LM Studio endpoint. To stay 100% future-proof as vendors release new models, external providers carry zero hardcoded model lists: click 'Fetch Live Models' to query the provider's live /models or /api/tags endpoint, or type any exact model ID manually.",
       },
       {
         title: "Run Live Connection Diagnostics Before Saving",

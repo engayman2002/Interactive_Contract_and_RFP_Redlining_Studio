@@ -91,6 +91,17 @@ def _build_anthropic_messages_url(base_url: str) -> str:
     return f"{cleaned}/v1/messages"
 
 
+def _require_llm_model_name(provider_label: str, model_name: str) -> str:
+    """Ensure an explicit non-empty LLM model identifier is configured."""
+    cleaned = model_name.strip()
+    if not cleaned:
+        raise ClauseAnalysisError(
+            f"Missing model name for '{provider_label}' LLM provider. "
+            "Configure LLM_MODEL_NAME explicitly or select a live model via Fetch Live Models."
+        )
+    return cleaned
+
+
 class OpenAICompatibleChatRunnable(Runnable[Any, str]):
     """Runnable adapter for Groq, OpenAI, and OpenAI-compatible servers (vLLM, LM Studio)."""
 
@@ -107,7 +118,7 @@ class OpenAICompatibleChatRunnable(Runnable[Any, str]):
     ) -> None:
         super().__init__()
         self._provider_label = provider_label
-        self._model_name = model_name
+        self._model_name = _require_llm_model_name(provider_label, model_name)
         self._endpoint_url = _build_chat_completions_url(base_url)
         self._api_key = api_key
         self._temperature = temperature
@@ -199,7 +210,7 @@ class AnthropicMessagesChatRunnable(Runnable[Any, str]):
 
     def __init__(
         self,
-        model_name: str = "claude-3-5-sonnet-latest",
+        model_name: str,
         base_url: str = "https://api.anthropic.com",
         api_key: str | None = None,
         temperature: float = 0.0,
@@ -207,7 +218,7 @@ class AnthropicMessagesChatRunnable(Runnable[Any, str]):
         http_client: httpx.AsyncClient | None = None,
     ) -> None:
         super().__init__()
-        self._model_name = model_name
+        self._model_name = _require_llm_model_name("anthropic", model_name)
         self._endpoint_url = _build_anthropic_messages_url(base_url)
         self._api_key = api_key
         self._temperature = temperature
@@ -294,14 +305,14 @@ class OllamaChatRunnable(Runnable[Any, str]):
 
     def __init__(
         self,
-        model_name: str = "llama3.1:8b",
+        model_name: str,
         base_url: str = "http://localhost:11434",
         temperature: float = 0.0,
         timeout_seconds: float = 60.0,
         http_client: httpx.AsyncClient | None = None,
     ) -> None:
         super().__init__()
-        self._model_name = model_name
+        self._model_name = _require_llm_model_name("ollama", model_name)
         self._endpoint_url = f"{base_url.strip().rstrip('/')}/api/chat"
         self._temperature = temperature
         self._timeout_seconds = timeout_seconds
@@ -376,7 +387,7 @@ class GeminiGenerateContentChatRunnable(Runnable[Any, str]):
 
     def __init__(
         self,
-        model_name: str = "gemini-2.5-flash",
+        model_name: str,
         base_url: str = "https://generativelanguage.googleapis.com/v1beta",
         api_key: str | None = None,
         temperature: float = 0.0,
@@ -384,7 +395,9 @@ class GeminiGenerateContentChatRunnable(Runnable[Any, str]):
         http_client: httpx.AsyncClient | None = None,
     ) -> None:
         super().__init__()
-        clean_model = model_name.strip().removeprefix("models/")
+        clean_model = _require_llm_model_name("gemini", model_name).removeprefix("models/")
+        if not clean_model:
+            raise ClauseAnalysisError("Missing model name for 'gemini' LLM provider.")
         self._model_id = clean_model
         clean_base = base_url.strip().rstrip("/")
         self._endpoint_url = f"{clean_base}/models/{self._model_id}:generateContent"
@@ -578,7 +591,7 @@ def _build_groq_llm(
 ) -> Runnable[Any, str]:
     return OpenAICompatibleChatRunnable(
         provider_label="groq",
-        model_name=settings.LLM_MODEL_NAME,
+        model_name=_require_llm_model_name("groq", settings.LLM_MODEL_NAME),
         base_url=settings.LLM_BASE_URL or "https://api.groq.com/openai/v1",
         api_key=settings.resolve_llm_api_key(),
         temperature=settings.LLM_TEMPERATURE,
@@ -593,14 +606,9 @@ def _build_openai_llm(
     settings: Settings,
     http_client: httpx.AsyncClient | None = None,
 ) -> Runnable[Any, str]:
-    model_name = (
-        "gpt-4o-mini"
-        if settings.LLM_MODEL_NAME == "llama-3.3-70b-versatile"
-        else settings.LLM_MODEL_NAME
-    )
     return OpenAICompatibleChatRunnable(
         provider_label="openai",
-        model_name=model_name,
+        model_name=_require_llm_model_name("openai", settings.LLM_MODEL_NAME),
         base_url=settings.LLM_BASE_URL or "https://api.openai.com/v1",
         api_key=settings.resolve_llm_api_key(),
         temperature=settings.LLM_TEMPERATURE,
@@ -615,13 +623,8 @@ def _build_anthropic_llm(
     settings: Settings,
     http_client: httpx.AsyncClient | None = None,
 ) -> Runnable[Any, str]:
-    model_name = (
-        "claude-3-5-sonnet-latest"
-        if settings.LLM_MODEL_NAME == "llama-3.3-70b-versatile"
-        else settings.LLM_MODEL_NAME
-    )
     return AnthropicMessagesChatRunnable(
-        model_name=model_name,
+        model_name=_require_llm_model_name("anthropic", settings.LLM_MODEL_NAME),
         base_url=settings.LLM_BASE_URL or "https://api.anthropic.com",
         api_key=settings.resolve_llm_api_key(),
         temperature=settings.LLM_TEMPERATURE,
@@ -635,13 +638,8 @@ def _build_ollama_llm(
     settings: Settings,
     http_client: httpx.AsyncClient | None = None,
 ) -> Runnable[Any, str]:
-    model_name = (
-        "llama3.1:8b"
-        if settings.LLM_MODEL_NAME == "llama-3.3-70b-versatile"
-        else settings.LLM_MODEL_NAME
-    )
     return OllamaChatRunnable(
-        model_name=model_name,
+        model_name=_require_llm_model_name("ollama", settings.LLM_MODEL_NAME),
         base_url=settings.LLM_BASE_URL or "http://localhost:11434",
         temperature=settings.LLM_TEMPERATURE,
         timeout_seconds=settings.LLM_TIMEOUT_SECONDS,
@@ -656,7 +654,7 @@ def _build_openai_compatible_llm(
 ) -> Runnable[Any, str]:
     return OpenAICompatibleChatRunnable(
         provider_label="openai_compatible",
-        model_name=settings.LLM_MODEL_NAME,
+        model_name=_require_llm_model_name("openai_compatible", settings.LLM_MODEL_NAME),
         base_url=settings.LLM_BASE_URL or "http://localhost:8000/v1",
         api_key=settings.resolve_llm_api_key(),
         temperature=settings.LLM_TEMPERATURE,
@@ -671,13 +669,8 @@ def _build_gemini_llm(
     settings: Settings,
     http_client: httpx.AsyncClient | None = None,
 ) -> Runnable[Any, str]:
-    model_name = (
-        "gemini-2.5-flash"
-        if settings.LLM_MODEL_NAME == "llama-3.3-70b-versatile"
-        else settings.LLM_MODEL_NAME
-    )
     return GeminiGenerateContentChatRunnable(
-        model_name=model_name,
+        model_name=_require_llm_model_name("gemini", settings.LLM_MODEL_NAME),
         base_url=settings.LLM_BASE_URL
         or "https://generativelanguage.googleapis.com/v1beta",
         api_key=settings.resolve_llm_api_key(),

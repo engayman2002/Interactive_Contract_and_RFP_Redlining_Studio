@@ -488,11 +488,34 @@ async def test_google_gemini_llm_and_embeddings_mock_transport() -> None:
 
 
 @pytest.mark.asyncio
-async def test_gemini_missing_api_key_and_empty_text_errors() -> None:
-    """Verify Gemini adapters raise appropriate domain exceptions on missing key or blank text."""
+async def test_gemini_missing_model_api_key_and_empty_text_errors() -> None:
+    """Verify non-deterministic providers reject empty model IDs, missing keys, and blank text."""
+    # 1. Missing model IDs must raise domain exceptions with zero hardcoded fallback
+    missing_model_settings = Settings(
+        LLM_PROVIDER="gemini",
+        LLM_MODEL_NAME="",
+        EMBEDDING_PROVIDER="gemini",
+        EMBEDDING_MODEL_NAME="",
+        GEMINI_API_KEY="valid-key",
+    )
+    with pytest.raises(EmbeddingGenerationError) as missing_emb_model_exc:
+        create_embedding_generator(missing_model_settings)
+    assert "Model name" in str(missing_emb_model_exc.value) or "model" in str(
+        missing_emb_model_exc.value
+    ).lower()
+
+    with pytest.raises(ClauseAnalysisError) as missing_llm_model_exc:
+        create_llm_runnable(missing_model_settings)
+    assert "Model name" in str(missing_llm_model_exc.value) or "model" in str(
+        missing_llm_model_exc.value
+    ).lower()
+
+    # 2. Explicit model IDs + missing API key raises missing API key errors
     no_key_settings = Settings(
         LLM_PROVIDER="gemini",
+        LLM_MODEL_NAME="gemini-live-test-model",
         EMBEDDING_PROVIDER="gemini",
+        EMBEDDING_MODEL_NAME="gemini-live-embed-model",
         GEMINI_API_KEY=None,
         LLM_API_KEY=None,
         EMBEDDING_API_KEY=None,
@@ -505,7 +528,9 @@ async def test_gemini_missing_api_key_and_empty_text_errors() -> None:
 
     with_key_settings = Settings(
         LLM_PROVIDER="gemini",
+        LLM_MODEL_NAME="gemini-live-test-model",
         EMBEDDING_PROVIDER="gemini",
+        EMBEDDING_MODEL_NAME="gemini-live-embed-model",
         GEMINI_API_KEY="valid-key",
     )
     valid_embedder = create_embedding_generator(with_key_settings)

@@ -139,10 +139,10 @@ class DiscoverModelsRequestDTO(ImmutableDTO):
 
 
 class DiscoverModelsResponseDTO(ImmutableDTO):
-    """Sanitized live or fallback catalog from `POST /api/v1/ai-settings/discover-models`."""
+    """Sanitized live model discovery response from `POST /api/v1/ai-settings/discover-models`."""
 
     provider_id: str
-    source: Literal["live_api", "catalog_fallback"]
+    source: Literal["live_api", "unconfigured", "unreachable"]
     llm_models: list[str] = Field(default_factory=list)
     embedding_models: list[str] = Field(default_factory=list)
     latency_ms: float

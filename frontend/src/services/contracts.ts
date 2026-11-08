@@ -310,7 +310,8 @@ export type TestAIConnectionResponseDTO = z.infer<
 
 export const DiscoverModelsSourceSchema = z.enum([
   "live_api",
-  "catalog_fallback",
+  "unconfigured",
+  "unreachable",
 ]);
 export type DiscoverModelsSource = z.infer<typeof DiscoverModelsSourceSchema>;
 

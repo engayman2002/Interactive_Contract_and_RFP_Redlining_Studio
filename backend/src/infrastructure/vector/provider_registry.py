@@ -85,6 +85,17 @@ def _build_openai_embeddings_url(base_url: str) -> str:
     return f"{cleaned}/v1/embeddings"
 
 
+def _require_embedding_model_name(provider_label: str, model_name: str) -> str:
+    """Ensure an explicit non-empty Embedding model identifier is configured."""
+    cleaned = model_name.strip()
+    if not cleaned:
+        raise EmbeddingGenerationError(
+            f"Missing model name for '{provider_label}' embedding provider. "
+            "Set EMBEDDING_MODEL_NAME explicitly or pick a live model via Fetch Live Models."
+        )
+    return cleaned
+
+
 class OpenAICompatibleEmbeddingAdapter(EmbeddingGeneratorPort):
     """Async HTTP adapter for OpenAI and OpenAI-compatible embedding endpoints (`/v1/embeddings`).
 
@@ -97,7 +108,7 @@ class OpenAICompatibleEmbeddingAdapter(EmbeddingGeneratorPort):
 
     def __init__(
         self,
-        model_name: str = "text-embedding-3-small",
+        model_name: str,
         base_url: str = "https://api.openai.com/v1",
         api_key: str | None = None,
         dimension: int = 1536,
@@ -107,7 +118,7 @@ class OpenAICompatibleEmbeddingAdapter(EmbeddingGeneratorPort):
     ) -> None:
         if dimension <= 0:
             raise ValueError("Embedding dimension must be positive.")
-        self._model_name = model_name
+        self._model_name = _require_embedding_model_name("openai", model_name)
         self._endpoint_url = _build_openai_embeddings_url(base_url)
         self._api_key = api_key
         self._dimension = dimension
@@ -210,7 +221,7 @@ class OllamaEmbeddingAdapter(EmbeddingGeneratorPort):
 
     def __init__(
         self,
-        model_name: str = "nomic-embed-text",
+        model_name: str,
         base_url: str = "http://localhost:11434",
         dimension: int = 1536,
         timeout_seconds: float = 30.0,
@@ -218,7 +229,7 @@ class OllamaEmbeddingAdapter(EmbeddingGeneratorPort):
     ) -> None:
         if dimension <= 0:
             raise ValueError("Embedding dimension must be positive.")
-        self._model_name = model_name
+        self._model_name = _require_embedding_model_name("ollama", model_name)
         self._base_url = base_url.strip().rstrip("/")
         self._dimension = dimension
         self._timeout_seconds = timeout_seconds
@@ -316,7 +327,7 @@ class GeminiEmbeddingAdapter(EmbeddingGeneratorPort):
 
     def __init__(
         self,
-        model_name: str = "text-embedding-004",
+        model_name: str,
         base_url: str = "https://generativelanguage.googleapis.com/v1beta",
         api_key: str | None = None,
         dimension: int = 1536,
@@ -325,7 +336,10 @@ class GeminiEmbeddingAdapter(EmbeddingGeneratorPort):
     ) -> None:
         if dimension <= 0:
             raise ValueError("Embedding dimension must be positive.")
-        self._model_id = model_name.strip().removeprefix("models/")
+        clean_id = _require_embedding_model_name("gemini", model_name).removeprefix("models/")
+        if not clean_id:
+            raise EmbeddingGenerationError("Missing model name for 'gemini' embedding provider.")
+        self._model_id = clean_id
         self._base_url = base_url.strip().rstrip("/")
         self._api_key = api_key
         self._dimension = dimension
@@ -547,7 +561,7 @@ def _build_openai_embedding_provider(
     http_client: httpx.AsyncClient | None = None,
 ) -> EmbeddingGeneratorPort:
     return OpenAICompatibleEmbeddingAdapter(
-        model_name=settings.EMBEDDING_MODEL_NAME,
+        model_name=_require_embedding_model_name("openai", settings.EMBEDDING_MODEL_NAME),
         base_url=settings.EMBEDDING_BASE_URL or "https://api.openai.com/v1",
         api_key=settings.resolve_embedding_api_key(),
         dimension=settings.EMBEDDING_DIMENSION,
@@ -563,7 +577,9 @@ def _build_openai_compatible_embedding_provider(
     http_client: httpx.AsyncClient | None = None,
 ) -> EmbeddingGeneratorPort:
     return OpenAICompatibleEmbeddingAdapter(
-        model_name=settings.EMBEDDING_MODEL_NAME,
+        model_name=_require_embedding_model_name(
+            "openai_compatible", settings.EMBEDDING_MODEL_NAME
+        ),
         base_url=settings.EMBEDDING_BASE_URL or "http://localhost:8080/v1",
         api_key=settings.resolve_embedding_api_key(),
         dimension=settings.EMBEDDING_DIMENSION,
@@ -578,13 +594,8 @@ def _build_ollama_embedding_provider(
     settings: Settings,
     http_client: httpx.AsyncClient | None = None,
 ) -> EmbeddingGeneratorPort:
-    model_name = (
-        "nomic-embed-text"
-        if settings.EMBEDDING_MODEL_NAME == "text-embedding-3-small"
-        else settings.EMBEDDING_MODEL_NAME
-    )
     return OllamaEmbeddingAdapter(
-        model_name=model_name,
+        model_name=_require_embedding_model_name("ollama", settings.EMBEDDING_MODEL_NAME),
         base_url=settings.EMBEDDING_BASE_URL or "http://localhost:11434",
         dimension=settings.EMBEDDING_DIMENSION,
         timeout_seconds=settings.EMBEDDING_TIMEOUT_SECONDS,
@@ -597,13 +608,8 @@ def _build_gemini_embedding_provider(
     settings: Settings,
     http_client: httpx.AsyncClient | None = None,
 ) -> EmbeddingGeneratorPort:
-    model_name = (
-        "text-embedding-004"
-        if settings.EMBEDDING_MODEL_NAME == "text-embedding-3-small"
-        else settings.EMBEDDING_MODEL_NAME
-    )
     return GeminiEmbeddingAdapter(
-        model_name=model_name,
+        model_name=_require_embedding_model_name("gemini", settings.EMBEDDING_MODEL_NAME),
         base_url=settings.EMBEDDING_BASE_URL
         or "https://generativelanguage.googleapis.com/v1beta",
         api_key=settings.resolve_embedding_api_key(),

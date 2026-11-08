@@ -53,29 +53,29 @@ const PRESET_DISPLAY_META: Record<string, PresetDisplayMeta> = {
     badge: "Zero API Key",
   },
   gemini: {
-    tagline: "gemini-2.5-flash / gemini-2.5-pro + text-embedding-004",
+    tagline: "Native Google Generative Language REST API • Live /models discovery",
     badge: "Google AI",
   },
   groq: {
-    tagline: "llama-3.3-70b-versatile / llama-4-scout / qwen-qwq-32b",
+    tagline: "Ultra-low-latency LPU cloud inference • Live /models discovery",
     badge: "Ultra-Fast LPU",
   },
   openai: {
-    tagline: "gpt-4.1 / gpt-4o / o4-mini + text-embedding-3-small",
+    tagline: "OpenAI Chat & Vector Embeddings API • Live /models discovery",
     badge: "OpenAI Cloud",
   },
   anthropic: {
-    tagline: "claude-sonnet-4-20250514 / claude-opus-4 / claude-3-7-sonnet",
+    tagline: "Anthropic Messages API for legal reasoning • Live /models discovery",
     badge: "Legal Reasoning",
   },
   ollama: {
-    tagline: "llama3.3 / qwen2.5:14b / gemma3:12b + nomic-embed-text",
+    tagline: "100% private local daemon (localhost:11434) • Live /api/tags discovery",
     badge: "100% Private Local",
     defaultBaseUrl: "http://localhost:11434",
     defaultEmbeddingBaseUrl: "http://localhost:11434",
   },
   openai_compatible: {
-    tagline: "vLLM, LM Studio, llama.cpp or TEI custom HTTP endpoint",
+    tagline: "vLLM, LM Studio, llama.cpp or TEI HTTP endpoint • Live /v1/models discovery",
     badge: "Self-Hosted vLLM",
     defaultBaseUrl: "http://localhost:8000/v1",
     defaultEmbeddingBaseUrl: "http://localhost:8080/v1",
@@ -97,7 +97,7 @@ export function formatActiveAIBadge(provider: string, model: string): string {
   if (normalized === "deterministic") {
     return "AI: Deterministic";
   }
-  const shortModel = model.trim() || "default";
+  const shortModel = model.trim() || "unconfigured";
   return `AI: ${label} · ${shortModel}`;
 }
 
@@ -249,20 +249,18 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
   );
 
   const availableLlmModels = useMemo(() => {
-    const live = discoveredLlmByProvider[llmProvider];
-    if (live && live.length > 0) {
-      return live;
+    if (llmProvider === "deterministic") {
+      return ["policy-deterministic-v1"];
     }
-    return selectedLlmCatalog?.recommended_llm_models ?? [];
-  }, [discoveredLlmByProvider, llmProvider, selectedLlmCatalog]);
+    return discoveredLlmByProvider[llmProvider] ?? [];
+  }, [discoveredLlmByProvider, llmProvider]);
 
   const availableEmbeddingModels = useMemo(() => {
-    const live = discoveredEmbByProvider[embeddingProvider];
-    if (live && live.length > 0) {
-      return live;
+    if (embeddingProvider === "deterministic") {
+      return ["deterministic-hash-1536"];
     }
-    return selectedEmbeddingCatalog?.recommended_embedding_models ?? [];
-  }, [discoveredEmbByProvider, embeddingProvider, selectedEmbeddingCatalog]);
+    return discoveredEmbByProvider[embeddingProvider] ?? [];
+  }, [discoveredEmbByProvider, embeddingProvider]);
 
   const activeLlmDiscoveryStatus = discoveryStatusByProvider[llmProvider];
   const activeEmbDiscoveryStatus = discoveryStatusByProvider[embeddingProvider];
@@ -317,18 +315,14 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
         [providerId]: result,
       }));
 
-      if (result.llm_models.length > 0) {
-        setDiscoveredLlmByProvider((prev) => ({
-          ...prev,
-          [providerId]: result.llm_models,
-        }));
-      }
-      if (result.embedding_models.length > 0) {
-        setDiscoveredEmbByProvider((prev) => ({
-          ...prev,
-          [providerId]: result.embedding_models,
-        }));
-      }
+      setDiscoveredLlmByProvider((prev) => ({
+        ...prev,
+        [providerId]: result.llm_models,
+      }));
+      setDiscoveredEmbByProvider((prev) => ({
+        ...prev,
+        [providerId]: result.embedding_models,
+      }));
     } finally {
       if (isMountedRef.current) {
         if (target === "llm") {
@@ -355,24 +349,20 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
       : "";
     if (preset.supports_llm) {
       setLlmProvider(preset.provider_id);
-      if (preset.default_llm_model) {
-        setLlmModelName(preset.default_llm_model);
-      }
+      setLlmModelName(
+        preset.provider_id === "deterministic" ? "policy-deterministic-v1" : ""
+      );
       setLlmBaseUrl(nextLlmUrl);
     }
 
     if (preset.supports_embeddings) {
       setEmbeddingProvider(preset.provider_id);
-      if (preset.default_embedding_model) {
-        setEmbeddingModelName(preset.default_embedding_model);
-      }
+      setEmbeddingModelName(
+        preset.provider_id === "deterministic" ? "deterministic-hash-1536" : ""
+      );
       setEmbeddingBaseUrl(
         preset.supports_base_url ? meta?.defaultEmbeddingBaseUrl ?? "" : ""
       );
-    }
-
-    if (preset.provider_id === "ollama") {
-      void runLiveDiscovery("llm", "ollama", "", nextLlmUrl || "http://localhost:11434");
     }
   };
 
@@ -382,14 +372,11 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     setLlmProvider(nextProviderId);
     const found = catalog.find((item) => item.provider_id === nextProviderId);
     const meta = PRESET_DISPLAY_META[nextProviderId];
-    if (found?.default_llm_model) {
-      setLlmModelName(found.default_llm_model);
-    }
+    setLlmModelName(
+      nextProviderId === "deterministic" ? "policy-deterministic-v1" : ""
+    );
     const nextUrl = found?.supports_base_url ? meta?.defaultBaseUrl ?? "" : "";
     setLlmBaseUrl(nextUrl);
-    if (nextProviderId === "ollama") {
-      void runLiveDiscovery("llm", "ollama", "", nextUrl || "http://localhost:11434");
-    }
   };
 
   const handleEmbeddingProviderSelect = (nextProviderId: string) => {
@@ -398,16 +385,13 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     setEmbeddingProvider(nextProviderId);
     const found = catalog.find((item) => item.provider_id === nextProviderId);
     const meta = PRESET_DISPLAY_META[nextProviderId];
-    if (found?.default_embedding_model) {
-      setEmbeddingModelName(found.default_embedding_model);
-    }
+    setEmbeddingModelName(
+      nextProviderId === "deterministic" ? "deterministic-hash-1536" : ""
+    );
     const nextUrl = found?.supports_base_url
       ? meta?.defaultEmbeddingBaseUrl ?? ""
       : "";
     setEmbeddingBaseUrl(nextUrl);
-    if (nextProviderId === "ollama") {
-      void runLiveDiscovery("embedding", "ollama", "", nextUrl || "http://localhost:11434");
-    }
   };
 
   const resolveEffectiveEmbeddingKeyPayload = (): string | undefined => {
@@ -465,7 +449,20 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     }
   };
 
+  const isLlmModelMissing =
+    llmProvider !== "deterministic" && !llmModelName.trim();
+  const isEmbeddingModelMissing =
+    embeddingProvider !== "deterministic" && !embeddingModelName.trim();
+  const isMissingRequiredModelId =
+    isLlmModelMissing || isEmbeddingModelMissing;
+
   const handleSaveAndActivate = async () => {
+    if (isMissingRequiredModelId) {
+      setSaveError(
+        "Model ID required: Type an explicit model ID manually or click Fetch Live Models to select one from the provider API."
+      );
+      return;
+    }
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccessBanner(null);
@@ -565,7 +562,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 Quick-Select Provider Presets
               </h3>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                Click a preset to auto-populate recommended LLM &amp; Embedding models
+                Select a provider, then type a Model ID manually or click Fetch Live Models
               </span>
             </div>
 
@@ -677,12 +674,12 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                       htmlFor="ai-llm-model-input"
                       className="block text-xs font-medium text-slate-700 dark:text-slate-300"
                     >
-                      Model ID (Live, Preset, or Custom)
+                      Model ID (Manual Entry or Live Discovery)
                     </label>
                     {llmModelName.trim() &&
                     !availableLlmModels.includes(llmModelName.trim()) ? (
                       <span className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300">
-                        Custom ID
+                        Manual ID
                       </span>
                     ) : null}
                   </div>
@@ -709,7 +706,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
 
                     {availableLlmModels.length > 0 ? (
                       <select
-                        aria-label="Recommended LLM Model Presets"
+                        aria-label="Live Discovered LLM Models"
                         data-testid="ai-settings-llm-preset-select"
                         value={
                           availableLlmModels.includes(llmModelName)
@@ -724,15 +721,13 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                         className="max-w-[165px] truncate rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
                       >
                         <option value="" disabled>
-                          {activeLlmDiscoveryStatus?.source === "live_api"
-                            ? "Pick live model..."
-                            : "Select preset..."}
+                          {llmProvider === "deterministic"
+                            ? "Built-in engine..."
+                            : "Pick live model..."}
                         </option>
                         {availableLlmModels.map((m) => (
                           <option key={m} value={m}>
-                            {activeLlmDiscoveryStatus?.source === "live_api"
-                              ? `Live: ${m}`
-                              : `Preset: ${m}`}
+                            {llmProvider === "deterministic" ? m : `Live: ${m}`}
                           </option>
                         ))}
                       </select>
@@ -747,7 +742,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   data-testid="ai-settings-llm-model-input"
                   value={llmModelName}
                   onChange={(e) => setLlmModelName(e.target.value)}
-                  placeholder="Type any custom model ID or select below (e.g., gemini-2.5-flash, gpt-4.1, llama3.3)"
+                  placeholder="Type model ID manually or click Fetch Live Models..."
                   className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <datalist id="ai-llm-models-datalist">
@@ -767,7 +762,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   >
                     {activeLlmDiscoveryStatus.source === "live_api"
                       ? `✓ Fetched ${activeLlmDiscoveryStatus.llm_models.length} live LLM models from provider API (${activeLlmDiscoveryStatus.latency_ms} ms)`
-                      : `Using built-in presets — ${activeLlmDiscoveryStatus.message}`}
+                      : activeLlmDiscoveryStatus.message}
                   </div>
                 ) : null}
 
@@ -953,7 +948,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 </select>
               </div>
 
-              {/* Embedding Model Input + Live Discovery + Presets */}
+              {/* Embedding Model Input + Live Discovery */}
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-1.5">
                   <div className="flex items-center gap-1.5">
@@ -961,14 +956,14 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                       htmlFor="ai-embedding-model-input"
                       className="block text-xs font-medium text-slate-700 dark:text-slate-300"
                     >
-                      Embedding Model ID (Live, Preset, or Custom)
+                      Embedding Model ID (Manual Entry or Live Discovery)
                     </label>
                     {embeddingModelName.trim() &&
                     !availableEmbeddingModels.includes(
                       embeddingModelName.trim()
                     ) ? (
                       <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
-                        Custom ID
+                        Manual ID
                       </span>
                     ) : null}
                   </div>
@@ -995,7 +990,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
 
                     {availableEmbeddingModels.length > 0 ? (
                       <select
-                        aria-label="Recommended Embedding Model Presets"
+                        aria-label="Live Discovered Embedding Models"
                         data-testid="ai-settings-embedding-preset-select"
                         value={
                           availableEmbeddingModels.includes(embeddingModelName)
@@ -1010,15 +1005,15 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                         className="max-w-[165px] truncate rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
                       >
                         <option value="" disabled>
-                          {activeEmbDiscoveryStatus?.source === "live_api"
-                            ? "Pick live model..."
-                            : "Select preset..."}
+                          {embeddingProvider === "deterministic"
+                            ? "Built-in engine..."
+                            : "Pick live model..."}
                         </option>
                         {availableEmbeddingModels.map((m) => (
                           <option key={m} value={m}>
-                            {activeEmbDiscoveryStatus?.source === "live_api"
-                              ? `Live: ${m}`
-                              : `Preset: ${m}`}
+                            {embeddingProvider === "deterministic"
+                              ? m
+                              : `Live: ${m}`}
                           </option>
                         ))}
                       </select>
@@ -1033,7 +1028,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   data-testid="ai-settings-embedding-model-input"
                   value={embeddingModelName}
                   onChange={(e) => setEmbeddingModelName(e.target.value)}
-                  placeholder="Type any custom embedding model ID or select below (e.g., text-embedding-004, BAAI/bge-m3)"
+                  placeholder="Type model ID manually or click Fetch Live Models..."
                   className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <datalist id="ai-embedding-models-datalist">
@@ -1041,6 +1036,22 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                     <option key={m} value={m} />
                   ))}
                 </datalist>
+
+                {activeEmbDiscoveryStatus &&
+                embeddingProvider !== llmProvider ? (
+                  <div
+                    data-testid="live-embedding-models-status-badge"
+                    className={`mt-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
+                      activeEmbDiscoveryStatus.source === "live_api"
+                        ? "border-emerald-200 bg-emerald-50/80 text-emerald-800 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
+                        : "border-amber-200 bg-amber-50/80 text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
+                    }`}
+                  >
+                    {activeEmbDiscoveryStatus.source === "live_api"
+                      ? `✓ Fetched ${activeEmbDiscoveryStatus.embedding_models.length} live Embedding models (${activeEmbDiscoveryStatus.latency_ms} ms)`
+                      : activeEmbDiscoveryStatus.message}
+                  </div>
+                ) : null}
 
                 {availableEmbeddingModels.length > 0 ? (
                   <div
@@ -1135,14 +1146,23 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 <strong className="font-semibold text-slate-800 dark:text-slate-200">
                   Automatic 1536-d pgvector Adaptation:
                 </strong>{" "}
-                Any 384-d, 768-d (e.g.{" "}
-                <code className="font-mono">text-embedding-004</code>,{" "}
-                <code className="font-mono">nomic-embed-text</code>), or 3072-d
-                vector is automatically adapted and L2-normalized to unit length
-                with zero database schema migrations.
+                Any 384-d, 768-d, 1024-d, or 3072-d provider vector is
+                automatically adapted and L2-normalized to unit length with zero
+                database schema migrations.
               </div>
             </section>
           </div>
+
+          {isMissingRequiredModelId ? (
+            <div
+              data-testid="ai-settings-model-required-hint"
+              className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-2.5 text-xs font-medium text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
+            >
+              Model ID required: Type an explicit model ID manually or click{" "}
+              <strong className="font-semibold">Fetch Live Models</strong> to
+              select an available model from the provider API before activating.
+            </div>
+          ) : null}
 
           {/* Live Connection Diagnostic Result Card */}
           {testResult ? (
@@ -1235,10 +1255,14 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
             <button
               type="button"
               data-testid="save-ai-settings-btn"
-              disabled={isSaving || isReadOnlyRole}
+              disabled={
+                isSaving || isReadOnlyRole || isMissingRequiredModelId
+              }
               title={
                 isReadOnlyRole
                   ? "Only ADMIN users can mutate active workspace AI settings"
+                  : isMissingRequiredModelId
+                  ? "Enter an explicit Model ID or click Fetch Live Models first"
                   : "Save & Activate AI Engine"
               }
               onClick={() => void handleSaveAndActivate()}

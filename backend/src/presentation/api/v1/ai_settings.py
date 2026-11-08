@@ -74,10 +74,10 @@ def _build_provider_catalog() -> list[ProviderCatalogItemDTO]:
                 supports_embeddings=extra_id in emb_registered,
                 requires_api_key=False,
                 supports_base_url=True,
-                default_llm_model="default" if extra_id in llm_registered else None,
-                recommended_llm_models=["default"] if extra_id in llm_registered else [],
-                default_embedding_model="default" if extra_id in emb_registered else None,
-                recommended_embedding_models=["default"] if extra_id in emb_registered else [],
+                default_llm_model=None,
+                recommended_llm_models=[],
+                default_embedding_model=None,
+                recommended_embedding_models=[],
             )
         )
     return catalog

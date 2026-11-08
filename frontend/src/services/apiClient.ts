@@ -1045,18 +1045,10 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     supports_embeddings: true,
     requires_api_key: true,
     supports_base_url: false,
-    default_llm_model: "gemini-2.5-flash",
-    recommended_llm_models: [
-      "gemini-2.5-flash",
-      "gemini-2.5-pro",
-      "gemini-2.5-flash-lite",
-      "gemini-2.0-flash",
-    ],
-    default_embedding_model: "text-embedding-004",
-    recommended_embedding_models: [
-      "text-embedding-004",
-      "gemini-embedding-001",
-    ],
+    default_llm_model: null,
+    recommended_llm_models: [],
+    default_embedding_model: null,
+    recommended_embedding_models: [],
   },
   {
     provider_id: "groq",
@@ -1065,15 +1057,8 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     supports_embeddings: false,
     requires_api_key: true,
     supports_base_url: false,
-    default_llm_model: "llama-3.3-70b-versatile",
-    recommended_llm_models: [
-      "llama-3.3-70b-versatile",
-      "meta-llama/llama-4-scout-17b-16e-instruct",
-      "meta-llama/llama-4-maverick-17b-128e-instruct",
-      "deepseek-r1-distill-llama-70b",
-      "qwen-qwq-32b",
-      "llama-3.1-8b-instant",
-    ],
+    default_llm_model: null,
+    recommended_llm_models: [],
     default_embedding_model: null,
     recommended_embedding_models: [],
   },
@@ -1084,21 +1069,10 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     supports_embeddings: true,
     requires_api_key: true,
     supports_base_url: false,
-    default_llm_model: "gpt-4.1",
-    recommended_llm_models: [
-      "gpt-4.1",
-      "gpt-4.1-mini",
-      "gpt-4.1-nano",
-      "gpt-4o",
-      "gpt-4o-mini",
-      "o3-mini",
-      "o4-mini",
-    ],
-    default_embedding_model: "text-embedding-3-small",
-    recommended_embedding_models: [
-      "text-embedding-3-small",
-      "text-embedding-3-large",
-    ],
+    default_llm_model: null,
+    recommended_llm_models: [],
+    default_embedding_model: null,
+    recommended_embedding_models: [],
   },
   {
     provider_id: "anthropic",
@@ -1107,14 +1081,8 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     supports_embeddings: false,
     requires_api_key: true,
     supports_base_url: false,
-    default_llm_model: "claude-sonnet-4-20250514",
-    recommended_llm_models: [
-      "claude-sonnet-4-20250514",
-      "claude-opus-4-20250514",
-      "claude-3-7-sonnet-latest",
-      "claude-3-5-sonnet-latest",
-      "claude-3-5-haiku-latest",
-    ],
+    default_llm_model: null,
+    recommended_llm_models: [],
     default_embedding_model: null,
     recommended_embedding_models: [],
   },
@@ -1125,22 +1093,10 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     supports_embeddings: true,
     requires_api_key: false,
     supports_base_url: true,
-    default_llm_model: "llama3.3",
-    recommended_llm_models: [
-      "llama3.3",
-      "qwen2.5:14b",
-      "deepseek-r1:14b",
-      "llama3.2",
-      "mistral",
-      "gemma3:12b",
-    ],
-    default_embedding_model: "nomic-embed-text",
-    recommended_embedding_models: [
-      "nomic-embed-text",
-      "bge-m3",
-      "mxbai-embed-large",
-      "all-minilm",
-    ],
+    default_llm_model: null,
+    recommended_llm_models: [],
+    default_embedding_model: null,
+    recommended_embedding_models: [],
   },
   {
     provider_id: "openai_compatible",
@@ -1149,19 +1105,10 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     supports_embeddings: true,
     requires_api_key: false,
     supports_base_url: true,
-    default_llm_model: "local-model",
-    recommended_llm_models: [
-      "local-model",
-      "Qwen/Qwen2.5-14B-Instruct",
-      "meta-llama/Llama-3.3-70B-Instruct",
-      "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
-    ],
-    default_embedding_model: "BAAI/bge-m3",
-    recommended_embedding_models: [
-      "BAAI/bge-m3",
-      "nomic-ai/nomic-embed-text-v1.5",
-      "intfloat/e5-mistral-7b-instruct",
-    ],
+    default_llm_model: null,
+    recommended_llm_models: [],
+    default_embedding_model: null,
+    recommended_embedding_models: [],
   },
 ];
 
@@ -1256,10 +1203,27 @@ export async function updateAISettings(
       nextEmbMasked = null;
     }
 
+    const resolvedLlmModel =
+      nextLlmProvider === "deterministic"
+        ? payload.llm_model_name?.trim() || "policy-deterministic-v1"
+        : payload.llm_model_name !== undefined
+        ? payload.llm_model_name.trim()
+        : llmProviderChanged
+        ? ""
+        : offlineAISettingsState.llm_model_name;
+
+    const resolvedEmbModel =
+      nextEmbProvider === "deterministic"
+        ? payload.embedding_model_name?.trim() || "deterministic-hash-1536"
+        : payload.embedding_model_name !== undefined
+        ? payload.embedding_model_name.trim()
+        : embProviderChanged
+        ? ""
+        : offlineAISettingsState.embedding_model_name;
+
     offlineAISettingsState = {
       llm_provider: nextLlmProvider,
-      llm_model_name:
-        payload.llm_model_name?.trim() || offlineAISettingsState.llm_model_name,
+      llm_model_name: resolvedLlmModel,
       llm_base_url:
         payload.llm_base_url !== undefined
           ? payload.llm_base_url?.trim() || null
@@ -1271,9 +1235,7 @@ export async function updateAISettings(
       llm_temperature:
         payload.llm_temperature ?? offlineAISettingsState.llm_temperature,
       embedding_provider: nextEmbProvider,
-      embedding_model_name:
-        payload.embedding_model_name?.trim() ||
-        offlineAISettingsState.embedding_model_name,
+      embedding_model_name: resolvedEmbModel,
       embedding_base_url:
         payload.embedding_base_url !== undefined
           ? payload.embedding_base_url?.trim() || null
@@ -1329,14 +1291,30 @@ export async function testAIConnection(
     const llmProvider =
       payload.llm_provider?.trim().toLowerCase() ??
       offlineAISettingsState.llm_provider;
+    const rawLlmModel =
+      payload.llm_model_name !== undefined
+        ? payload.llm_model_name.trim()
+        : llmProvider === offlineAISettingsState.llm_provider
+        ? offlineAISettingsState.llm_model_name
+        : "";
     const llmModel =
-      payload.llm_model_name?.trim() || offlineAISettingsState.llm_model_name;
+      llmProvider === "deterministic"
+        ? rawLlmModel || "policy-deterministic-v1"
+        : rawLlmModel;
+
     const embProvider =
       payload.embedding_provider?.trim().toLowerCase() ??
       offlineAISettingsState.embedding_provider;
+    const rawEmbModel =
+      payload.embedding_model_name !== undefined
+        ? payload.embedding_model_name.trim()
+        : embProvider === offlineAISettingsState.embedding_provider
+        ? offlineAISettingsState.embedding_model_name
+        : "";
     const embModel =
-      payload.embedding_model_name?.trim() ||
-      offlineAISettingsState.embedding_model_name;
+      embProvider === "deterministic"
+        ? rawEmbModel || "deterministic-hash-1536"
+        : rawEmbModel;
 
     const llmCatalog = DEFAULT_AI_PROVIDER_CATALOG.find(
       (p) => p.provider_id === llmProvider
@@ -1360,7 +1338,12 @@ export async function testAIConnection(
     const messages: string[] = [];
 
     if (target === "embedding" || target === "both") {
-      if (embCatalog?.requires_api_key && !hasCandidateEmbKey) {
+      if (embProvider !== "deterministic" && !embModel) {
+        embOk = false;
+        messages.push(
+          `Embedding check failed: Model ID is required for ${embCatalog?.display_name ?? embProvider}.`
+        );
+      } else if (embCatalog?.requires_api_key && !hasCandidateEmbKey) {
         embOk = false;
         messages.push(
           `Embedding check failed: API key is required for ${embCatalog.display_name}.`
@@ -1374,7 +1357,12 @@ export async function testAIConnection(
     }
 
     if (target === "llm" || target === "both") {
-      if (llmCatalog?.requires_api_key && !hasCandidateLlmKey) {
+      if (llmProvider !== "deterministic" && !llmModel) {
+        llmOk = false;
+        messages.push(
+          `LLM check failed: Model ID is required for ${llmCatalog?.display_name ?? llmProvider}.`
+        );
+      } else if (llmCatalog?.requires_api_key && !hasCandidateLlmKey) {
         llmOk = false;
         messages.push(
           `LLM check failed: API key is required for ${llmCatalog.display_name}.`
@@ -1399,6 +1387,9 @@ export async function testAIConnection(
         ? 2.4
         : 48.6;
 
+    const displayedLlmModel = llmModel || "(unconfigured)";
+    const displayedEmbModel = embModel || "(unconfigured)";
+
     return {
       success: overallSuccess,
       llm_ok: llmOk,
@@ -1414,10 +1405,10 @@ export async function testAIConnection(
           : `${llmProvider} + ${embProvider}`,
       model_tested:
         target === "llm"
-          ? llmModel
+          ? displayedLlmModel
           : target === "embedding"
-          ? embModel
-          : `${llmModel} + ${embModel}`,
+          ? displayedEmbModel
+          : `${displayedLlmModel} + ${displayedEmbModel}`,
       message: messages.join(" "),
       sample_output_preview: llmOk
         ? "[CRITICAL] Vendor $500 liability cap with uncapped Customer consequential damages violates mutual 12-month fee cap policy."
@@ -1455,6 +1446,9 @@ export async function testAIConnection(
   }
 }
 
+const DISCOVERY_GUIDANCE_MESSAGE =
+  "Provide a valid API key (or start your local server) and click Fetch Live Models to load available models from the provider, or type your model ID manually.";
+
 export async function discoverProviderModels(
   payload: DiscoverModelsRequestDTO,
   token?: string
@@ -1464,30 +1458,28 @@ export async function discoverProviderModels(
     (item) => item.provider_id === normalized
   );
 
-  const buildFallbackResponse = (reason?: string): DiscoverModelsResponseDTO => {
-    const llmModels = catalogEntry?.recommended_llm_models ?? ["default"];
-    const embModels = catalogEntry?.recommended_embedding_models ?? [];
-    if (normalized === "deterministic") {
-      return {
-        provider_id: "deterministic",
-        source: "live_api",
-        llm_models: llmModels,
-        embedding_models: embModels,
-        latency_ms: 0.2,
-        message: "Offline Deterministic Engine models ready (in-process).",
-      };
-    }
+  if (normalized === "deterministic") {
     return {
-      provider_id: normalized,
-      source: "catalog_fallback",
-      llm_models: llmModels,
-      embedding_models: embModels,
-      latency_ms: 1.4,
-      message:
-        reason ??
-        `Using built-in presets for ${catalogEntry?.display_name ?? normalized}.`,
+      provider_id: "deterministic",
+      source: "live_api",
+      llm_models: ["policy-deterministic-v1"],
+      embedding_models: ["deterministic-hash-1536"],
+      latency_ms: 0.2,
+      message: "Offline Deterministic Engine models ready (in-process).",
     };
-  };
+  }
+
+  const buildEmptyDiscoveryResponse = (
+    source: "unconfigured" | "unreachable",
+    reason?: string
+  ): DiscoverModelsResponseDTO => ({
+    provider_id: normalized,
+    source,
+    llm_models: [],
+    embedding_models: [],
+    latency_ms: 0.0,
+    message: reason ?? DISCOVERY_GUIDANCE_MESSAGE,
+  });
 
   if (!token) {
     const hasKey =
@@ -1495,12 +1487,11 @@ export async function discoverProviderModels(
       (normalized === offlineAISettingsState.llm_provider &&
         offlineAISettingsState.llm_has_api_key);
     if (catalogEntry?.requires_api_key && !hasKey) {
-      return buildFallbackResponse(
-        `Enter an API key for ${catalogEntry.display_name} to fetch live models; showing built-in presets.`
-      );
+      return buildEmptyDiscoveryResponse("unconfigured");
     }
-    return buildFallbackResponse(
-      `Backend offline (Demo Mode) — showing curated ${catalogEntry?.display_name ?? normalized} presets.`
+    return buildEmptyDiscoveryResponse(
+      "unreachable",
+      `Backend offline (Demo Mode) — ${DISCOVERY_GUIDANCE_MESSAGE}`
     );
   }
 
@@ -1511,16 +1502,15 @@ export async function discoverProviderModels(
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
-      return buildFallbackResponse(
-        `Live model discovery returned HTTP ${response.status}; showing built-in presets.`
+      return buildEmptyDiscoveryResponse(
+        "unreachable",
+        `Live model discovery returned HTTP ${response.status}. ${DISCOVERY_GUIDANCE_MESSAGE}`
       );
     }
     const raw = await response.json();
     return DiscoverModelsResponseDTOSchema.parse(raw);
   } catch {
-    return buildFallbackResponse(
-      "Could not reach backend model discovery endpoint; showing built-in presets."
-    );
+    return buildEmptyDiscoveryResponse("unreachable");
   }
 }
 

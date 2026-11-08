@@ -64,7 +64,7 @@ async def test_get_ai_settings_returns_catalog_and_requires_auth(
     assert body["llm_has_api_key"] is False
     assert body["llm_api_key_masked"] is None
 
-    provider_ids = {p["provider_id"] for p in body["available_providers"]}
+    provider_map = {p["provider_id"]: p for p in body["available_providers"]}
     assert {
         "deterministic",
         "gemini",
@@ -73,7 +73,29 @@ async def test_get_ai_settings_returns_catalog_and_requires_auth(
         "anthropic",
         "ollama",
         "openai_compatible",
-    }.issubset(provider_ids)
+    }.issubset(set(provider_map.keys()))
+
+    # Built-in offline deterministic engine retains its internal code identifiers
+    det_entry = provider_map["deterministic"]
+    assert det_entry["default_llm_model"] == "policy-deterministic-v1"
+    assert det_entry["recommended_llm_models"] == ["policy-deterministic-v1"]
+    assert det_entry["default_embedding_model"] == "deterministic-hash-1536"
+    assert det_entry["recommended_embedding_models"] == ["deterministic-hash-1536"]
+
+    # External & local providers expose zero hardcoded/static model lists
+    for ext_provider in (
+        "gemini",
+        "groq",
+        "openai",
+        "anthropic",
+        "ollama",
+        "openai_compatible",
+    ):
+        ext_entry = provider_map[ext_provider]
+        assert ext_entry["default_llm_model"] is None
+        assert ext_entry["recommended_llm_models"] == []
+        assert ext_entry["default_embedding_model"] is None
+        assert ext_entry["recommended_embedding_models"] == []
 
 
 async def test_put_ai_settings_switches_providers_masks_api_key_and_enforces_rbac(
@@ -290,7 +312,7 @@ async def test_discover_models_live_api_parsing_fallback_and_secret_scrubbing(
     )
     assert ssrf_resp.status_code == 422
 
-    # 2. Graceful fallback when cloud provider has no API key configured
+    # 2. Unconfigured status with zero static models when cloud provider has no API key
     no_key_resp = await client.post(
         "/api/v1/ai-settings/discover-models",
         headers=admin_headers,
@@ -298,9 +320,10 @@ async def test_discover_models_live_api_parsing_fallback_and_secret_scrubbing(
     )
     assert no_key_resp.status_code == 200
     no_key_body = no_key_resp.json()
-    assert no_key_body["source"] == "catalog_fallback"
-    assert "gemini-2.5-flash" in no_key_body["llm_models"]
-    assert "text-embedding-004" in no_key_body["embedding_models"]
+    assert no_key_body["source"] == "unconfigured"
+    assert no_key_body["llm_models"] == []
+    assert no_key_body["embedding_models"] == []
+    assert "Fetch Live Models" in no_key_body["message"]
 
     # 3. Mock upstream HTTP responses for Gemini, OpenAI, Groq, and Ollama
     secret_test_key = "sk-live-super-secret-discovery-9911"  # noqa: S105
@@ -434,7 +457,7 @@ async def test_discover_models_live_api_parsing_fallback_and_secret_scrubbing(
     assert ollama_body["llm_models"] == ["llama3.3:latest", "qwen2.5:14b"]
     assert ollama_body["embedding_models"] == ["nomic-embed-text:latest", "bge-m3:latest"]
 
-    # Upstream 401 error scrubs candidate secret and falls back cleanly (200 OK)
+    # Upstream 401 error scrubs candidate secret and returns empty lists with source="unreachable"
     bad_key = "sk-bad-secret-value-1234"
     err_resp = await client.post(
         "/api/v1/ai-settings/discover-models",
@@ -443,7 +466,10 @@ async def test_discover_models_live_api_parsing_fallback_and_secret_scrubbing(
     )
     assert err_resp.status_code == 200
     assert bad_key not in err_resp.text
-    assert err_resp.json()["source"] == "catalog_fallback"
+    err_body = err_resp.json()
+    assert err_body["source"] == "unreachable"
+    assert err_body["llm_models"] == []
+    assert err_body["embedding_models"] == []
 
 
 async def test_put_ai_settings_persists_arbitrary_custom_model_ids(

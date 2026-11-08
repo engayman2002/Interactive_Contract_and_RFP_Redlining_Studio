@@ -19,7 +19,7 @@ _SENTINEL: Final[object] = object()
 
 @dataclass(frozen=True)
 class CuratedProviderPreset:
-    """Curated modern fallback model catalog metadata for a built-in AI provider."""
+    """Capability metadata for a built-in AI provider (zero hardcoded external model lists)."""
 
     provider_id: str
     display_name: str
@@ -53,18 +53,10 @@ CURATED_PROVIDER_PRESETS: Final[tuple[CuratedProviderPreset, ...]] = (
         supports_embeddings=True,
         requires_api_key=True,
         supports_base_url=False,
-        default_llm_model="gemini-2.5-flash",
-        recommended_llm_models=(
-            "gemini-2.5-flash",
-            "gemini-2.5-pro",
-            "gemini-2.5-flash-lite",
-            "gemini-2.0-flash",
-        ),
-        default_embedding_model="text-embedding-004",
-        recommended_embedding_models=(
-            "text-embedding-004",
-            "gemini-embedding-001",
-        ),
+        default_llm_model=None,
+        recommended_llm_models=(),
+        default_embedding_model=None,
+        recommended_embedding_models=(),
     ),
     CuratedProviderPreset(
         provider_id="groq",
@@ -73,15 +65,8 @@ CURATED_PROVIDER_PRESETS: Final[tuple[CuratedProviderPreset, ...]] = (
         supports_embeddings=False,
         requires_api_key=True,
         supports_base_url=False,
-        default_llm_model="llama-3.3-70b-versatile",
-        recommended_llm_models=(
-            "llama-3.3-70b-versatile",
-            "meta-llama/llama-4-scout-17b-16e-instruct",
-            "meta-llama/llama-4-maverick-17b-128e-instruct",
-            "deepseek-r1-distill-llama-70b",
-            "qwen-qwq-32b",
-            "llama-3.1-8b-instant",
-        ),
+        default_llm_model=None,
+        recommended_llm_models=(),
         default_embedding_model=None,
         recommended_embedding_models=(),
     ),
@@ -92,21 +77,10 @@ CURATED_PROVIDER_PRESETS: Final[tuple[CuratedProviderPreset, ...]] = (
         supports_embeddings=True,
         requires_api_key=True,
         supports_base_url=False,
-        default_llm_model="gpt-4.1",
-        recommended_llm_models=(
-            "gpt-4.1",
-            "gpt-4.1-mini",
-            "gpt-4.1-nano",
-            "gpt-4o",
-            "gpt-4o-mini",
-            "o3-mini",
-            "o4-mini",
-        ),
-        default_embedding_model="text-embedding-3-small",
-        recommended_embedding_models=(
-            "text-embedding-3-small",
-            "text-embedding-3-large",
-        ),
+        default_llm_model=None,
+        recommended_llm_models=(),
+        default_embedding_model=None,
+        recommended_embedding_models=(),
     ),
     CuratedProviderPreset(
         provider_id="anthropic",
@@ -115,14 +89,8 @@ CURATED_PROVIDER_PRESETS: Final[tuple[CuratedProviderPreset, ...]] = (
         supports_embeddings=False,
         requires_api_key=True,
         supports_base_url=False,
-        default_llm_model="claude-sonnet-4-20250514",
-        recommended_llm_models=(
-            "claude-sonnet-4-20250514",
-            "claude-opus-4-20250514",
-            "claude-3-7-sonnet-latest",
-            "claude-3-5-sonnet-latest",
-            "claude-3-5-haiku-latest",
-        ),
+        default_llm_model=None,
+        recommended_llm_models=(),
         default_embedding_model=None,
         recommended_embedding_models=(),
     ),
@@ -133,22 +101,10 @@ CURATED_PROVIDER_PRESETS: Final[tuple[CuratedProviderPreset, ...]] = (
         supports_embeddings=True,
         requires_api_key=False,
         supports_base_url=True,
-        default_llm_model="llama3.3",
-        recommended_llm_models=(
-            "llama3.3",
-            "qwen2.5:14b",
-            "deepseek-r1:14b",
-            "llama3.2",
-            "mistral",
-            "gemma3:12b",
-        ),
-        default_embedding_model="nomic-embed-text",
-        recommended_embedding_models=(
-            "nomic-embed-text",
-            "bge-m3",
-            "mxbai-embed-large",
-            "all-minilm",
-        ),
+        default_llm_model=None,
+        recommended_llm_models=(),
+        default_embedding_model=None,
+        recommended_embedding_models=(),
     ),
     CuratedProviderPreset(
         provider_id="openai_compatible",
@@ -157,19 +113,10 @@ CURATED_PROVIDER_PRESETS: Final[tuple[CuratedProviderPreset, ...]] = (
         supports_embeddings=True,
         requires_api_key=False,
         supports_base_url=True,
-        default_llm_model="local-model",
-        recommended_llm_models=(
-            "local-model",
-            "Qwen/Qwen2.5-14B-Instruct",
-            "meta-llama/Llama-3.3-70B-Instruct",
-            "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
-        ),
-        default_embedding_model="BAAI/bge-m3",
-        recommended_embedding_models=(
-            "BAAI/bge-m3",
-            "nomic-ai/nomic-embed-text-v1.5",
-            "intfloat/e5-mistral-7b-instruct",
-        ),
+        default_llm_model=None,
+        recommended_llm_models=(),
+        default_embedding_model=None,
+        recommended_embedding_models=(),
     ),
 )
 
@@ -235,14 +182,22 @@ class RuntimeAISettingsManager:
         with cls._lock:
             if cls._overrides is None:
                 base = get_settings()
+                init_llm_provider = base.LLM_PROVIDER.strip().lower()
+                init_llm_model = base.LLM_MODEL_NAME.strip() or (
+                    "policy-deterministic-v1" if init_llm_provider == "deterministic" else ""
+                )
+                init_emb_provider = base.EMBEDDING_PROVIDER.strip().lower()
+                init_emb_model = base.EMBEDDING_MODEL_NAME.strip() or (
+                    "deterministic-hash-1536" if init_emb_provider == "deterministic" else ""
+                )
                 cls._overrides = _RuntimeAIOverrides(
-                    llm_provider=base.LLM_PROVIDER.strip().lower(),
-                    llm_model_name=base.LLM_MODEL_NAME,
+                    llm_provider=init_llm_provider,
+                    llm_model_name=init_llm_model,
                     llm_base_url=base.LLM_BASE_URL,
                     llm_api_key=None,
                     llm_temperature=base.LLM_TEMPERATURE,
-                    embedding_provider=base.EMBEDDING_PROVIDER.strip().lower(),
-                    embedding_model_name=base.EMBEDDING_MODEL_NAME,
+                    embedding_provider=init_emb_provider,
+                    embedding_model_name=init_emb_model,
                     embedding_base_url=base.EMBEDDING_BASE_URL,
                     embedding_api_key=None,
                 )
@@ -370,11 +325,14 @@ class RuntimeAISettingsManager:
             cand_llm_provider = (
                 llm_provider.strip().lower() if llm_provider else state.llm_provider
             )
-            cand_llm_model = (
-                llm_model_name.strip()
-                if llm_model_name and llm_model_name.strip()
-                else state.llm_model_name
-            )
+            if llm_model_name is not None and llm_model_name.strip():
+                cand_llm_model = llm_model_name.strip()
+            elif cand_llm_provider == "deterministic":
+                cand_llm_model = "policy-deterministic-v1"
+            elif cand_llm_provider == state.llm_provider and llm_model_name is None:
+                cand_llm_model = state.llm_model_name
+            else:
+                cand_llm_model = ""
             cand_llm_base_url = (
                 llm_base_url.strip()
                 if llm_base_url is not None and llm_base_url.strip()
@@ -403,11 +361,14 @@ class RuntimeAISettingsManager:
                 if embedding_provider
                 else state.embedding_provider
             )
-            cand_emb_model = (
-                embedding_model_name.strip()
-                if embedding_model_name and embedding_model_name.strip()
-                else state.embedding_model_name
-            )
+            if embedding_model_name is not None and embedding_model_name.strip():
+                cand_emb_model = embedding_model_name.strip()
+            elif cand_emb_provider == "deterministic":
+                cand_emb_model = "deterministic-hash-1536"
+            elif cand_emb_provider == state.embedding_provider and embedding_model_name is None:
+                cand_emb_model = state.embedding_model_name
+            else:
+                cand_emb_model = ""
             cand_emb_base_url = (
                 embedding_base_url.strip()
                 if embedding_base_url is not None and embedding_base_url.strip()
@@ -516,6 +477,12 @@ class RuntimeAISettingsManager:
             state.llm_provider = next_llm_provider
             if llm_model_name is not None and llm_model_name.strip():
                 state.llm_model_name = llm_model_name.strip()
+            elif next_llm_provider == "deterministic" and (
+                provider_changed_llm or not state.llm_model_name
+            ):
+                state.llm_model_name = "policy-deterministic-v1"
+            elif provider_changed_llm:
+                state.llm_model_name = ""
 
             if llm_base_url is not _SENTINEL:
                 cleaned_llm_url = (
@@ -537,6 +504,12 @@ class RuntimeAISettingsManager:
             state.embedding_provider = next_emb_provider
             if embedding_model_name is not None and embedding_model_name.strip():
                 state.embedding_model_name = embedding_model_name.strip()
+            elif next_emb_provider == "deterministic" and (
+                provider_changed_emb or not state.embedding_model_name
+            ):
+                state.embedding_model_name = "deterministic-hash-1536"
+            elif provider_changed_emb:
+                state.embedding_model_name = ""
 
             if embedding_base_url is not _SENTINEL:
                 cleaned_emb_url = (

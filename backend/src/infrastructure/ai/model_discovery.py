@@ -11,7 +11,12 @@ from src.infrastructure.ai.runtime_settings import (
     sanitize_secret_from_text,
 )
 
-DiscoverySource = Literal["live_api", "catalog_fallback"]
+DiscoverySource = Literal["live_api", "unconfigured", "unreachable"]
+
+_MANUAL_OR_LIVE_GUIDANCE: Final[str] = (
+    "Provide a valid API key (or start your local server) and click Fetch Live Models "
+    "to load available models from the provider, or type your model ID manually."
+)
 
 _GEMINI_DEFAULT_BASE_URL: Final[str] = "https://generativelanguage.googleapis.com/v1beta"
 _GROQ_DEFAULT_BASE_URL: Final[str] = "https://api.groq.com/openai/v1"
@@ -47,7 +52,7 @@ _NON_CHAT_AUDIO_IMAGE_KEYWORDS: Final[tuple[str, ...]] = (
 
 @dataclass(frozen=True)
 class DiscoveredModelsResult:
-    """Typed result of live provider model discovery or curated catalog fallback."""
+    """Typed result of live provider model discovery (zero static model fallbacks)."""
 
     provider_id: str
     source: DiscoverySource
@@ -65,18 +70,6 @@ def _dedupe_preserve_order(items: list[str]) -> list[str]:
         if cleaned and cleaned not in seen:
             seen[cleaned] = None
     return list(seen.keys())
-
-
-def _fallback_models_for_provider(provider_id: str) -> tuple[list[str], list[str], str]:
-    """Return `(llm_models, embedding_models, display_name)` from curated presets."""
-    preset = CURATED_PROVIDER_PRESET_MAP.get(provider_id)
-    if preset is None:
-        return (["default"], [], provider_id)
-    return (
-        list(preset.recommended_llm_models),
-        list(preset.recommended_embedding_models),
-        preset.display_name,
-    )
 
 
 def _is_embedding_model_id(model_id: str) -> bool:
@@ -229,9 +222,10 @@ async def discover_provider_models(
     timeout_seconds: float = 10.0,
     http_client: httpx.AsyncClient | None = None,
 ) -> DiscoveredModelsResult:
-    """Query a provider's live `/models` or `/api/tags` endpoint with graceful preset fallback."""
+    """Query a provider's live `/models` or `/api/tags` endpoint without static model fallbacks."""
     normalized = provider_id.strip().lower()
-    fallback_llm, fallback_emb, display_name = _fallback_models_for_provider(normalized)
+    preset = CURATED_PROVIDER_PRESET_MAP.get(normalized)
+    display_name = preset.display_name if preset is not None else normalized
     cleaned_key = api_key.strip() if api_key and api_key.strip() else None
     cleaned_base = base_url.strip() if base_url and base_url.strip() else None
 
@@ -239,21 +233,20 @@ async def discover_provider_models(
         return DiscoveredModelsResult(
             provider_id="deterministic",
             source="live_api",
-            llm_models=fallback_llm,
-            embedding_models=fallback_emb,
+            llm_models=["policy-deterministic-v1"],
+            embedding_models=["deterministic-hash-1536"],
             latency_ms=0.1,
-            message="Offline Deterministic Engine models ready (in-process).",
+            message="Offline Deterministic Engine internal rules ready (in-process).",
         )
 
-    preset = CURATED_PROVIDER_PRESET_MAP.get(normalized)
     if preset is not None and preset.requires_api_key and not cleaned_key:
         return DiscoveredModelsResult(
             provider_id=normalized,
-            source="catalog_fallback",
-            llm_models=fallback_llm,
-            embedding_models=fallback_emb,
+            source="unconfigured",
+            llm_models=[],
+            embedding_models=[],
             latency_ms=0.0,
-            message=f"No API key configured for {display_name}; showing curated preset catalog.",
+            message=_MANUAL_OR_LIVE_GUIDANCE,
         )
 
     url: str
@@ -290,11 +283,11 @@ async def discover_provider_models(
         if not cleaned_base:
             return DiscoveredModelsResult(
                 provider_id=normalized,
-                source="catalog_fallback",
-                llm_models=fallback_llm,
-                embedding_models=fallback_emb,
+                source="unconfigured",
+                llm_models=[],
+                embedding_models=[],
                 latency_ms=0.0,
-                message=f"Using registered defaults for plugin provider '{normalized}'.",
+                message=_MANUAL_OR_LIVE_GUIDANCE,
             )
         url = _build_openai_models_url(cleaned_base)
         if cleaned_key:
@@ -317,13 +310,13 @@ async def discover_provider_models(
             )
             return DiscoveredModelsResult(
                 provider_id=normalized,
-                source="catalog_fallback",
-                llm_models=fallback_llm,
-                embedding_models=fallback_emb,
+                source="unreachable",
+                llm_models=[],
+                embedding_models=[],
                 latency_ms=latency_ms,
                 message=(
-                    f"Provider returned HTTP {response.status_code} ({safe_status_body}); "
-                    "showing curated preset catalog."
+                    f"Provider returned HTTP {response.status_code} ({safe_status_body}). "
+                    f"{_MANUAL_OR_LIVE_GUIDANCE}"
                 ),
             )
 
@@ -331,11 +324,11 @@ async def discover_provider_models(
         if not isinstance(body, dict):
             return DiscoveredModelsResult(
                 provider_id=normalized,
-                source="catalog_fallback",
-                llm_models=fallback_llm,
-                embedding_models=fallback_emb,
+                source="unreachable",
+                llm_models=[],
+                embedding_models=[],
                 latency_ms=latency_ms,
-                message="Unexpected non-object JSON payload; showing curated preset catalog.",
+                message=f"Unexpected non-object JSON payload. {_MANUAL_OR_LIVE_GUIDANCE}",
             )
 
         if normalized == "gemini":
@@ -365,13 +358,13 @@ async def discover_provider_models(
         if total_found == 0:
             return DiscoveredModelsResult(
                 provider_id=normalized,
-                source="catalog_fallback",
-                llm_models=fallback_llm,
-                embedding_models=fallback_emb,
+                source="unreachable",
+                llm_models=[],
+                embedding_models=[],
                 latency_ms=latency_ms,
                 message=(
-                    f"Connected to {display_name}, but 0 models were returned; "
-                    "showing curated preset catalog."
+                    f"Connected to {display_name}, but 0 models were returned. "
+                    f"{_MANUAL_OR_LIVE_GUIDANCE}"
                 ),
             )
 
@@ -391,13 +384,13 @@ async def discover_provider_models(
         safe_err = sanitize_secret_from_text(str(exc), cleaned_key)
         return DiscoveredModelsResult(
             provider_id=normalized,
-            source="catalog_fallback",
-            llm_models=fallback_llm,
-            embedding_models=fallback_emb,
+            source="unreachable",
+            llm_models=[],
+            embedding_models=[],
             latency_ms=latency_ms,
             message=(
-                f"Live model discovery unavailable for {display_name} ({safe_err}); "
-                "showing curated preset catalog."
+                f"Could not reach {display_name} ({safe_err}). "
+                f"{_MANUAL_OR_LIVE_GUIDANCE}"
             ),
         )
 
@@ -407,4 +400,3 @@ __all__ = [
     "DiscoverySource",
     "discover_provider_models",
 ]
-

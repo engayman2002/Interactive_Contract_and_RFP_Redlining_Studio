@@ -160,7 +160,7 @@ class Settings(BaseSettings):
 
     # Phase 3: Company Playbook & Vector Knowledge Base Configuration
     EMBEDDING_PROVIDER: str = Field(default="deterministic")
-    EMBEDDING_MODEL_NAME: str = Field(default="text-embedding-3-small")
+    EMBEDDING_MODEL_NAME: str = Field(default="")
     EMBEDDING_BASE_URL: str | None = Field(default=None)
     EMBEDDING_API_KEY: str | None = Field(
         default_factory=lambda: _resolve_optional_secret("EMBEDDING_API_KEY")
@@ -176,7 +176,7 @@ class Settings(BaseSettings):
 
     # Phase 4: LangChain Redlining Engine & Async Worker Pipeline Configuration
     LLM_PROVIDER: str = Field(default="deterministic")
-    LLM_MODEL_NAME: str = Field(default="llama-3.3-70b-versatile")
+    LLM_MODEL_NAME: str = Field(default="")
     LLM_BASE_URL: str | None = Field(default=None)
     LLM_API_KEY: str | None = Field(
         default_factory=lambda: _resolve_optional_secret("LLM_API_KEY")
