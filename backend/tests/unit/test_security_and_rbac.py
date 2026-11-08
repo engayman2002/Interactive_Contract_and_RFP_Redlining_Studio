@@ -1,5 +1,6 @@
 """Unit tests for PasswordService, JwtTokenService, and RbacGuardService."""
 
+import base64
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
@@ -17,8 +18,14 @@ from src.domain.enums import UserRole
 from src.domain.exceptions import (
     DomainValidationError,
     ForbiddenRoleError,
+    InvalidAIVaultError,
     TenantIsolationError,
     UnauthorizedError,
+)
+from src.infrastructure.ai.config_vault import (
+    EncryptedAIVaultEnvelope,
+    decrypt_ai_settings_vault,
+    encrypt_ai_settings_vault,
 )
 from src.infrastructure.config import Settings
 
@@ -251,5 +258,59 @@ def test_jwt_secret_env_var_prioritized_over_unreadable_secret_file(
 
     settings = Settings()
     assert settings.JWT_SECRET_KEY == "direct-env-var-jwt-secret-with-sufficient-length"  # noqa: S105
+
+
+def test_ai_config_vault_aes_256_gcm_roundtrip_tamper_and_passphrase_checks() -> None:
+    """Verify PBKDF2-HMAC-SHA256 + AES-256-GCM vault encryption, CSPRNG uniqueness, and AEAD."""
+    secret_payload = {
+        "llm_provider": "gemini",
+        "llm_model_name": "gemini-2.5-pro",
+        "llm_api_key": "AIzaSyVaultUnitSecretKey9911",
+        "embedding_provider": "gemini",
+        "embedding_model_name": "text-embedding-004",
+    }
+    passphrase = "StrongVaultPassphrase!2026"
+
+    # Reject short passphrases (< 8 chars)
+    with pytest.raises(DomainValidationError):
+        encrypt_ai_settings_vault(secret_payload, "short7")
+
+    env1 = encrypt_ai_settings_vault(secret_payload, passphrase)
+    env2 = encrypt_ai_settings_vault(secret_payload, passphrase)
+
+    assert env1.cipher == "AES-256-GCM"
+    assert env1.kdf == "PBKDF2-HMAC-SHA256"
+    assert env1.iterations == 600_000
+    # Fresh 16-byte salt and 12-byte nonce guarantee distinct ciphertexts
+    assert env1.salt_b64 != env2.salt_b64
+    assert env1.nonce_b64 != env2.nonce_b64
+    assert env1.ciphertext_b64 != env2.ciphertext_b64
+    assert "AIzaSyVaultUnitSecretKey9911" not in env1.ciphertext_b64
+
+    # Round-trip decryption succeeds with exact passphrase
+    restored = decrypt_ai_settings_vault(env1, passphrase)
+    assert restored == secret_payload
+
+    # Wrong passphrase raises InvalidAIVaultError
+    with pytest.raises(InvalidAIVaultError):
+        decrypt_ai_settings_vault(env1, "WrongVaultPassphrase!9999")
+
+    # Tampered ciphertext / GCM authentication tag raises InvalidAIVaultError
+    raw_cipher = bytearray(base64.b64decode(env1.ciphertext_b64))
+    raw_cipher[0] ^= 0xFF
+    tampered_b64 = base64.b64encode(bytes(raw_cipher)).decode("ascii")
+    tampered_env = EncryptedAIVaultEnvelope(
+        vault_version=env1.vault_version,
+        cipher=env1.cipher,
+        kdf=env1.kdf,
+        iterations=env1.iterations,
+        salt_b64=env1.salt_b64,
+        nonce_b64=env1.nonce_b64,
+        ciphertext_b64=tampered_b64,
+        exported_at=env1.exported_at,
+    )
+    with pytest.raises(InvalidAIVaultError):
+        decrypt_ai_settings_vault(tampered_env, passphrase)
+
 
 

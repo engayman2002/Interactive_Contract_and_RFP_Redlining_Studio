@@ -4,6 +4,7 @@ import httpx
 import pytest
 from httpx import AsyncClient
 from src.domain.enums import UserRole
+from src.infrastructure.ai.config_vault import encrypt_ai_settings_vault
 
 
 async def _register_org_and_admin(client: AsyncClient, slug: str) -> dict[str, str]:
@@ -502,3 +503,151 @@ async def test_put_ai_settings_persists_arbitrary_custom_model_ids(
     assert get_body["llm_model_name"] == "custom-org-legal-llm-v3"
     assert get_body["embedding_provider"] == "openai_compatible"
     assert get_body["embedding_model_name"] == "org-internal/legal-bge-large-ft"
+
+
+async def test_ai_settings_encrypted_vault_export_import_roundtrip_and_rbac(
+    client: AsyncClient,
+) -> None:
+    """Verify AES-256-GCM vault export/import, wrong-passphrase guard, SSRF check, and RBAC."""
+    admin_headers = await _register_org_and_admin(client, "vault")
+    viewer_headers = await _create_and_login_role_user(
+        client,
+        admin_headers,
+        email="viewer-vault@aiswitcher.io",
+        role=UserRole.VIEWER,
+    )
+    counsel_headers = await _create_and_login_role_user(
+        client,
+        admin_headers,
+        email="counsel-vault@aiswitcher.io",
+        role=UserRole.LEGAL_COUNSEL,
+    )
+
+    vault_secret_key = "AIzaSyVaultSecretKey998877"
+    vault_passphrase = "MyStrongVaultPassphrase!2026"
+
+    # 1. Configure Gemini in runtime settings first
+    put_gemini = await client.put(
+        "/api/v1/ai-settings",
+        headers=admin_headers,
+        json={
+            "llm_provider": "gemini",
+            "llm_model_name": "gemini-2.5-pro",
+            "llm_api_key": vault_secret_key,
+            "llm_temperature": 0.15,
+            "embedding_provider": "gemini",
+            "embedding_model_name": "text-embedding-004",
+            "embedding_api_key": vault_secret_key,
+        },
+    )
+    assert put_gemini.status_code == 200
+
+    # 2. Export encrypted vault (.rsvault.json envelope)
+    export_resp = await client.post(
+        "/api/v1/ai-settings/export-vault",
+        headers=admin_headers,
+        json={"passphrase": vault_passphrase},
+    )
+    assert export_resp.status_code == 200
+    assert vault_secret_key not in export_resp.text
+    assert "gemini-2.5-pro" not in export_resp.text
+
+    envelope = export_resp.json()
+    assert envelope["vault_version"] == 1
+    assert envelope["cipher"] == "AES-256-GCM"
+    assert envelope["kdf"] == "PBKDF2-HMAC-SHA256"
+    assert envelope["iterations"] == 600_000
+
+    # 3. RBAC: VIEWER and LEGAL_COUNSEL receive 403 Forbidden on both vault endpoints
+    for non_admin_headers in (viewer_headers, counsel_headers):
+        forbidden_export = await client.post(
+            "/api/v1/ai-settings/export-vault",
+            headers=non_admin_headers,
+            json={"passphrase": vault_passphrase},
+        )
+        assert forbidden_export.status_code == 403
+
+        forbidden_import = await client.post(
+            "/api/v1/ai-settings/import-vault",
+            headers=non_admin_headers,
+            json={"passphrase": vault_passphrase, "vault": envelope},
+        )
+        assert forbidden_import.status_code == 403
+
+    # 4. Reset active runtime settings back to offline deterministic engine
+    reset_resp = await client.put(
+        "/api/v1/ai-settings",
+        headers=admin_headers,
+        json={
+            "llm_provider": "deterministic",
+            "llm_model_name": "policy-deterministic-v1",
+            "embedding_provider": "deterministic",
+            "embedding_model_name": "deterministic-hash-1536",
+        },
+    )
+    assert reset_resp.status_code == 200
+    assert reset_resp.json()["llm_provider"] == "deterministic"
+
+    # 5. Wrong passphrase returns 400 Bad Request and does NOT mutate active settings
+    wrong_pass_resp = await client.post(
+        "/api/v1/ai-settings/import-vault",
+        headers=admin_headers,
+        json={"passphrase": "WrongVaultPassphrase!9999", "vault": envelope},
+    )
+    assert wrong_pass_resp.status_code == 400
+    assert wrong_pass_resp.json()["error"]["code"] == "INVALID_AI_VAULT"
+
+    after_wrong_get = await client.get("/api/v1/ai-settings", headers=admin_headers)
+    assert after_wrong_get.status_code == 200
+    assert after_wrong_get.json()["llm_provider"] == "deterministic"
+
+    # 6. SSRF check inside decrypted vault payload returns 422 and leaves settings untouched
+    ssrf_envelope = encrypt_ai_settings_vault(
+        {
+            "llm_provider": "openai_compatible",
+            "llm_model_name": "local-vllm-model",
+            "llm_base_url": "http://169.254.169.254/latest/meta-data/",
+            "embedding_provider": "deterministic",
+            "embedding_model_name": "deterministic-hash-1536",
+        },
+        vault_passphrase,
+    )
+    ssrf_import = await client.post(
+        "/api/v1/ai-settings/import-vault",
+        headers=admin_headers,
+        json={
+            "passphrase": vault_passphrase,
+            "vault": {
+                "vault_version": ssrf_envelope.vault_version,
+                "cipher": ssrf_envelope.cipher,
+                "kdf": ssrf_envelope.kdf,
+                "iterations": ssrf_envelope.iterations,
+                "salt_b64": ssrf_envelope.salt_b64,
+                "nonce_b64": ssrf_envelope.nonce_b64,
+                "ciphertext_b64": ssrf_envelope.ciphertext_b64,
+                "exported_at": ssrf_envelope.exported_at,
+            },
+        },
+    )
+    assert ssrf_import.status_code == 422
+
+    # 7. Correct passphrase unlocks vault, restores Gemini + keys, and returns masked preview
+    unlock_resp = await client.post(
+        "/api/v1/ai-settings/import-vault",
+        headers=admin_headers,
+        json={"passphrase": vault_passphrase, "vault": envelope},
+    )
+    assert unlock_resp.status_code == 200
+    assert vault_secret_key not in unlock_resp.text
+
+    unlocked_body = unlock_resp.json()
+    assert unlocked_body["llm_provider"] == "gemini"
+    assert unlocked_body["llm_model_name"] == "gemini-2.5-pro"
+    assert unlocked_body["llm_temperature"] == 0.15
+    assert unlocked_body["llm_has_api_key"] is True
+    assert unlocked_body["llm_api_key_masked"] == "AIza...8877"
+    assert unlocked_body["embedding_provider"] == "gemini"
+    assert unlocked_body["embedding_model_name"] == "text-embedding-004"
+    assert unlocked_body["embedding_has_api_key"] is True
+    assert unlocked_body["embedding_api_key_masked"] == "AIza...8877"
+

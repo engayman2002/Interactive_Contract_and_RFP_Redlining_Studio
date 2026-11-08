@@ -63,3 +63,6 @@ frontend/out/
 frontend/coverage/
 *.tsbuildinfo
 next-env.d.ts
+
+# Encrypted AI Configuration Vault backups
+*.rsvault.json

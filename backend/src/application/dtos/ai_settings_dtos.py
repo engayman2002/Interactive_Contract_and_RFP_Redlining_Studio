@@ -149,10 +149,53 @@ class DiscoverModelsResponseDTO(ImmutableDTO):
     message: str
 
 
+class EncryptedAIVaultEnvelopeDTO(ImmutableDTO):
+    """Versioned AEAD encrypted AI configuration vault envelope (`.rsvault.json`)."""
+
+    vault_version: Literal[1] = 1
+    kdf: Literal["PBKDF2-HMAC-SHA256"] = "PBKDF2-HMAC-SHA256"
+    iterations: int = Field(default=600_000, ge=100_000, le=2_000_000)
+    cipher: Literal["AES-256-GCM"] = "AES-256-GCM"
+    salt_b64: str = Field(min_length=16, max_length=256)
+    nonce_b64: str = Field(min_length=12, max_length=128)
+    ciphertext_b64: str = Field(min_length=24, max_length=65536)
+    exported_at: str = Field(min_length=10, max_length=64)
+
+
+class ExportAIVaultRequestDTO(ImmutableDTO):
+    """ADMIN request DTO to export active/candidate AI settings as an AES-256-GCM vault."""
+
+    passphrase: str = Field(..., min_length=8, max_length=256)
+    llm_provider: str | None = Field(default=None, min_length=1, max_length=64)
+    llm_model_name: str | None = Field(default=None, max_length=160)
+    llm_base_url: str | None = Field(default=None, max_length=512)
+    llm_api_key: str | None = Field(default=None, max_length=512)
+    llm_temperature: float | None = Field(default=None, ge=0.0, le=1.0)
+    embedding_provider: str | None = Field(default=None, min_length=1, max_length=64)
+    embedding_model_name: str | None = Field(default=None, max_length=160)
+    embedding_base_url: str | None = Field(default=None, max_length=512)
+    embedding_api_key: str | None = Field(default=None, max_length=512)
+
+    @field_validator("llm_base_url", "embedding_base_url")
+    @classmethod
+    def validate_base_urls(cls, value: str | None) -> str | None:
+        return _validate_optional_base_url(value)
+
+
+class ImportAIVaultRequestDTO(ImmutableDTO):
+    """ADMIN request DTO to unlock, validate, and activate an encrypted `.rsvault.json` file."""
+
+    passphrase: str = Field(..., min_length=8, max_length=256)
+    vault: EncryptedAIVaultEnvelopeDTO
+
+
 __all__ = [
     "AISettingsResponseDTO",
     "DiscoverModelsRequestDTO",
     "DiscoverModelsResponseDTO",
+    "EncryptedAIVaultEnvelopeDTO",
+    "ExportAIVaultRequestDTO",
+    "ImportAIVaultRequestDTO",
     "ProviderCatalogItemDTO",
     "TestAIConnectionRequestDTO",
     "TestAIConnectionResponseDTO",

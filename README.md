@@ -184,13 +184,14 @@ Interactive_Contract_and_RFP_Redlining_Studio/
 │   │   │       ├── redline_chain.py                # RedlineOutput, SYSTEM_PROMPT, LangChainClauseAuditor
 │   │   │       ├── provider_registry.py            # LLMProviderRegistry (Deterministic, Groq, OpenAI, Anthropic, Gemini, Ollama, vLLM)
 │   │   │       ├── runtime_settings.py             # Thread-Safe RuntimeAISettingsManager & Secret Key Masking (Zero Static Model Presets)
+│   │   │       ├── config_vault.py                 # Passphrase-Protected Encrypted AI Vault (PBKDF2-HMAC-SHA256 600k + AES-256-GCM)
 │   │   │       ├── model_discovery.py              # Async Live Provider Model Discovery (/models & /api/tags)
 │   │   │       ├── batch_worker.py                 # BatchDocumentAuditWorker (Bounded Semaphore=20)
 │   │   │       └── celery_app.py                   # Celery Worker App & audit_document_celery_task
 │   │   └── presentation/                           # Delivery & HTTP Layer
 │   │       ├── api/v1/
 │   │       │   ├── __init__.py                     # /health, /auth/*, /users/* Routers
-│   │       │   ├── ai_settings.py                  # /ai-settings (GET, PUT Hot-Swap, POST /test-connection, POST /discover-models)
+│   │       │   ├── ai_settings.py                  # /ai-settings (GET, PUT Hot-Swap, /test-connection, /discover-models, /export-vault, /import-vault)
 │   │       │   ├── documents.py                    # /documents/upload, /workspace, /analyze, /stream, /export, /audit-trail
 │   │       │   ├── playbooks.py                    # /playbooks/rules CRUD & /playbooks/search
 │   │       │   └── collaboration.py                # /suggestions/{id}/resolve & /clauses/{id}/comments
@@ -223,7 +224,7 @@ Interactive_Contract_and_RFP_Redlining_Studio/
         │   │   └── ThemeToggle.tsx                 # Persistent Dual-Theme Toggle (Executive Light / Slate Dark)
         │   ├── workspace/
         │   │   ├── RedliningStudioWorkspace.tsx    # Resizable Split-Screen Container, Export Controls & 409 Banner
-        │   │   ├── AISettingsModal.tsx             # In-App AI Provider & Model Switcher + Live Connection Tester
+        │   │   ├── AISettingsModal.tsx             # In-App AI Provider Switcher, Live Discovery & Encrypted .rsvault.json Vault
         │   │   ├── ContractUploadDropzone.tsx      # Drag-and-Drop .docx/.pdf Dropzone with Multi-Stage Progress
         │   │   ├── UploadModal.tsx                 # In-Studio Quick File Upload Modal
         │   │   └── QuickHelpModal.tsx              # In-Studio Contextual Quick-Help & Risk Heatmap Reference Drawer
@@ -249,7 +250,7 @@ Interactive_Contract_and_RFP_Redlining_Studio/
         │   └── helpContent.ts                      # Structured User Guide Modules, Playbook Templates & FAQ Library
         ├── store/
         │   └── workspaceStore.ts                   # Zustand Store (Bidirectional Sync, Optimistic Edits & Rollback)
-        └── __tests__/                              # 7 Vitest + React Testing Library Test Suites (24 Tests)
+        └── __tests__/                              # 7 Vitest + React Testing Library Test Suites (25 Tests)
 ```
 
 ### 1.4 Frontend User Journey, Multi-Page Routes & Automatic Session Bootstrapper
@@ -550,6 +551,7 @@ The backend implements a vendor-agnostic **Plugin Registry Architecture** strict
 > - **Live Provider API Discovery (`POST /api/v1/ai-settings/discover-models`):** Click **`Fetch Live Models`** inside the modal to query the selected provider's live `/models` or `/api/tags` endpoint in real time via [`discover_provider_models`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/model_discovery.py), separating LLM and Embedding models automatically (`source: "live_api"`). When credentials are missing or the server is unreachable, the API returns `source: "unconfigured"` or `"unreachable"` with empty lists (`[]`) and clear setup guidance—never stale static presets.
 > - **Manual Model ID Entry:** Type or paste **any exact model ID** directly into the Model ID field (newly released vendor IDs, fine-tuned enterprise checkpoints, or local Ollama/HuggingFace tags) OR click any live-discovered model chip. Saving is prevented when a non-deterministic provider has an empty Model ID.
 > - **Secret Masking, Live Latency Probe & Hot-Swap:** API keys are masked server-side via [`mask_api_key`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/runtime_settings.py) and never exposed in `GET` responses; **`Test Connection`** (`POST /api/v1/ai-settings/test-connection`) verifies `1536-d` vector generation and structured LLM auditing latency in milliseconds before **`Save & Activate Engine`** (`PUT /api/v1/ai-settings`) hot-swaps [`RuntimeAISettingsManager`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/runtime_settings.py) with zero container restarts.
+> - **Passphrase-Protected Encrypted Configuration Vault (`.rsvault.json` — Export & Import):** Because runtime API keys stay strictly in memory (zero plaintext secrets on disk), `ADMIN` users can enter a passphrase (min 8 chars) inside [`AISettingsModal.tsx`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/workspace/AISettingsModal.tsx) to export an authenticated encrypted `.rsvault.json` envelope (`POST /api/v1/ai-settings/export-vault` via [`config_vault.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/config_vault.py)) using **PBKDF2-HMAC-SHA256** (`600,000` iterations, 16-byte CSPRNG salt) and **AES-256-GCM** (12-byte CSPRNG nonce, AAD `"redline-studio-ai-vault-v1"`). Uploading `.rsvault.json` and clicking **`Unlock & Restore Vault`** (`POST /api/v1/ai-settings/import-vault`) verifies the GCM authentication tag, enforces provider registry & SSRF rules, activates all settings & API keys in one click, and returns only masked key previews. Offline Demo Mode provides a byte-compatible WebCrypto (`crypto.subtle`) implementation.
 
 #### 5.1.1 Supported Built-in Providers Matrix
 
@@ -873,7 +875,9 @@ The OpenXML `.docx` reconstruction engine is located in [`backend/src/infrastruc
 | 24 | `GET /api/v1/ai-settings` | All Authenticated Roles | `200 OK` | Inspect active LLM & Embedding providers, masked API key flags, and provider catalog |
 | 25 | `PUT /api/v1/ai-settings` | `ADMIN` | `200 OK` (`403` non-admin) | Hot-swap active runtime LLM & Vector Embedding providers/models (including custom model IDs) |
 | 26 | `POST /api/v1/ai-settings/test-connection` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Live probe candidate LLM & 1536-d Embedding settings and report `latency_ms` |
-| 27 | `POST /api/v1/ai-settings/discover-models` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Dynamically fetch live LLM & Embedding models from provider `/models` or `/api/tags` with preset fallback |
+| 27 | `POST /api/v1/ai-settings/discover-models` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Dynamically fetch live LLM & Embedding models from provider `/models` or `/api/tags` |
+| 28 | `POST /api/v1/ai-settings/export-vault` | `ADMIN` | `200 OK` (`403` non-admin) | Encrypt active/typed AI settings & API keys into an AES-256-GCM `.rsvault.json` envelope |
+| 29 | `POST /api/v1/ai-settings/import-vault` | `ADMIN` | `200 OK` (`400` bad passphrase) | Decrypt, validate (SSRF & registry), and activate an AES-256-GCM `.rsvault.json` vault |
 
 ---
 
@@ -1038,10 +1042,10 @@ cd /home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend
 # 1. Lint & Security Checks (pycodestyle, pyflakes, isort, bugbear, bandit)
 ./.venv/bin/ruff check .
 
-# 2. Strict Static Type Checking (97 source & test files)
+# 2. Strict Static Type Checking (98 source & test files)
 ./.venv/bin/mypy --strict src tests
 
-# 3. Full Unit & Multi-Tenant Integration Test Suite (54 tests)
+# 3. Full Unit & Multi-Tenant Integration Test Suite (56 tests)
 ./.venv/bin/pytest -v
 ```
 
@@ -1056,7 +1060,7 @@ node ./node_modules/.bin/tsc --noEmit
 # 2. Next.js ESLint Verification
 node ./node_modules/.bin/next lint
 
-# 3. Vitest + React Testing Library Suite (7 test files, 24 tests)
+# 3. Vitest + React Testing Library Suite (7 test files, 25 tests)
 node ./node_modules/.bin/vitest run
 
 # 4. Next.js 15 Standalone Production Build Verification (/, /playbooks, /documents/[id], /help)

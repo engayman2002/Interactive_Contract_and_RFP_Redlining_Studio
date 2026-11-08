@@ -19,6 +19,7 @@ from src.domain.exceptions import (
     DuplicateEntityError,
     EntityNotFoundError,
     ForbiddenRoleError,
+    InvalidAIVaultError,
     TenantIsolationError,
     UnauthorizedError,
 )
@@ -32,6 +33,7 @@ ALLOWED_HTTP_METHODS: Final[frozenset[str]] = frozenset(
 )
 
 DOMAIN_ERROR_STATUS_MAP: Final[dict[type[DomainError], int]] = {
+    InvalidAIVaultError: status.HTTP_400_BAD_REQUEST,
     UnauthorizedError: status.HTTP_401_UNAUTHORIZED,
     ForbiddenRoleError: status.HTTP_403_FORBIDDEN,
     TenantIsolationError: status.HTTP_403_FORBIDDEN,

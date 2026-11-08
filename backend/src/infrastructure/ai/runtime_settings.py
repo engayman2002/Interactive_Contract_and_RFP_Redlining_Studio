@@ -2,7 +2,7 @@
 
 import threading
 from dataclasses import dataclass
-from typing import Final
+from typing import Any, Final
 
 from src.domain.ports import ClauseAuditorPort, EmbeddingGeneratorPort
 from src.infrastructure.ai.provider_registry import LLMProviderRegistry, create_llm_runnable
@@ -575,6 +575,135 @@ class RuntimeAISettingsManager:
                 resolved_base_url = state.embedding_base_url
 
             return resolved_key, resolved_base_url
+
+    @classmethod
+    def build_vault_export_payload(
+        cls,
+        *,
+        llm_provider: str | None = None,
+        llm_model_name: str | None = None,
+        llm_base_url: str | None | object = _SENTINEL,
+        llm_api_key: str | None = None,
+        llm_temperature: float | None = None,
+        embedding_provider: str | None = None,
+        embedding_model_name: str | None = None,
+        embedding_base_url: str | None | object = _SENTINEL,
+        embedding_api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Build a complete AI configuration dict (with active/candidate secrets) for AEAD vault."""
+        with cls._lock:
+            state = cls._ensure_initialized()
+            base = get_settings()
+
+            registered_llm = LLMProviderRegistry.available_providers()
+            registered_emb = EmbeddingProviderRegistry.available_providers()
+
+            exp_llm_provider = (
+                llm_provider.strip().lower() if llm_provider else state.llm_provider
+            )
+            if exp_llm_provider not in registered_llm:
+                raise UnsupportedAIProviderError(
+                    provider_name=exp_llm_provider,
+                    provider_kind="llm",
+                    available_providers=registered_llm,
+                )
+
+            exp_emb_provider = (
+                embedding_provider.strip().lower()
+                if embedding_provider
+                else state.embedding_provider
+            )
+            if exp_emb_provider not in registered_emb:
+                raise UnsupportedAIProviderError(
+                    provider_name=exp_emb_provider,
+                    provider_kind="embedding",
+                    available_providers=registered_emb,
+                )
+
+            if llm_model_name is not None and llm_model_name.strip():
+                exp_llm_model = llm_model_name.strip()
+            elif exp_llm_provider == "deterministic":
+                exp_llm_model = "policy-deterministic-v1"
+            elif exp_llm_provider == state.llm_provider:
+                exp_llm_model = state.llm_model_name
+            else:
+                exp_llm_model = ""
+
+            if llm_base_url is not _SENTINEL:
+                cleaned_llm_base = (
+                    str(llm_base_url).strip() if llm_base_url is not None else ""
+                )
+                exp_llm_base_url: str | None = cleaned_llm_base or None
+            elif exp_llm_provider == state.llm_provider:
+                exp_llm_base_url = state.llm_base_url
+            else:
+                exp_llm_base_url = None
+
+            cand_llm_override = (
+                llm_api_key.strip()
+                if llm_api_key is not None and llm_api_key.strip()
+                else (state.llm_api_key if exp_llm_provider == state.llm_provider else None)
+            )
+            exp_llm_key = cls._resolve_provider_llm_key(
+                provider=exp_llm_provider,
+                override_key=cand_llm_override,
+                base=base,
+            )
+
+            exp_temp = (
+                llm_temperature if llm_temperature is not None else state.llm_temperature
+            )
+
+            if embedding_model_name is not None and embedding_model_name.strip():
+                exp_emb_model = embedding_model_name.strip()
+            elif exp_emb_provider == "deterministic":
+                exp_emb_model = "deterministic-hash-1536"
+            elif exp_emb_provider == state.embedding_provider:
+                exp_emb_model = state.embedding_model_name
+            else:
+                exp_emb_model = ""
+
+            if embedding_base_url is not _SENTINEL:
+                cleaned_emb_base = (
+                    str(embedding_base_url).strip()
+                    if embedding_base_url is not None
+                    else ""
+                )
+                exp_emb_base_url: str | None = cleaned_emb_base or None
+            elif exp_emb_provider == state.embedding_provider:
+                exp_emb_base_url = state.embedding_base_url
+            else:
+                exp_emb_base_url = None
+
+            cand_emb_override = (
+                embedding_api_key.strip()
+                if embedding_api_key is not None and embedding_api_key.strip()
+                else (
+                    state.embedding_api_key
+                    if exp_emb_provider == state.embedding_provider
+                    else None
+                )
+            )
+            if cand_emb_override is None and exp_emb_provider == exp_llm_provider:
+                cand_emb_override = cand_llm_override
+
+            exp_emb_key = cls._resolve_provider_embedding_key(
+                provider=exp_emb_provider,
+                override_key=cand_emb_override,
+                base=base,
+            )
+
+            return {
+                "llm_provider": exp_llm_provider,
+                "llm_model_name": exp_llm_model,
+                "llm_base_url": exp_llm_base_url,
+                "llm_api_key": exp_llm_key,
+                "llm_temperature": exp_temp,
+                "embedding_provider": exp_emb_provider,
+                "embedding_model_name": exp_emb_model,
+                "embedding_base_url": exp_emb_base_url,
+                "embedding_api_key": exp_emb_key,
+            }
 
     @classmethod
     def get_active_embedding_generator(cls) -> EmbeddingGeneratorPort:

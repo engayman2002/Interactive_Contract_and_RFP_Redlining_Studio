@@ -24,8 +24,21 @@ class StructuredOutputValidationError(DomainValidationError):
         self.code = "STRUCTURED_OUTPUT_VALIDATION_ERROR"
 
 
+class InvalidAIVaultError(DomainError):
+    """Raised when an encrypted AI configuration vault cannot be unlocked or validated."""
+
+    def __init__(
+        self,
+        message: str = (
+            "Failed to unlock AI configuration vault: invalid passphrase or corrupted vault file."
+        ),
+    ) -> None:
+        super().__init__(message=message, code="INVALID_AI_VAULT")
+
+
 __all__ = [
     "ClauseAnalysisError",
+    "InvalidAIVaultError",
     "StructuredOutputValidationError",
 ]
 

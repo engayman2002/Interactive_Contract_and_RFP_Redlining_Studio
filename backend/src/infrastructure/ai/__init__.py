@@ -6,6 +6,11 @@ from src.infrastructure.ai.celery_app import (
     celery_app,
     create_celery_app,
 )
+from src.infrastructure.ai.config_vault import (
+    EncryptedAIVaultEnvelope,
+    decrypt_ai_settings_vault,
+    encrypt_ai_settings_vault,
+)
 from src.infrastructure.ai.model_discovery import (
     DiscoveredModelsResult,
     DiscoverySource,
@@ -47,6 +52,7 @@ __all__ = [
     "CuratedProviderPreset",
     "DiscoveredModelsResult",
     "DiscoverySource",
+    "EncryptedAIVaultEnvelope",
     "GeminiGenerateContentChatRunnable",
     "LLMProviderRegistry",
     "LangChainClauseAuditor",
@@ -62,7 +68,9 @@ __all__ = [
     "celery_app",
     "create_celery_app",
     "create_llm_runnable",
+    "decrypt_ai_settings_vault",
     "discover_provider_models",
+    "encrypt_ai_settings_vault",
     "format_playbook_rules_context",
     "mask_api_key",
     "parse_and_validate_redline_output",

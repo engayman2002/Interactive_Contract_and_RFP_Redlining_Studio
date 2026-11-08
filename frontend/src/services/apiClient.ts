@@ -17,8 +17,12 @@ import {
   DocumentListItemDTOSchema,
   DocumentWorkspaceDTO,
   DocumentWorkspaceDTOSchema,
+  EncryptedAIVaultEnvelopeDTO,
+  EncryptedAIVaultEnvelopeDTOSchema,
+  ExportAIVaultRequestDTO,
   ExportMode,
   ExportModeSchema,
+  ImportAIVaultRequestDTO,
   OnboardingResponseDTO,
   OnboardingResponseDTOSchema,
   PlaybookRuleDTO,
@@ -35,6 +39,7 @@ import {
   TokenResponseDTO,
   TokenResponseDTOSchema,
   UpdateAISettingsRequestDTO,
+  UpdateAISettingsRequestDTOSchema,
 } from "./contracts";
 
 export const API_BASE_URL =
@@ -1146,8 +1151,17 @@ function buildDefaultOfflineAISettings(): AISettingsResponseDTO {
 let offlineAISettingsState: AISettingsResponseDTO =
   buildDefaultOfflineAISettings();
 
+let offlineRawSecrets: {
+  llmApiKey: string | null;
+  embeddingApiKey: string | null;
+} = {
+  llmApiKey: null,
+  embeddingApiKey: null,
+};
+
 export function resetOfflineAISettings(): void {
   offlineAISettingsState = buildDefaultOfflineAISettings();
+  offlineRawSecrets = { llmApiKey: null, embeddingApiKey: null };
 }
 
 export async function fetchAISettings(
@@ -1185,8 +1199,10 @@ export async function updateAISettings(
 
     let nextLlmMasked = offlineAISettingsState.llm_api_key_masked ?? null;
     if (payload.llm_api_key !== undefined) {
+      offlineRawSecrets.llmApiKey = payload.llm_api_key?.trim() || null;
       nextLlmMasked = maskClientApiKey(payload.llm_api_key);
     } else if (llmProviderChanged) {
+      offlineRawSecrets.llmApiKey = null;
       nextLlmMasked = null;
     }
 
@@ -1198,8 +1214,11 @@ export async function updateAISettings(
 
     let nextEmbMasked = offlineAISettingsState.embedding_api_key_masked ?? null;
     if (payload.embedding_api_key !== undefined) {
+      offlineRawSecrets.embeddingApiKey =
+        payload.embedding_api_key?.trim() || null;
       nextEmbMasked = maskClientApiKey(payload.embedding_api_key);
     } else if (embProviderChanged) {
+      offlineRawSecrets.embeddingApiKey = null;
       nextEmbMasked = null;
     }
 
@@ -1512,6 +1531,386 @@ export async function discoverProviderModels(
   } catch {
     return buildEmptyDiscoveryResponse("unreachable");
   }
+}
+
+const VAULT_PBKDF2_ITERATIONS = 600000;
+const VAULT_AAD_LABEL = "redline-studio-ai-vault-v1";
+const BLOCKED_SSRF_HOSTS = new Set([
+  "169.254.169.254",
+  "metadata.google.internal",
+  "metadata.goog",
+  "100.100.100.200",
+]);
+
+function toStrictArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+  const binary = atob(b64.trim());
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    out[i] = binary.charCodeAt(i);
+  }
+  return out;
+}
+
+function validateClientBaseUrl(urlValue?: string | null): string | null {
+  if (!urlValue) {
+    return null;
+  }
+  const cleaned = urlValue.trim();
+  if (!cleaned) {
+    return null;
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(cleaned);
+  } catch {
+    throw new Error(
+      "Base URL must start with http:// or https:// and include a valid host."
+    );
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(
+      "Base URL must start with http:// or https:// and include a valid host."
+    );
+  }
+  if (BLOCKED_SSRF_HOSTS.has(parsed.hostname.toLowerCase())) {
+    throw new Error("Base URL host is not permitted by SSRF security policy.");
+  }
+  return cleaned;
+}
+
+async function encryptOfflineVaultWebCrypto(
+  payload: ExportAIVaultRequestDTO
+): Promise<EncryptedAIVaultEnvelopeDTO> {
+  if (payload.passphrase.length < 8) {
+    throw new Error("Vault passphrase must be at least 8 characters long.");
+  }
+
+  const llmProvider =
+    payload.llm_provider?.trim().toLowerCase() ??
+    offlineAISettingsState.llm_provider;
+  const embProvider =
+    payload.embedding_provider?.trim().toLowerCase() ??
+    offlineAISettingsState.embedding_provider;
+
+  const llmModel =
+    llmProvider === "deterministic"
+      ? payload.llm_model_name?.trim() || "policy-deterministic-v1"
+      : payload.llm_model_name?.trim() ??
+        (llmProvider === offlineAISettingsState.llm_provider
+          ? offlineAISettingsState.llm_model_name
+          : "");
+  const embModel =
+    embProvider === "deterministic"
+      ? payload.embedding_model_name?.trim() || "deterministic-hash-1536"
+      : payload.embedding_model_name?.trim() ??
+        (embProvider === offlineAISettingsState.embedding_provider
+          ? offlineAISettingsState.embedding_model_name
+          : "");
+
+  if (llmProvider !== "deterministic" && !llmModel) {
+    throw new Error(`Explicit LLM model ID is required for '${llmProvider}'.`);
+  }
+  if (embProvider !== "deterministic" && !embModel) {
+    throw new Error(
+      `Explicit Embedding model ID is required for '${embProvider}'.`
+    );
+  }
+
+  const llmBaseUrl = validateClientBaseUrl(
+    payload.llm_base_url !== undefined
+      ? payload.llm_base_url
+      : llmProvider === offlineAISettingsState.llm_provider
+      ? offlineAISettingsState.llm_base_url
+      : null
+  );
+  const embBaseUrl = validateClientBaseUrl(
+    payload.embedding_base_url !== undefined
+      ? payload.embedding_base_url
+      : embProvider === offlineAISettingsState.embedding_provider
+      ? offlineAISettingsState.embedding_base_url
+      : null
+  );
+
+  const resolvedLlmKey =
+    payload.llm_api_key?.trim() ||
+    (llmProvider === offlineAISettingsState.llm_provider
+      ? offlineRawSecrets.llmApiKey
+      : null);
+  const resolvedEmbKey =
+    payload.embedding_api_key?.trim() ||
+    (embProvider === llmProvider && payload.llm_api_key?.trim()
+      ? payload.llm_api_key.trim()
+      : embProvider === offlineAISettingsState.embedding_provider
+      ? offlineRawSecrets.embeddingApiKey
+      : null);
+
+  const secretConfigPayload = {
+    llm_provider: llmProvider,
+    llm_model_name: llmModel,
+    llm_base_url: llmBaseUrl,
+    llm_api_key: resolvedLlmKey,
+    llm_temperature:
+      payload.llm_temperature ?? offlineAISettingsState.llm_temperature,
+    embedding_provider: embProvider,
+    embedding_model_name: embModel,
+    embedding_base_url: embBaseUrl,
+    embedding_api_key: resolvedEmbKey,
+  };
+
+  const salt = new Uint8Array(16);
+  const nonce = new Uint8Array(12);
+  if (!globalThis.crypto?.subtle) {
+    throw new Error(
+      "WebCrypto API (crypto.subtle) requires a secure context (HTTPS or localhost) for offline vault encryption."
+    );
+  }
+  globalThis.crypto.getRandomValues(salt);
+  globalThis.crypto.getRandomValues(nonce);
+
+  const encoder = new TextEncoder();
+  const keyMaterial = await globalThis.crypto.subtle.importKey(
+    "raw",
+    toStrictArrayBuffer(encoder.encode(payload.passphrase)),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+  const aesKey = await globalThis.crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: toStrictArrayBuffer(salt),
+      iterations: VAULT_PBKDF2_ITERATIONS,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt"]
+  );
+
+  const plaintextBytes = encoder.encode(JSON.stringify(secretConfigPayload));
+  const aadBytes = encoder.encode(VAULT_AAD_LABEL);
+  const cipherBuffer = await globalThis.crypto.subtle.encrypt(
+    {
+      name: "AES-GCM",
+      iv: toStrictArrayBuffer(nonce),
+      additionalData: toStrictArrayBuffer(aadBytes),
+      tagLength: 128,
+    },
+    aesKey,
+    toStrictArrayBuffer(plaintextBytes)
+  );
+
+  return {
+    vault_version: 1,
+    kdf: "PBKDF2-HMAC-SHA256",
+    iterations: VAULT_PBKDF2_ITERATIONS,
+    cipher: "AES-256-GCM",
+    salt_b64: bytesToBase64(salt),
+    nonce_b64: bytesToBase64(nonce),
+    ciphertext_b64: bytesToBase64(new Uint8Array(cipherBuffer)),
+    exported_at: new Date().toISOString(),
+  };
+}
+
+async function decryptOfflineVaultWebCrypto(
+  payload: ImportAIVaultRequestDTO
+): Promise<AISettingsResponseDTO> {
+  const invalidVaultMessage =
+    "Failed to unlock AI configuration vault: invalid passphrase or corrupted vault file.";
+  if (payload.passphrase.length < 8) {
+    throw new Error(invalidVaultMessage);
+  }
+
+  let salt: Uint8Array;
+  let nonce: Uint8Array;
+  let ciphertext: Uint8Array;
+  try {
+    salt = base64ToBytes(payload.vault.salt_b64);
+    nonce = base64ToBytes(payload.vault.nonce_b64);
+    ciphertext = base64ToBytes(payload.vault.ciphertext_b64);
+  } catch {
+    throw new Error(invalidVaultMessage);
+  }
+
+  if (
+    salt.byteLength < 16 ||
+    nonce.byteLength !== 12 ||
+    ciphertext.byteLength <= 16
+  ) {
+    throw new Error(invalidVaultMessage);
+  }
+
+  const encoder = new TextEncoder();
+  let decryptedJson: unknown;
+  try {
+    const keyMaterial = await globalThis.crypto.subtle.importKey(
+      "raw",
+      toStrictArrayBuffer(encoder.encode(payload.passphrase)),
+      "PBKDF2",
+      false,
+      ["deriveKey"]
+    );
+    const aesKey = await globalThis.crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: toStrictArrayBuffer(salt),
+        iterations: payload.vault.iterations,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["decrypt"]
+    );
+
+    const aadBytes = encoder.encode(VAULT_AAD_LABEL);
+    const plainBuffer = await globalThis.crypto.subtle.decrypt(
+      {
+        name: "AES-GCM",
+        iv: toStrictArrayBuffer(nonce),
+        additionalData: toStrictArrayBuffer(aadBytes),
+        tagLength: 128,
+      },
+      aesKey,
+      toStrictArrayBuffer(ciphertext)
+    );
+    decryptedJson = JSON.parse(new TextDecoder().decode(plainBuffer));
+  } catch {
+    throw new Error(invalidVaultMessage);
+  }
+
+  const validated = UpdateAISettingsRequestDTOSchema.parse(decryptedJson);
+  validateClientBaseUrl(validated.llm_base_url);
+  validateClientBaseUrl(validated.embedding_base_url);
+
+  const knownProviderIds = new Set(
+    DEFAULT_AI_PROVIDER_CATALOG.map((item) => item.provider_id)
+  );
+  const nextLlm = validated.llm_provider?.trim().toLowerCase() ?? "";
+  const nextEmb = validated.embedding_provider?.trim().toLowerCase() ?? "";
+  if (!knownProviderIds.has(nextLlm) || !knownProviderIds.has(nextEmb)) {
+    throw new Error("Decrypted AI vault references an unsupported provider.");
+  }
+  if (nextLlm !== "deterministic" && !validated.llm_model_name?.trim()) {
+    throw new Error(`Decrypted vault is missing LLM model ID for '${nextLlm}'.`);
+  }
+  if (nextEmb !== "deterministic" && !validated.embedding_model_name?.trim()) {
+    throw new Error(
+      `Decrypted vault is missing Embedding model ID for '${nextEmb}'.`
+    );
+  }
+
+  return updateAISettings(validated, undefined);
+}
+
+async function extractBackendErrorMessage(
+  response: Response,
+  fallback: string
+): Promise<string> {
+  try {
+    const data = (await response.json()) as {
+      error?: { message?: string };
+      detail?: unknown;
+    };
+    if (data?.error?.message) {
+      return data.error.message;
+    }
+    if (typeof data?.detail === "string") {
+      return data.detail;
+    }
+  } catch {
+    // Ignore JSON parse errors on error body
+  }
+  return fallback;
+}
+
+export async function exportAIVault(
+  payload: ExportAIVaultRequestDTO,
+  token?: string
+): Promise<EncryptedAIVaultEnvelopeDTO> {
+  if (!token) {
+    return encryptOfflineVaultWebCrypto(payload);
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/ai-settings/export-vault`, {
+      method: "POST",
+      headers: buildHeaders(token, true),
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return encryptOfflineVaultWebCrypto(payload);
+  }
+
+  if (response.status === 403) {
+    throw new Error(
+      "Forbidden (403): Only ADMIN users can export encrypted AI configuration vaults."
+    );
+  }
+  if (!response.ok) {
+    const msg = await extractBackendErrorMessage(
+      response,
+      `Failed to export AI configuration vault (${response.status}).`
+    );
+    throw new Error(msg);
+  }
+
+  const raw = await response.json();
+  return EncryptedAIVaultEnvelopeDTOSchema.parse(raw);
+}
+
+export async function importAIVault(
+  payload: ImportAIVaultRequestDTO,
+  token?: string
+): Promise<AISettingsResponseDTO> {
+  if (!token) {
+    return decryptOfflineVaultWebCrypto(payload);
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/ai-settings/import-vault`, {
+      method: "POST",
+      headers: buildHeaders(token, true),
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return decryptOfflineVaultWebCrypto(payload);
+  }
+
+  if (response.status === 403) {
+    throw new Error(
+      "Forbidden (403): Only ADMIN users can import encrypted AI configuration vaults."
+    );
+  }
+  if (!response.ok) {
+    const msg = await extractBackendErrorMessage(
+      response,
+      "Failed to unlock AI configuration vault: invalid passphrase or corrupted vault file."
+    );
+    throw new Error(msg);
+  }
+
+  const raw = await response.json();
+  const parsed = AISettingsResponseDTOSchema.parse(raw);
+  offlineAISettingsState = parsed;
+  return parsed;
 }
 
 

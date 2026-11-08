@@ -70,6 +70,7 @@ class DomainValidationError(DomainError):
 
 from src.domain.exceptions.ai_exceptions import (  # noqa: E402
     ClauseAnalysisError,
+    InvalidAIVaultError,
     StructuredOutputValidationError,
 )
 from src.domain.exceptions.collaboration_exceptions import (  # noqa: E402
@@ -100,6 +101,7 @@ __all__ = [
     "EmptyDocumentError",
     "EntityNotFoundError",
     "ForbiddenRoleError",
+    "InvalidAIVaultError",
     "InvalidDocumentFormatError",
     "InvalidPlaybookRuleError",
     "InvalidResolutionError",

@@ -5,11 +5,15 @@ from typing import Annotated, Final
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, status
+from pydantic import ValidationError
 
 from src.application.dtos import (
     AISettingsResponseDTO,
     DiscoverModelsRequestDTO,
     DiscoverModelsResponseDTO,
+    EncryptedAIVaultEnvelopeDTO,
+    ExportAIVaultRequestDTO,
+    ImportAIVaultRequestDTO,
     ProviderCatalogItemDTO,
     TestAIConnectionRequestDTO,
     TestAIConnectionResponseDTO,
@@ -18,14 +22,18 @@ from src.application.dtos import (
 )
 from src.domain.entities import ClauseAuditInput
 from src.domain.enums import UserRole
+from src.domain.exceptions import DomainValidationError
 from src.infrastructure.ai import (
     CURATED_PROVIDER_PRESETS,
+    EncryptedAIVaultEnvelope,
     LangChainClauseAuditor,
     LLMProviderRegistry,
     RuntimeAISettingsManager,
     UnsupportedAIProviderError,
     create_llm_runnable,
+    decrypt_ai_settings_vault,
     discover_provider_models,
+    encrypt_ai_settings_vault,
     mask_api_key,
     sanitize_secret_from_text,
 )
@@ -341,6 +349,131 @@ async def discover_ai_models(
         latency_ms=discovered.latency_ms,
         message=discovered.message,
     )
+
+
+@ai_settings_router.post(
+    "/export-vault",
+    response_model=EncryptedAIVaultEnvelopeDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def export_ai_settings_vault(
+    payload: ExportAIVaultRequestDTO,
+    _current_user: Annotated[
+        TokenPayloadDTO,
+        Depends(require_roles(UserRole.ADMIN)),
+    ],
+) -> EncryptedAIVaultEnvelopeDTO:
+    """Encrypt active/candidate AI settings & API keys into an AES-256-GCM vault (ADMIN only)."""
+    llm_base_arg: str | None | object = (
+        payload.llm_base_url if "llm_base_url" in payload.model_fields_set else _SENTINEL
+    )
+    emb_base_arg: str | None | object = (
+        payload.embedding_base_url
+        if "embedding_base_url" in payload.model_fields_set
+        else _SENTINEL
+    )
+
+    vault_payload = RuntimeAISettingsManager.build_vault_export_payload(
+        llm_provider=payload.llm_provider,
+        llm_model_name=payload.llm_model_name,
+        llm_base_url=llm_base_arg,
+        llm_api_key=payload.llm_api_key,
+        llm_temperature=payload.llm_temperature,
+        embedding_provider=payload.embedding_provider,
+        embedding_model_name=payload.embedding_model_name,
+        embedding_base_url=emb_base_arg,
+        embedding_api_key=payload.embedding_api_key,
+    )
+
+    if vault_payload["llm_provider"] != "deterministic" and not vault_payload["llm_model_name"]:
+        raise DomainValidationError(
+            f"Explicit LLM model name is required when exporting '{vault_payload['llm_provider']}'."
+        )
+    if (
+        vault_payload["embedding_provider"] != "deterministic"
+        and not vault_payload["embedding_model_name"]
+    ):
+        raise DomainValidationError(
+            "Explicit Embedding model name is required when exporting "
+            f"'{vault_payload['embedding_provider']}'."
+        )
+
+    envelope = encrypt_ai_settings_vault(vault_payload, payload.passphrase)
+    return EncryptedAIVaultEnvelopeDTO(
+        vault_version=1,
+        kdf="PBKDF2-HMAC-SHA256",
+        iterations=envelope.iterations,
+        cipher="AES-256-GCM",
+        salt_b64=envelope.salt_b64,
+        nonce_b64=envelope.nonce_b64,
+        ciphertext_b64=envelope.ciphertext_b64,
+        exported_at=envelope.exported_at,
+    )
+
+
+@ai_settings_router.post(
+    "/import-vault",
+    response_model=AISettingsResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def import_ai_settings_vault(
+    payload: ImportAIVaultRequestDTO,
+    _current_user: Annotated[
+        TokenPayloadDTO,
+        Depends(require_roles(UserRole.ADMIN)),
+    ],
+) -> AISettingsResponseDTO:
+    """Unlock, validate, and activate an AES-256-GCM AI configuration vault (ADMIN only)."""
+    envelope = EncryptedAIVaultEnvelope(
+        vault_version=payload.vault.vault_version,
+        kdf=payload.vault.kdf,
+        iterations=payload.vault.iterations,
+        cipher=payload.vault.cipher,
+        salt_b64=payload.vault.salt_b64,
+        nonce_b64=payload.vault.nonce_b64,
+        ciphertext_b64=payload.vault.ciphertext_b64,
+        exported_at=payload.vault.exported_at,
+    )
+    decrypted_dict = decrypt_ai_settings_vault(envelope, payload.passphrase)
+
+    try:
+        validated = UpdateAISettingsRequestDTO.model_validate(decrypted_dict)
+    except ValidationError as exc:
+        raise DomainValidationError(
+            "Decrypted AI configuration vault failed schema or SSRF security validation."
+        ) from exc
+
+    restored_llm_provider = (validated.llm_provider or "").strip().lower()
+    restored_emb_provider = (validated.embedding_provider or "").strip().lower()
+    if not restored_llm_provider or not restored_emb_provider:
+        raise DomainValidationError(
+            "Decrypted AI configuration vault is missing required provider identifiers."
+        )
+    if restored_llm_provider != "deterministic" and not (
+        validated.llm_model_name and validated.llm_model_name.strip()
+    ):
+        raise DomainValidationError(
+            f"Decrypted vault is missing LLM model ID for '{restored_llm_provider}'."
+        )
+    if restored_emb_provider != "deterministic" and not (
+        validated.embedding_model_name and validated.embedding_model_name.strip()
+    ):
+        raise DomainValidationError(
+            f"Decrypted vault is missing Embedding model ID for '{restored_emb_provider}'."
+        )
+
+    updated = RuntimeAISettingsManager.update_runtime_ai_settings(
+        llm_provider=restored_llm_provider,
+        llm_model_name=validated.llm_model_name,
+        llm_base_url=validated.llm_base_url,
+        llm_api_key=validated.llm_api_key,
+        llm_temperature=validated.llm_temperature,
+        embedding_provider=restored_emb_provider,
+        embedding_model_name=validated.embedding_model_name,
+        embedding_base_url=validated.embedding_base_url,
+        embedding_api_key=validated.embedding_api_key,
+    )
+    return _build_settings_response(updated)
 
 
 __all__ = ["ai_settings_router"]

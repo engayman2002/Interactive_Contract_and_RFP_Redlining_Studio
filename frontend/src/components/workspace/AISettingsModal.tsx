@@ -7,29 +7,38 @@ import {
   CheckCircle2,
   Cpu,
   Database,
+  Download,
   Eye,
   EyeOff,
   Globe,
   KeyRound,
   Loader2,
+  Lock,
   RefreshCw,
   Server,
+  ShieldCheck,
   Sparkles,
+  Unlock,
+  Upload,
   X,
   Zap,
 } from "lucide-react";
 import {
   DEFAULT_AI_PROVIDER_CATALOG,
   discoverProviderModels,
+  exportAIVault,
   fetchAISettings,
+  importAIVault,
   testAIConnection,
   updateAISettings,
 } from "@/services/apiClient";
-import type {
-  AISettingsResponseDTO,
-  DiscoverModelsResponseDTO,
-  ProviderCatalogItemDTO,
-  TestAIConnectionResponseDTO,
+import {
+  EncryptedAIVaultEnvelopeDTOSchema,
+  type AISettingsResponseDTO,
+  type DiscoverModelsResponseDTO,
+  type EncryptedAIVaultEnvelopeDTO,
+  type ProviderCatalogItemDTO,
+  type TestAIConnectionResponseDTO,
 } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 
@@ -175,6 +184,22 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     null
   );
 
+  // Encrypted AI Configuration Vault State
+  const [vaultPassphrase, setVaultPassphrase] = useState<string>("");
+  const [showVaultPassphrase, setShowVaultPassphrase] =
+    useState<boolean>(false);
+  const [pendingVaultEnvelope, setPendingVaultEnvelope] =
+    useState<EncryptedAIVaultEnvelopeDTO | null>(null);
+  const [pendingVaultFileName, setPendingVaultFileName] = useState<
+    string | null
+  >(null);
+  const [isExportingVault, setIsExportingVault] = useState<boolean>(false);
+  const [isImportingVault, setIsImportingVault] = useState<boolean>(false);
+  const [vaultStatus, setVaultStatus] = useState<{
+    tone: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
+
   const applyFetchedSettings = useCallback(
     (data: AISettingsResponseDTO) => {
       if (!isMountedRef.current) {
@@ -215,6 +240,11 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     setTestResult(null);
     setSaveError(null);
     setSaveSuccessBanner(null);
+    setVaultPassphrase("");
+    setShowVaultPassphrase(false);
+    setPendingVaultEnvelope(null);
+    setPendingVaultFileName(null);
+    setVaultStatus(null);
     setIsLoadingSettings(true);
 
     void fetchAISettings(token ?? undefined)
@@ -504,6 +534,194 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
   };
 
   const isReadOnlyRole = Boolean(token && userRole !== "ADMIN");
+
+  const readVaultFileText = async (file: File): Promise<string> => {
+    if (typeof file.text === "function") {
+      return file.text();
+    }
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(typeof reader.result === "string" ? reader.result : "");
+      };
+      reader.onerror = () => {
+        reject(new Error("Failed to read encrypted vault file."));
+      };
+      reader.readAsText(file);
+    });
+  };
+
+  const handleExportVault = async () => {
+    if (vaultPassphrase.length < 8) {
+      setVaultStatus({
+        tone: "error",
+        message: "Vault passphrase must be at least 8 characters long.",
+      });
+      return;
+    }
+    if (isMissingRequiredModelId) {
+      setVaultStatus({
+        tone: "error",
+        message:
+          "Model ID required: Enter explicit LLM and Embedding Model IDs before exporting an encrypted vault.",
+      });
+      return;
+    }
+
+    setIsExportingVault(true);
+    setVaultStatus(null);
+    try {
+      const envelope = await exportAIVault(
+        {
+          passphrase: vaultPassphrase,
+          llm_provider: llmProvider,
+          llm_model_name: llmModelName.trim(),
+          llm_base_url: selectedLlmCatalog?.supports_base_url
+            ? llmBaseUrl.trim() || null
+            : null,
+          llm_api_key: llmApiKeyInput.trim() || undefined,
+          llm_temperature: llmTemperature,
+          embedding_provider: embeddingProvider,
+          embedding_model_name: embeddingModelName.trim(),
+          embedding_base_url: selectedEmbeddingCatalog?.supports_base_url
+            ? embeddingBaseUrl.trim() || null
+            : null,
+          embedding_api_key: resolveEffectiveEmbeddingKeyPayload(),
+        },
+        token ?? undefined
+      );
+
+      const serializedVault = JSON.stringify(envelope, null, 2);
+      if (
+        typeof window !== "undefined" &&
+        typeof URL !== "undefined" &&
+        typeof URL.createObjectURL === "function"
+      ) {
+        const blob = new Blob([serializedVault], {
+          type: "application/json",
+        });
+        const downloadUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = downloadUrl;
+        anchor.download = "redline-studio-ai-config.rsvault.json";
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        if (typeof URL.revokeObjectURL === "function") {
+          URL.revokeObjectURL(downloadUrl);
+        }
+      }
+
+      if (isMountedRef.current) {
+        setVaultStatus({
+          tone: "success",
+          message:
+            "Encrypted vault exported (redline-studio-ai-config.rsvault.json • AES-256-GCM + PBKDF2 600,000 iterations).",
+        });
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setVaultStatus({
+          tone: "error",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Failed to export encrypted AI configuration vault.",
+        });
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsExportingVault(false);
+      }
+    }
+  };
+
+  const handleVaultFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const rawText = await readVaultFileText(file);
+      const parsedJson: unknown = JSON.parse(rawText);
+      const validatedEnvelope =
+        EncryptedAIVaultEnvelopeDTOSchema.parse(parsedJson);
+      if (isMountedRef.current) {
+        setPendingVaultEnvelope(validatedEnvelope);
+        setPendingVaultFileName(file.name);
+        setVaultStatus({
+          tone: "info",
+          message: `Loaded encrypted vault "${file.name}". Enter passphrase and click Unlock & Restore Vault.`,
+        });
+      }
+    } catch {
+      if (isMountedRef.current) {
+        setPendingVaultEnvelope(null);
+        setPendingVaultFileName(null);
+        setVaultStatus({
+          tone: "error",
+          message:
+            "Invalid vault file: expected a valid AES-256-GCM .rsvault.json envelope.",
+        });
+      }
+    }
+  };
+
+  const handleImportVault = async () => {
+    if (!pendingVaultEnvelope) {
+      setVaultStatus({
+        tone: "error",
+        message: "Select an encrypted .rsvault.json file first before unlocking.",
+      });
+      return;
+    }
+    if (vaultPassphrase.length < 8) {
+      setVaultStatus({
+        tone: "error",
+        message: "Vault passphrase must be at least 8 characters long.",
+      });
+      return;
+    }
+
+    setIsImportingVault(true);
+    setVaultStatus(null);
+    setSaveError(null);
+    try {
+      const restored = await importAIVault(
+        {
+          passphrase: vaultPassphrase,
+          vault: pendingVaultEnvelope,
+        },
+        token ?? undefined
+      );
+
+      applyFetchedSettings(restored);
+      if (isMountedRef.current) {
+        setVaultPassphrase("");
+        setVaultStatus({
+          tone: "success",
+          message: `Vault unlocked & activated: ${restored.llm_provider} (${restored.llm_model_name}) + ${restored.embedding_provider} embeddings.`,
+        });
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setVaultStatus({
+          tone: "error",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Failed to unlock AI configuration vault: invalid passphrase or corrupted vault file.",
+        });
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsImportingVault(false);
+      }
+    }
+  };
 
   return (
     <div
@@ -1163,6 +1381,175 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
               select an available model from the provider API before activating.
             </div>
           ) : null}
+
+          {/* Encrypted Configuration Vault (Backup & Restore API Keys) */}
+          <section
+            aria-label="Encrypted Configuration Vault"
+            className="space-y-4 rounded-xl border border-slate-200/90 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/50"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-2.5 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                <div>
+                  <h3 className="text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                    Encrypted Configuration Vault (Backup &amp; Restore API Keys)
+                  </h3>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    Runtime API keys stay strictly in memory. Export a passphrase-locked{" "}
+                    <code className="rounded bg-slate-200/70 px-1 py-0.5 font-mono text-[10px] dark:bg-slate-800">
+                      .rsvault.json
+                    </code>{" "}
+                    bundle to reload settings across future sessions without re-typing keys.
+                  </p>
+                </div>
+              </div>
+
+              <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300">
+                AES-256-GCM • PBKDF2 600k
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+              {/* Passphrase Input */}
+              <div className="lg:col-span-5">
+                <div className="flex items-center justify-between gap-2">
+                  <label
+                    htmlFor="ai-vault-passphrase-input"
+                    className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                  >
+                    <Lock className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Vault Passphrase</span>
+                  </label>
+                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                    Min 8 chars • Never stored
+                  </span>
+                </div>
+
+                <div className="relative mt-1.5">
+                  <input
+                    id="ai-vault-passphrase-input"
+                    type={showVaultPassphrase ? "text" : "password"}
+                    autoComplete="off"
+                    minLength={8}
+                    data-testid="ai-vault-passphrase-input"
+                    value={vaultPassphrase}
+                    onChange={(e) => setVaultPassphrase(e.target.value)}
+                    placeholder="Enter secret passphrase (min 8 chars)..."
+                    className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-3 pr-9 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowVaultPassphrase((prev) => !prev)}
+                    aria-label={
+                      showVaultPassphrase
+                        ? "Hide vault passphrase"
+                        : "Show vault passphrase"
+                    }
+                    className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                  >
+                    {showVaultPassphrase ? (
+                      <EyeOff className="h-3.5 w-3.5" />
+                    ) : (
+                      <Eye className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Export & Import Actions */}
+              <div className="flex flex-col justify-end gap-2.5 lg:col-span-7">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    data-testid="export-ai-vault-btn"
+                    disabled={
+                      isExportingVault || isImportingVault || isReadOnlyRole
+                    }
+                    title={
+                      isReadOnlyRole
+                        ? "Only ADMIN users can export encrypted AI vaults"
+                        : "Encrypt & download active/typed AI settings as .rsvault.json"
+                    }
+                    onClick={() => void handleExportVault()}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25"
+                  >
+                    {isExportingVault ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                    <span>
+                      {isExportingVault
+                        ? "Encrypting..."
+                        : "Export Encrypted Vault (.rsvault.json)"}
+                    </span>
+                  </button>
+
+                  <label
+                    htmlFor="import-ai-vault-file-input"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500/40"
+                  >
+                    <Upload className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+                    <span className="max-w-[180px] truncate">
+                      {pendingVaultFileName
+                        ? pendingVaultFileName
+                        : "Select .rsvault.json"}
+                    </span>
+                    <input
+                      id="import-ai-vault-file-input"
+                      type="file"
+                      accept=".json,.rsvault.json,application/json"
+                      data-testid="import-ai-vault-file-input"
+                      onChange={(e) => void handleVaultFileChange(e)}
+                      className="sr-only"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    data-testid="import-ai-vault-btn"
+                    disabled={
+                      isImportingVault || isExportingVault || isReadOnlyRole
+                    }
+                    title={
+                      isReadOnlyRole
+                        ? "Only ADMIN users can unlock and activate encrypted AI vaults"
+                        : "Decrypt .rsvault.json and immediately activate settings"
+                    }
+                    onClick={() => void handleImportVault()}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isImportingVault ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Unlock className="h-3.5 w-3.5" />
+                    )}
+                    <span>
+                      {isImportingVault
+                        ? "Unlocking..."
+                        : "Unlock & Restore Vault"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {vaultStatus ? (
+              <div
+                data-testid="ai-vault-status-banner"
+                role={vaultStatus.tone === "error" ? "alert" : "status"}
+                className={`rounded-lg border px-3.5 py-2.5 text-xs font-medium ${
+                  vaultStatus.tone === "success"
+                    ? "border-emerald-200 bg-emerald-50/90 text-emerald-800 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
+                    : vaultStatus.tone === "error"
+                    ? "border-rose-200 bg-rose-50/90 text-rose-800 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300"
+                    : "border-indigo-200 bg-indigo-50/90 text-indigo-800 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300"
+                }`}
+              >
+                {vaultStatus.message}
+              </div>
+            ) : null}
+          </section>
 
           {/* Live Connection Diagnostic Result Card */}
           {testResult ? (

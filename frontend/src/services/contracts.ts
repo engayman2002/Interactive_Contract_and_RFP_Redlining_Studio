@@ -336,5 +336,43 @@ export type DiscoverModelsResponseDTO = z.infer<
   typeof DiscoverModelsResponseDTOSchema
 >;
 
+export const EncryptedAIVaultEnvelopeDTOSchema = z.object({
+  vault_version: z.literal(1).default(1),
+  kdf: z.literal("PBKDF2-HMAC-SHA256").default("PBKDF2-HMAC-SHA256"),
+  iterations: z.number().int().min(100000).max(2000000).default(600000),
+  cipher: z.literal("AES-256-GCM").default("AES-256-GCM"),
+  salt_b64: z.string().min(16),
+  nonce_b64: z.string().min(12),
+  ciphertext_b64: z.string().min(24),
+  exported_at: z.string().min(10),
+});
+export type EncryptedAIVaultEnvelopeDTO = z.infer<
+  typeof EncryptedAIVaultEnvelopeDTOSchema
+>;
+
+export const ExportAIVaultRequestDTOSchema = z.object({
+  passphrase: z.string().min(8).max(256),
+  llm_provider: z.string().optional(),
+  llm_model_name: z.string().optional(),
+  llm_base_url: z.string().nullable().optional(),
+  llm_api_key: z.string().nullable().optional(),
+  llm_temperature: z.number().min(0).max(1).optional(),
+  embedding_provider: z.string().optional(),
+  embedding_model_name: z.string().optional(),
+  embedding_base_url: z.string().nullable().optional(),
+  embedding_api_key: z.string().nullable().optional(),
+});
+export type ExportAIVaultRequestDTO = z.infer<
+  typeof ExportAIVaultRequestDTOSchema
+>;
+
+export const ImportAIVaultRequestDTOSchema = z.object({
+  passphrase: z.string().min(8).max(256),
+  vault: EncryptedAIVaultEnvelopeDTOSchema,
+});
+export type ImportAIVaultRequestDTO = z.infer<
+  typeof ImportAIVaultRequestDTOSchema
+>;
+
 
 

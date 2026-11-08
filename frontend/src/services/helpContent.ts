@@ -302,6 +302,11 @@ export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
       "api key",
       "test connection",
       "embeddings",
+      "vault",
+      "rsvault",
+      "aes-256-gcm",
+      "backup",
+      "passphrase",
     ],
     steps: [
       {
@@ -318,6 +323,11 @@ export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
         title: "Run Live Connection Diagnostics Before Saving",
         description:
           "Click 'Test Connection' to verify 1536-dimensional vector adaptation, structured clause auditing, and round-trip latency in milliseconds before clicking 'Save & Activate Engine' (Admin role required for saving).",
+      },
+      {
+        title: "Back Up & Restore API Keys via the Encrypted Configuration Vault (.rsvault.json)",
+        description:
+          "Because runtime API keys are held strictly in memory and never stored in plaintext on disk, use the 'Encrypted Configuration Vault' section inside the modal: enter a passphrase (min 8 characters) and click 'Export Encrypted Vault (.rsvault.json)' to download a PBKDF2-HMAC-SHA256 (600,000 iterations) + AES-256-GCM encrypted bundle. In future sessions, select your .rsvault.json file, enter your passphrase, and click 'Unlock & Restore Vault' to activate all providers, Model IDs, and API keys in one click.",
       },
     ],
   },
@@ -510,6 +520,26 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
       "fetch live models",
       "custom model",
       "hot swap",
+    ],
+  },
+  {
+    id: "faq-ai-config-vault",
+    question:
+      "How do I save my AI API keys and Model IDs across sessions without storing plaintext secrets on disk?",
+    answer:
+      "Inside the AI Engine Switcher modal, scroll to 'Encrypted Configuration Vault (Backup & Restore API Keys)'. Enter a strong passphrase (minimum 8 characters) and click 'Export Encrypted Vault (.rsvault.json)'. Your active/typed LLM & Embedding providers, Model IDs, Base URLs, Temperature, and API keys are encrypted using PBKDF2-HMAC-SHA256 (600,000 iterations, random 16-byte salt) and AES-256-GCM authenticated encryption—never plaintext. Whenever you restart the server or open a new session, upload your .rsvault.json file, enter your passphrase, and click 'Unlock & Restore Vault' to decrypt, validate, and activate your full AI configuration in one click.",
+    category: "workflow",
+    keywords: [
+      "vault",
+      "rsvault",
+      "passphrase",
+      "encrypt",
+      "decrypt",
+      "aes-256-gcm",
+      "pbkdf2",
+      "backup",
+      "restore",
+      "api key",
     ],
   },
 ];

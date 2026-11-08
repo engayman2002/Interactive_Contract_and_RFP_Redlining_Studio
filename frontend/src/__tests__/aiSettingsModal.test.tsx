@@ -256,5 +256,120 @@ describe("In-App AI Provider & Model Switcher Modal", () => {
       );
     });
   });
+
+  it("exports a passphrase-protected AES-256-GCM .rsvault.json file, rejects wrong passphrases, and unlocks & restores AI settings", async () => {
+    const exportSpy = vi.spyOn(apiClient, "exportAIVault");
+    const importSpy = vi.spyOn(apiClient, "importAIVault");
+
+    render(<RedliningStudioWorkspace initialWorkspace={DEMO_WORKSPACE_DATA} />);
+
+    fireEvent.click(screen.getByTestId("open-ai-settings-btn"));
+    await screen.findByTestId("ai-settings-modal");
+
+    // 1. Configure Gemini with custom model IDs & secret API key
+    fireEvent.click(screen.getByTestId("provider-preset-gemini"));
+    fireEvent.change(screen.getByTestId("ai-settings-llm-model-input"), {
+      target: { value: "gemini-2.5-pro" },
+    });
+    fireEvent.change(screen.getByTestId("ai-settings-embedding-model-input"), {
+      target: { value: "text-embedding-004" },
+    });
+    fireEvent.change(screen.getByTestId("ai-settings-api-key-input"), {
+      target: { value: "AIzaSyVaultUiSecretKey1234" },
+    });
+
+    // 2. Enter vault passphrase and click Export Encrypted Vault
+    const passphraseInput = screen.getByTestId(
+      "ai-vault-passphrase-input"
+    ) as HTMLInputElement;
+    fireEvent.change(passphraseInput, {
+      target: { value: "MyEnterpriseVaultPass!2026" },
+    });
+    fireEvent.click(screen.getByTestId("export-ai-vault-btn"));
+
+    await waitFor(() => {
+      expect(exportSpy).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("ai-vault-status-banner")).toHaveTextContent(
+        "Encrypted vault exported"
+      );
+    });
+
+    const exportedEnvelope = await exportSpy.mock.results[0]!.value;
+    const rawJson = JSON.stringify(exportedEnvelope);
+    expect(exportedEnvelope.cipher).toBe("AES-256-GCM");
+    expect(exportedEnvelope.kdf).toBe("PBKDF2-HMAC-SHA256");
+    expect(exportedEnvelope.iterations).toBe(600000);
+    expect(rawJson).not.toContain("AIzaSyVaultUiSecretKey1234");
+    expect(rawJson).not.toContain("gemini-2.5-pro");
+
+    // 3. Switch modal back to Deterministic so Gemini settings are cleared
+    fireEvent.click(screen.getByTestId("provider-preset-deterministic"));
+    expect(
+      (screen.getByTestId("ai-settings-llm-model-input") as HTMLInputElement)
+        .value
+    ).toBe("policy-deterministic-v1");
+
+    // 4. Upload the exported .rsvault.json file
+    const vaultFile = new File(
+      [rawJson],
+      "redline-studio-ai-config.rsvault.json",
+      { type: "application/json" }
+    );
+    fireEvent.change(screen.getByTestId("import-ai-vault-file-input"), {
+      target: { files: [vaultFile] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("ai-vault-status-banner")).toHaveTextContent(
+        'Loaded encrypted vault "redline-studio-ai-config.rsvault.json"'
+      );
+    });
+
+    // 5. Attempt unlock with a WRONG passphrase -> displays AEAD failure banner
+    fireEvent.change(passphraseInput, {
+      target: { value: "WrongVaultPassphrase!9999" },
+    });
+    fireEvent.click(screen.getByTestId("import-ai-vault-btn"));
+
+    await waitFor(() => {
+      expect(importSpy).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("ai-vault-status-banner")).toHaveTextContent(
+        "Failed to unlock AI configuration vault"
+      );
+    });
+    expect(screen.getByTestId("open-ai-settings-btn")).toHaveTextContent(
+      "AI: Deterministic"
+    );
+
+    // 6. Unlock with the CORRECT passphrase -> restores Gemini models, masked key, & header badge
+    fireEvent.change(passphraseInput, {
+      target: { value: "MyEnterpriseVaultPass!2026" },
+    });
+    fireEvent.click(screen.getByTestId("import-ai-vault-btn"));
+
+    await waitFor(() => {
+      expect(importSpy).toHaveBeenCalledTimes(2);
+      expect(screen.getByTestId("ai-vault-status-banner")).toHaveTextContent(
+        "Vault unlocked & activated: gemini (gemini-2.5-pro)"
+      );
+      expect(
+        (screen.getByTestId("ai-settings-llm-model-input") as HTMLInputElement)
+          .value
+      ).toBe("gemini-2.5-pro");
+      expect(
+        (
+          screen.getByTestId(
+            "ai-settings-embedding-model-input"
+          ) as HTMLInputElement
+        ).value
+      ).toBe("text-embedding-004");
+      expect(
+        screen.getByTestId("ai-settings-key-status-badge")
+      ).toHaveTextContent("Key Configured: AIza...1234");
+      expect(screen.getByTestId("open-ai-settings-btn")).toHaveTextContent(
+        "AI: Gemini · gemini-2.5-pro"
+      );
+    });
+  });
 });
 
