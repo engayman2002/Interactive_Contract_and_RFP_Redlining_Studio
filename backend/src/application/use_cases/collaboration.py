@@ -7,12 +7,19 @@ from src.application.dtos import (
     ClauseResolutionStateDTO,
     CreateClauseCommentCommand,
     RedlineSuggestionResponseDTO,
+    RefineSuggestionCommand,
+    RefineSuggestionResponseDTO,
     ResolveSuggestionCommand,
     ResolveSuggestionResponseDTO,
     TokenPayloadDTO,
 )
 from src.application.services import RBACAction, RbacGuardService
-from src.domain.entities import AuditLogEntry, ClauseComment
+from src.domain.entities import (
+    AuditLogEntry,
+    ClauseComment,
+    ClauseCopilotRefineInput,
+    PlaybookSearchQuery,
+)
 from src.domain.enums import AuditAction, SuggestionStatus
 from src.domain.exceptions import (
     ClauseNotFoundError,
@@ -20,7 +27,7 @@ from src.domain.exceptions import (
     InvalidResolutionError,
     SuggestionNotFoundError,
 )
-from src.domain.ports import UnitOfWorkPort
+from src.domain.ports import ClauseAuditorPort, PlaybookRetrieverPort, UnitOfWorkPort
 
 
 class ResolveRedlineSuggestionUseCase:
@@ -240,9 +247,126 @@ class ListClauseCommentsUseCase:
         return [ClauseCommentResponseDTO.from_domain(cm) for cm in comments]
 
 
+class RefineRedlineSuggestionUseCase:
+    """Refine an existing AI redline suggestion using natural-language copilot instructions."""
+
+    def __init__(
+        self,
+        uow: UnitOfWorkPort,
+        rbac_guard: RbacGuardService,
+        clause_auditor: ClauseAuditorPort,
+        retriever: PlaybookRetrieverPort,
+        top_k: int = 3,
+    ) -> None:
+        self._uow = uow
+        self._rbac_guard = rbac_guard
+        self._clause_auditor = clause_auditor
+        self._retriever = retriever
+        self._top_k = max(1, top_k)
+
+    async def execute(
+        self,
+        actor: TokenPayloadDTO,
+        command: RefineSuggestionCommand,
+    ) -> RefineSuggestionResponseDTO:
+        """Refine suggestion wording, update audit log, and return updated suggestion."""
+        # 1. Enforce RBAC (ensure_can_mutate / VIEWER raises 403 Forbidden) and tenant isolation
+        self._rbac_guard.ensure_can_mutate(actor.role)
+        self._rbac_guard.authorize_action(actor.role, RBACAction.RESOLVE_SUGGESTION)
+        self._rbac_guard.enforce_tenant_isolation(
+            actor_org_id=actor.org_id,
+            target_org_id=command.org_id,
+        )
+
+        # 2. Fetch suggestion strictly within org_id
+        suggestion = await self._uow.redlines.get_by_id(
+            org_id=actor.org_id,
+            suggestion_id=command.suggestion_id,
+        )
+        if suggestion is None:
+            raise SuggestionNotFoundError(
+                f"Redline suggestion '{command.suggestion_id}' was not found in your organization."
+            )
+
+        clause = await self._uow.documents.get_clause_by_id(
+            org_id=actor.org_id,
+            clause_id=suggestion.clause_id,
+        )
+        if clause is None:
+            raise ClauseNotFoundError(
+                f"Document clause '{suggestion.clause_id}' was not found in your organization."
+            )
+
+        # 3. Retrieve playbook context rules
+        query = PlaybookSearchQuery(
+            org_id=actor.org_id,
+            query_text=clause.current_text,
+            category=None,
+            top_k=self._top_k,
+        )
+        matched_rules = await self._retriever.retrieve_top_rules(query)
+
+        # 4. Invoke Copilot refinement
+        refine_input = ClauseCopilotRefineInput(
+            org_id=actor.org_id,
+            document_id=clause.document_id,
+            clause_id=clause.id,
+            suggestion_id=suggestion.id,
+            clause_index=clause.clause_index,
+            heading=clause.heading,
+            original_clause_text=clause.original_text,
+            current_proposed_text=suggestion.proposed_text,
+            user_instruction=command.instruction,
+            stance=command.stance,
+        )
+        refine_result = await self._clause_auditor.refine_clause_suggestion(
+            refine_input=refine_input,
+            matched_rules=matched_rules,
+        )
+
+        # 5. Update suggestion content in domain entity and persist
+        combined_rationale = (
+            f"{refine_result.rationale} | Talking Point: {refine_result.negotiation_talking_point}"
+        )
+        suggestion.update_refinement(
+            proposed_text=refine_result.proposed_text,
+            rationale=combined_rationale,
+        )
+        saved_suggestion = await self._uow.redlines.update_suggestion_content(
+            org_id=actor.org_id,
+            suggestion=suggestion,
+        )
+
+        # 6. Append immutable AuditLogEntry
+        await self._uow.audit_logs.append(
+            org_id=actor.org_id,
+            entry=AuditLogEntry(
+                org_id=actor.org_id,
+                document_id=clause.document_id,
+                clause_id=clause.id,
+                actor_user_id=actor.sub,
+                actor_role=actor.role,
+                action=AuditAction.SUGGESTION_REFINED,
+                details={
+                    "suggestion_id": str(suggestion.id),
+                    "instruction": command.instruction[:120],
+                    "stance": command.stance.value,
+                },
+            ),
+        )
+        await self._uow.commit()
+
+        return RefineSuggestionResponseDTO(
+            suggestion=RedlineSuggestionResponseDTO.from_domain(saved_suggestion),
+            negotiation_talking_point=refine_result.negotiation_talking_point,
+            latency_ms=refine_result.latency_ms,
+        )
+
+
 __all__ = [
     "CreateClauseCommentUseCase",
     "ListClauseCommentsUseCase",
+    "RefineRedlineSuggestionUseCase",
     "ResolveRedlineSuggestionUseCase",
 ]
 

@@ -426,3 +426,112 @@ async def test_collaboration_multi_tenant_isolation_between_orgs(
     )
     assert cross_comment_get.status_code == 404
     assert cross_comment_get.json()["error"]["code"] == "CLAUSE_NOT_FOUND"
+
+
+async def test_refine_redline_suggestion_copilot_and_audit_trail(
+    client: AsyncClient,
+) -> None:
+    """Verify Inline AI Copilot refines suggestion, logs audit event, and enforces RBAC."""
+    token, admin_user_id, doc_id, clauses, redlines = (
+        await _setup_org_and_analyzed_document(
+            client=client,
+            org_name="Copilot Refine Corp",
+            admin_email="admin@copilot-refine.io",
+        )
+    )
+
+    suggestion_id = redlines[0]["id"]
+    instruction = "Cap aggregate liability at $100,000 and add a 30-day cure period"
+
+    # 1. Admin refines the redline suggestion via AI Copilot
+    refine_resp = await client.post(
+        f"/api/v1/suggestions/{suggestion_id}/refine",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "instruction": instruction,
+            "stance": "balanced",
+        },
+    )
+    assert refine_resp.status_code == 200
+    refine_data = refine_resp.json()
+    assert refine_data["suggestion"]["id"] == suggestion_id
+    assert "$100,000" in refine_data["suggestion"]["proposed_text"]
+    assert "30-day" in refine_data["suggestion"]["proposed_text"]
+    assert "[AI Copilot Refined:" in refine_data["suggestion"]["rationale"]
+    assert len(refine_data["negotiation_talking_point"]) > 0
+    assert refine_data["latency_ms"] >= 0
+
+    # 2. Verify workspace reflects updated suggestion proposed text
+    ws_resp = await client.get(
+        f"/api/v1/documents/{doc_id}/workspace",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert ws_resp.status_code == 200
+    updated_redlines = ws_resp.json()["redlines"]
+    target_rl = next(r for r in updated_redlines if r["id"] == suggestion_id)
+    assert "$100,000" in target_rl["proposed_text"]
+    assert "[AI Copilot Refined:" in target_rl["rationale"]
+
+    # 3. Verify audit log captures SUGGESTION_REFINED
+    audit_resp = await client.get(
+        f"/api/v1/documents/{doc_id}/audit-trail",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert audit_resp.status_code == 200
+    audit_logs = audit_resp.json()
+    refined_entries = [log for log in audit_logs if log["action"] == "SUGGESTION_REFINED"]
+    assert len(refined_entries) >= 1
+    latest_entry = refined_entries[-1]
+    assert latest_entry["actor_user_id"] == admin_user_id
+    assert latest_entry["details"]["suggestion_id"] == suggestion_id
+    assert latest_entry["details"]["instruction"] == instruction
+
+    # 4. RBAC: VIEWER cannot refine suggestions (403 Forbidden)
+    viewer_create = await client.post(
+        "/api/v1/users",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "email": "viewer-copilot@copilot-refine.io",
+            "password": "ViewerSecurePass!2026",
+            "role": UserRole.VIEWER.value,
+        },
+    )
+    assert viewer_create.status_code == 201
+
+    viewer_login = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "viewer-copilot@copilot-refine.io",
+            "password": "ViewerSecurePass!2026",
+        },
+    )
+    assert viewer_login.status_code == 200
+    viewer_token: str = viewer_login.json()["access_token"]
+
+    viewer_refine = await client.post(
+        f"/api/v1/suggestions/{suggestion_id}/refine",
+        headers={"Authorization": f"Bearer {viewer_token}"},
+        json={"instruction": "Make this mutual"},
+    )
+    assert viewer_refine.status_code == 403
+    assert viewer_refine.json()["error"]["code"] == "FORBIDDEN_ROLE"
+
+    # 5. Multi-Tenant Isolation: Tenant Beta cannot refine Tenant Alpha's suggestion (404)
+    beta_reg = await client.post(
+        "/api/v1/auth/register-org",
+        json={
+            "organization_name": "Tenant Beta Copilot",
+            "admin_email": "admin@beta-copilot.io",
+            "admin_password": "BetaCopilotPass!2026",
+        },
+    )
+    assert beta_reg.status_code == 201
+    token_beta: str = beta_reg.json()["access_token"]
+
+    cross_refine = await client.post(
+        f"/api/v1/suggestions/{suggestion_id}/refine",
+        headers={"Authorization": f"Bearer {token_beta}"},
+        json={"instruction": "Cross tenant tamper attempt"},
+    )
+    assert cross_refine.status_code == 404
+    assert cross_refine.json()["error"]["code"] == "SUGGESTION_NOT_FOUND"

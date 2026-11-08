@@ -18,6 +18,8 @@ const ACTION_BADGE_STYLES: Record<AuditAction, string> = {
     "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300",
   SUGGESTION_REJECTED:
     "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300",
+  SUGGESTION_REFINED:
+    "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-500/20 dark:bg-purple-500/10 dark:text-purple-300",
   COMMENT_CREATED:
     "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300",
   DOCUMENT_EXPORTED:

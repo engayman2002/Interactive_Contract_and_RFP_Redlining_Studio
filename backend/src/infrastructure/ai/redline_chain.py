@@ -15,6 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from src.domain.entities import (
     ClauseAuditInput,
     ClauseAuditResult,
+    ClauseCopilotRefineInput,
+    ClauseCopilotRefineResult,
     MatchedPlaybookRule,
 )
 from src.domain.enums import NegotiationStance, RiskLevel
@@ -47,6 +49,14 @@ SYSTEM_PROMPT: Final[str] = """You are a Principal Legal and Technical Contract 
 Compare the provided contract clause against the retrieved Company Playbook Rules.
 If the clause violates policy or introduces unmitigated risk, generate a precise surgical redline
 that protects the company while remaining commercially reasonable."""
+
+COPILOT_SYSTEM_PROMPT: Final[str] = (
+    "You are an expert Legal Counsel and Contract AI Copilot. The user has provided an original "
+    "contract clause, an initial proposed redline, and an explicit user refinement instruction. "
+    "Your objective is to refine the proposed wording, rationale, and negotiation talking point "
+    "to strictly satisfy the user's specific instruction while adhering to the governing Playbook "
+    "rules and negotiation stance. Return a valid JSON object matching RedlineOutput."
+)
 
 STANCE_INSTRUCTIONS: Final[dict[NegotiationStance, str]] = {
     NegotiationStance.STRICT: (
@@ -574,6 +584,109 @@ class PolicyAwareDeterministicChatModel(Runnable[Any, str]):
             negotiation_talking_point="No redline required; clause is acceptable as drafted.",
         )
 
+    def evaluate_copilot_refinement(
+        self,
+        original_clause_text: str,
+        current_proposed_text: str,
+        user_instruction: str,
+        matched_rules: Sequence[MatchedPlaybookRule],
+        heading: str | None = None,
+        stance: NegotiationStance = NegotiationStance.BALANCED,
+    ) -> RedlineOutput:
+        """Deterministically refine redline wording according to user's copilot instruction."""
+        instr_lower = user_instruction.lower().strip()
+        top_rule = matched_rules[0].rule if matched_rules else None
+        category = (
+            top_rule.category
+            if top_rule
+            else (heading.strip() if heading else "General Commercial")
+        )
+
+        cap_match = re.search(r"(\$[\d,]+(?:\.\d+)?|\b\d+k\b)", user_instruction, re.IGNORECASE)
+        cure_match = re.search(
+            r"(\d+[\s-]?(?:day|days|business\s+days))\b", user_instruction, re.IGNORECASE
+        )
+        is_mutual = any(
+            kw in instr_lower for kw in ("mutual", "bilateral", "reciprocal", "each party")
+        )
+        is_soften = any(
+            kw in instr_lower for kw in ("soften", "partner", "collaborative", "relationship")
+        )
+
+        cap_val = cap_match.group(1).upper() if cap_match else None
+        cure_val = cure_match.group(1).lower() if cure_match else None
+
+        if cap_val and cure_val:
+            body = (
+                f"Each party's aggregate cumulative liability under this Agreement shall not "
+                f"exceed {cap_val}, subject to a {cure_val} prior written notice and cure period "
+                "before any claim or termination, and neither party shall be liable for "
+                "consequential damages."
+            )
+        elif cap_val:
+            body = (
+                f"Each party's aggregate cumulative liability under this Agreement shall not "
+                f"exceed {cap_val}, with mutual waiver of indirect, special, and consequential "
+                "damages."
+            )
+        elif cure_val:
+            if "terminate" in current_proposed_text.lower() or "termination" in instr_lower:
+                body = (
+                    "Either party may terminate this Agreement for material breach only after "
+                    f"providing a {cure_val} prior written notice and opportunity to cure to "
+                    "the other party."
+                )
+            else:
+                body = (
+                    f"{current_proposed_text.rstrip('.')} subject to a {cure_val} written notice "
+                    "and opportunity to cure before remedies or termination apply."
+                )
+        elif is_mutual:
+            orig_lower = original_clause_text.lower()
+            prop_lower = current_proposed_text.lower()
+            if "indemnif" in prop_lower or "indemnif" in orig_lower:
+                body = (
+                    "Each party shall defend, indemnify, and hold harmless the other party on a "
+                    "mutual and reciprocal basis against third-party claims, excluding "
+                    "consequential damages."
+                )
+            else:
+                stripped_prop = current_proposed_text.lstrip("0123456789. ")
+                body = f"Each party mutually agrees to the following terms: {stripped_prop}"
+        elif is_soften:
+            body = (
+                "The parties agree to collaborate in good faith under commercially reasonable "
+                "standards to resolve operational issues, provided core proprietary intellectual "
+                "property rights and confidentiality protections remain fully preserved."
+            )
+        else:
+            cleaned_instr = user_instruction.strip().rstrip(".")
+            body = (
+                f"{current_proposed_text.rstrip('.')} (Refined per counsel instruction: "
+                f"{cleaned_instr})."
+            )
+
+        refined_proposed = _preserve_clause_numbering(original_clause_text, body)
+        rationale_summary = user_instruction.strip()
+        if len(rationale_summary) > 60:
+            rationale_summary = rationale_summary[:57] + "..."
+        rationale = (
+            f'[AI Copilot Refined: "{rationale_summary}"] '
+            "Refined proposed redline to honor deal instruction."
+        )
+        talking_point = (
+            f"Per specific deal guidance, terms have been refined: {user_instruction.strip()}"
+        )
+
+        return RedlineOutput(
+            is_compliant=False,
+            risk="HIGH" if stance == NegotiationStance.STRICT else "MEDIUM",
+            category=category,
+            proposed_text=refined_proposed,
+            rationale=rationale,
+            negotiation_talking_point=talking_point,
+        )
+
     def invoke(
         self,
         input: Any,  # noqa: A002
@@ -694,6 +807,72 @@ def build_redline_chain(
         }
 
     return RunnableLambda(_prepare_prompt_inputs) | prompt | active_llm | parser_runnable
+
+
+def build_copilot_refine_chain(
+    llm: Runnable[Any, Any] | None = None,
+) -> Runnable[dict[str, Any], RedlineOutput]:
+    """Construct an LCEL chain for refining an existing redline via AI Copilot instructions."""
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", "{system_prompt}\n\n{stance_instruction}"),
+            (
+                "human",
+                "Company Playbook Context:\n{playbook_context}\n\n"
+                "Original Contract Clause:\n{original_clause_text}\n\n"
+                "Current Proposed Redline:\n{current_proposed_text}\n\n"
+                "[COPILOT_INSTRUCTION]: {user_instruction}\n\n"
+                "Refine the redline according to the instruction above.",
+            ),
+        ]
+    )
+    active_llm: Runnable[Any, Any] = (
+        llm if llm is not None else PolicyAwareDeterministicChatModel(temperature=0.0)
+    )
+    parser_runnable: Runnable[Any, RedlineOutput] = RunnableLambda(
+        parse_and_validate_redline_output
+    )
+
+    if isinstance(active_llm, PolicyAwareDeterministicChatModel):
+        def _invoke_copilot_policy_aware(payload: dict[str, Any]) -> str:
+            raw_stance = payload.get("stance", NegotiationStance.BALANCED)
+            stance = (
+                raw_stance
+                if isinstance(raw_stance, NegotiationStance)
+                else NegotiationStance(str(raw_stance).lower())
+            )
+            output = active_llm.evaluate_copilot_refinement(
+                original_clause_text=str(payload.get("original_clause_text", "")),
+                current_proposed_text=str(payload.get("current_proposed_text", "")),
+                user_instruction=str(payload.get("user_instruction", "")),
+                matched_rules=payload.get("matched_rules", []),
+                heading=payload.get("heading"),
+                stance=stance,
+            )
+            return output.model_dump_json()
+
+        return RunnableLambda(_invoke_copilot_policy_aware) | parser_runnable
+
+    def _prepare_copilot_inputs(payload: dict[str, Any]) -> dict[str, Any]:
+        raw_stance = payload.get("stance", NegotiationStance.BALANCED)
+        stance = (
+            raw_stance
+            if isinstance(raw_stance, NegotiationStance)
+            else NegotiationStance(str(raw_stance).lower())
+        )
+        stance_instruction = STANCE_INSTRUCTIONS.get(
+            stance, STANCE_INSTRUCTIONS[NegotiationStance.BALANCED]
+        )
+        return {
+            "system_prompt": COPILOT_SYSTEM_PROMPT,
+            "stance_instruction": stance_instruction,
+            "playbook_context": payload.get("playbook_context", ""),
+            "original_clause_text": payload.get("original_clause_text", ""),
+            "current_proposed_text": payload.get("current_proposed_text", ""),
+            "user_instruction": payload.get("user_instruction", ""),
+        }
+
+    return RunnableLambda(_prepare_copilot_inputs) | prompt | active_llm | parser_runnable
 
 
 class LangChainClauseAuditor(ClauseAuditorPort):
@@ -839,13 +1018,74 @@ class LangChainClauseAuditor(ClauseAuditorPort):
             stance=audit_input.stance,
         )
 
+    async def refine_clause_suggestion(
+        self,
+        refine_input: ClauseCopilotRefineInput,
+        matched_rules: Sequence[MatchedPlaybookRule],
+    ) -> ClauseCopilotRefineResult:
+        """Refine an existing clause suggestion using custom user prompt instruction."""
+        started_at = time.perf_counter()
+        playbook_context = format_playbook_rules_context(matched_rules)
+        stance_instruction = STANCE_INSTRUCTIONS.get(
+            refine_input.stance, STANCE_INSTRUCTIONS[NegotiationStance.BALANCED]
+        )
+        chain_input: dict[str, Any] = {
+            "playbook_context": playbook_context,
+            "original_clause_text": refine_input.original_clause_text,
+            "current_proposed_text": refine_input.current_proposed_text,
+            "user_instruction": refine_input.user_instruction,
+            "heading": refine_input.heading,
+            "matched_rules": list(matched_rules),
+            "stance": refine_input.stance,
+            "stance_instruction": stance_instruction,
+        }
+        copilot_chain = build_copilot_refine_chain(self._llm_runnable)
+        validated_output: RedlineOutput | None = None
+        total_attempts = 1 + self._max_retries
+
+        for attempt in range(1, total_attempts + 1):
+            try:
+                validated_output = await copilot_chain.ainvoke(chain_input)
+                break
+            except Exception as exc:
+                logger.warning(
+                    "Copilot refinement failed on attempt %d/%d for suggestion %s: %s",
+                    attempt,
+                    total_attempts,
+                    refine_input.suggestion_id,
+                    exc,
+                )
+
+        if validated_output is None:
+            validated_output = self._deterministic_fallback.evaluate_copilot_refinement(
+                original_clause_text=refine_input.original_clause_text,
+                current_proposed_text=refine_input.current_proposed_text,
+                user_instruction=refine_input.user_instruction,
+                matched_rules=matched_rules,
+                heading=refine_input.heading,
+                stance=refine_input.stance,
+            )
+
+        latency_ms = round((time.perf_counter() - started_at) * 1000.0, 3)
+        return ClauseCopilotRefineResult(
+            suggestion_id=refine_input.suggestion_id,
+            clause_id=refine_input.clause_id,
+            risk=RiskLevel(validated_output.risk),
+            proposed_text=validated_output.proposed_text,
+            rationale=validated_output.rationale,
+            negotiation_talking_point=validated_output.negotiation_talking_point,
+            latency_ms=latency_ms,
+        )
+
 
 __all__ = [
+    "COPILOT_SYSTEM_PROMPT",
     "LangChainClauseAuditor",
     "PolicyAwareDeterministicChatModel",
     "RedlineOutput",
     "STANCE_INSTRUCTIONS",
     "SYSTEM_PROMPT",
+    "build_copilot_refine_chain",
     "build_redline_chain",
     "format_playbook_rules_context",
     "parse_and_validate_redline_output",

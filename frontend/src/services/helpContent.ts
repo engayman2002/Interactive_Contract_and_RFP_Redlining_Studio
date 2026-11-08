@@ -377,6 +377,51 @@ export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
       },
     ],
   },
+  {
+    id: "inline-clause-ai-copilot",
+    number: 9,
+    title: "Inline Clause AI Copilot & Custom Prompting",
+    badge: "AI Copilot",
+    summary:
+      "Steer the AI redline engine on individual clauses using natural language prompt instructions or one-click preset directive chips to customize liability caps, cure periods, mutuality, and legal tone.",
+    keywords: [
+      "copilot",
+      "clause copilot",
+      "custom prompt",
+      "instruction",
+      "prompting",
+      "liability cap",
+      "cure period",
+      "mutual",
+      "soften tone",
+      "refine",
+      "talking point",
+    ],
+    steps: [
+      {
+        title: "Open the Inline AI Copilot Drawer",
+        description:
+          "On any redline card in the right-hand Inspector, click the '✨ AI Copilot' button in the card action bar. The copilot drawer expands to reveal preset quick-directive chips and an editable prompt instruction input.",
+        tip: "AI Copilot works seamlessly with both local deterministic analysis and active external LLMs (Gemini, Groq, OpenAI, Anthropic, Ollama).",
+      },
+      {
+        title: "One-Click Quick Directive Chips",
+        description:
+          "Choose from pre-engineered prompt chips for standard negotiation maneuvers: 'Make Strictly Mutual' (converts unilateral covenants into bilateral commitments), 'Cap Liability at $100,000' (establishes an explicit monetary ceiling), 'Add 30-Day Cure Period' (inserts default notice and cure provisions), or 'Soften Tone for Partner' (rephrases strict prohibitions into mutual approval workflows).",
+      },
+      {
+        title: "Free-Form Natural-Language Prompting",
+        description:
+          "Type any custom instruction directly into the prompt box (e.g., 'Cap aggregate liability at $250,000 and exclude incidental damages', 'Require SOC 2 Type II audit report within 14 days', 'Ensure 60 days advance written notice for auto-renewal'). Click 'Refine with AI' to re-evaluate the clause.",
+        tip: "The copilot updates the proposed text, generates updated rationale tags [AI Copilot Refined: \"...\"], and crafts fresh executive negotiation talking points.",
+      },
+      {
+        title: "Audit Trail & Concurrency Integration",
+        description:
+          "Every copilot refinement is recorded as an immutable SUGGESTION_REFINED event in the document compliance audit trail, logging the exact instruction, timestamp, and user ID. The updated wording immediately refreshes the split-screen word-level diff preview.",
+      },
+    ],
+  },
 ];
 
 export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
@@ -621,6 +666,40 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
       "quarter end",
       "fallback",
       "stance",
+    ],
+  },
+  {
+    id: "faq-inline-clause-copilot",
+    question:
+      "How do I use the Inline Clause AI Copilot to customize redlines on specific clauses?",
+    answer:
+      "Click the '✨ AI Copilot' button on any redline card in the Inspector panel. You can click one of four quick-directive chips ('Make Strictly Mutual', 'Cap Liability at $100,000', 'Add 30-Day Cure Period', 'Soften Tone for Partner') or type any natural-language prompt instruction. Click 'Refine with AI' to regenerate the proposed language and negotiation talking points in seconds.",
+    category: "workflow",
+    keywords: [
+      "copilot",
+      "clause copilot",
+      "custom prompt",
+      "instruction",
+      "liability cap",
+      "cure period",
+      "mutual",
+      "refine",
+    ],
+  },
+  {
+    id: "faq-copilot-audit-trail",
+    question:
+      "Does using the Inline Clause AI Copilot get tracked in the compliance audit trail?",
+    answer:
+      "Yes. Every copilot refinement triggers an immutable SUGGESTION_REFINED audit trail event recorded in the database, preserving the exact prompt instruction, actor role and ID, timestamp, and resulting redline version for SOC 2 and legal audit compliance.",
+    category: "collaboration",
+    keywords: [
+      "audit trail",
+      "compliance",
+      "copilot",
+      "suggestion_refined",
+      "tracking",
+      "immutable",
     ],
   },
 ];

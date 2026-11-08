@@ -9,6 +9,9 @@ from src.application.dtos import (
     ClauseCommentResponseDTO,
     CreateClauseCommentCommand,
     CreateClauseCommentRequestDTO,
+    RefineSuggestionCommand,
+    RefineSuggestionRequestDTO,
+    RefineSuggestionResponseDTO,
     ResolveSuggestionCommand,
     ResolveSuggestionRequestDTO,
     ResolveSuggestionResponseDTO,
@@ -18,12 +21,19 @@ from src.application.services import RbacGuardService
 from src.application.use_cases import (
     CreateClauseCommentUseCase,
     ListClauseCommentsUseCase,
+    RefineRedlineSuggestionUseCase,
     ResolveRedlineSuggestionUseCase,
 )
 from src.domain.enums import UserRole
-from src.domain.ports import UnitOfWorkPort
+from src.domain.ports import (
+    ClauseAuditorPort,
+    PlaybookRetrieverPort,
+    UnitOfWorkPort,
+)
 from src.presentation.dependencies import (
+    get_clause_auditor,
     get_current_user,
+    get_playbook_retriever,
     get_rbac_guard,
     get_uow,
     require_roles,
@@ -74,6 +84,47 @@ async def resolve_redline_suggestion(
         action=payload.action,
         expected_clause_version=payload.expected_clause_version,
         modified_text=payload.modified_text,
+    )
+    return await use_case.execute(actor=current_user, command=command)
+
+
+@suggestions_router.post(
+    "/{suggestion_id}/refine",
+    response_model=RefineSuggestionResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def refine_redline_suggestion(
+    suggestion_id: UUID,
+    payload: RefineSuggestionRequestDTO,
+    current_user: Annotated[
+        TokenPayloadDTO,
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.LEGAL_COUNSEL,
+                UserRole.TECHNICAL_LEAD,
+            )
+        ),
+    ],
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
+    retriever: Annotated[PlaybookRetrieverPort, Depends(get_playbook_retriever)],
+    auditor: Annotated[ClauseAuditorPort, Depends(get_clause_auditor)],
+) -> RefineSuggestionResponseDTO:
+    """Refine an AI redline suggestion using natural-language prompt instructions."""
+    use_case = RefineRedlineSuggestionUseCase(
+        uow=uow,
+        rbac_guard=rbac_guard,
+        clause_auditor=auditor,
+        retriever=retriever,
+    )
+    command = RefineSuggestionCommand(
+        org_id=current_user.org_id,
+        suggestion_id=suggestion_id,
+        actor_user_id=current_user.sub,
+        actor_role=current_user.role,
+        instruction=payload.instruction,
+        stance=payload.stance,
     )
     return await use_case.execute(actor=current_user, command=command)
 

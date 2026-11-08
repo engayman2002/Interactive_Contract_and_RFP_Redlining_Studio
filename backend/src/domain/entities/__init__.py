@@ -181,6 +181,20 @@ class RedlineSuggestion:
         self.resolved_by = resolved_by
         self.resolved_at = _utc_now()
 
+    def update_refinement(self, proposed_text: str, rationale: str) -> None:
+        """Update suggestion content via Copilot refinement and reset status to PENDING."""
+        cleaned_text = proposed_text.strip()
+        cleaned_rationale = rationale.strip()
+        if not cleaned_text:
+            raise DomainValidationError("Refined proposed_text cannot be empty.")
+        if not cleaned_rationale:
+            raise DomainValidationError("Refined rationale cannot be empty.")
+        self.proposed_text = cleaned_text
+        self.rationale = cleaned_rationale
+        self.status = SuggestionStatus.PENDING
+        self.resolved_by = None
+        self.resolved_at = None
+
 
 @dataclass(slots=True)
 class ClauseComment:
@@ -217,6 +231,8 @@ from src.domain.entities.redline_analysis import (  # noqa: E402
     AuditProgressEvent,
     ClauseAuditInput,
     ClauseAuditResult,
+    ClauseCopilotRefineInput,
+    ClauseCopilotRefineResult,
 )
 
 __all__ = [
@@ -226,6 +242,8 @@ __all__ = [
     "ClauseAuditInput",
     "ClauseAuditResult",
     "ClauseComment",
+    "ClauseCopilotRefineInput",
+    "ClauseCopilotRefineResult",
     "Document",
     "DocumentClause",
     "DocumentWithClauses",

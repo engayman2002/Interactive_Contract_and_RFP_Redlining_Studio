@@ -7,6 +7,7 @@ import {
   VersionConflictError,
   createClauseComment,
   exportDocumentDocx,
+  refineRedlineSuggestion,
   resolveSuggestion,
 } from "@/services/apiClient";
 import type {
@@ -78,6 +79,11 @@ export interface WorkspaceStoreState {
     token?: string
   ) => Promise<void>;
   rejectSuggestion: (suggestionId: string, token?: string) => Promise<void>;
+  refineSuggestionWithAI: (
+    suggestionId: string,
+    instruction: string,
+    token?: string
+  ) => Promise<{ talkingPoint: string }>;
   addClauseComment: (
     clauseId: string,
     body: string,
@@ -497,6 +503,48 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
         });
       }
     }
+  },
+
+  refineSuggestionWithAI: async (suggestionId, instruction, token) => {
+    const state = get();
+    const suggestion = state.redlines.find((r) => r.id === suggestionId);
+    if (!suggestion) {
+      return { talkingPoint: "" };
+    }
+
+    const res = await refineRedlineSuggestion(
+      suggestionId,
+      {
+        instruction,
+        stance: state.negotiationStance,
+      },
+      token
+    );
+
+    const auditEntry: AuditLogEntryDTO = {
+      id: `audit-opt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      org_id: DEMO_ORG_ID,
+      document_id: DEMO_DOCUMENT_ID,
+      clause_id: res.suggestion.clause_id,
+      actor_user_id: DEMO_USER_ID,
+      actor_role: "LEGAL_COUNSEL",
+      action: "SUGGESTION_REFINED",
+      details: {
+        suggestion_id: suggestionId,
+        instruction,
+        stance: state.negotiationStance,
+      },
+      created_at: new Date().toISOString(),
+    };
+
+    set((s) => ({
+      redlines: s.redlines.map((r) =>
+        r.id === suggestionId ? res.suggestion : r
+      ),
+      auditLogs: [...s.auditLogs, auditEntry],
+    }));
+
+    return { talkingPoint: res.negotiation_talking_point };
   },
 
   addClauseComment: async (clauseId, body, token, authorId) => {

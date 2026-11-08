@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Loader2, Sparkles } from "lucide-react";
 import type {
   ClauseDTO,
   RedlineSuggestionDTO,
@@ -68,6 +68,9 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
     const setHoveredSuggestion = useWorkspaceStore(
       (state) => state.setHoveredSuggestion
     );
+    const refineSuggestionWithAI = useWorkspaceStore(
+      (state) => state.refineSuggestionWithAI
+    );
 
     const [isEditingModify, setIsEditingModify] = useState<boolean>(false);
     const [modifiedDraft, setModifiedDraft] = useState<string>(
@@ -75,6 +78,14 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
     );
     const [copiedTalkingPoint, setCopiedTalkingPoint] =
       useState<boolean>(false);
+
+    const [isCopilotOpen, setIsCopilotOpen] = useState<boolean>(false);
+    const [copilotInstruction, setCopilotInstruction] = useState<string>("");
+    const [isRefining, setIsRefining] = useState<boolean>(false);
+    const [refineError, setRefineError] = useState<string | null>(null);
+    const [copilotSuccessMsg, setCopilotSuccessMsg] = useState<string | null>(
+      null
+    );
 
     useEffect(() => {
       setModifiedDraft(suggestion.proposed_text);
@@ -84,6 +95,35 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
       () => splitRationaleAndTalkingPoint(suggestion.rationale),
       [suggestion.rationale]
     );
+
+    const handleRefineSubmit = async (
+      e: React.FormEvent | React.MouseEvent
+    ) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const trimmed = copilotInstruction.trim();
+      if (!trimmed || isRefining) {
+        return;
+      }
+      setIsRefining(true);
+      setRefineError(null);
+      setCopilotSuccessMsg(null);
+      try {
+        const res = await refineSuggestionWithAI(suggestion.id, trimmed);
+        setCopilotSuccessMsg(
+          res.talkingPoint
+            ? `Refined: "${res.talkingPoint}"`
+            : "Clause refined successfully!"
+        );
+        setTimeout(() => setCopilotSuccessMsg(null), 4000);
+      } catch (err) {
+        setRefineError(
+          err instanceof Error ? err.message : "Failed to refine clause."
+        );
+      } finally {
+        setIsRefining(false);
+      }
+    };
 
     const handleCopyTalkingPoint = async (
       e: React.MouseEvent,
@@ -287,6 +327,24 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
 
             <button
               type="button"
+              data-testid={`toggle-copilot-btn-${suggestion.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                selectClause(clause.id, "inspector");
+                setIsCopilotOpen((prev) => !prev);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-all ${
+                isCopilotOpen
+                  ? "border-indigo-400 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20 dark:border-indigo-500 dark:bg-indigo-950/60 dark:text-indigo-200"
+                  : "border-indigo-200/90 bg-indigo-50/50 text-indigo-700 hover:bg-indigo-100/70 hover:text-indigo-800 dark:border-indigo-500/30 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>AI Copilot</span>
+            </button>
+
+            <button
+              type="button"
               data-testid={`modify-redline-btn-${clause.id}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -315,6 +373,131 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
             </button>
           </div>
         </div>
+
+        {/* Inline Clause AI Copilot Drawer */}
+        {isCopilotOpen && (
+          <div
+            data-testid={`copilot-drawer-${suggestion.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-3.5 rounded-xl border border-indigo-200/80 bg-gradient-to-b from-indigo-50/40 to-white p-3.5 shadow-sm dark:border-indigo-500/30 dark:from-slate-900 dark:to-slate-950"
+          >
+            <div className="mb-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-xs font-semibold text-indigo-950 dark:text-indigo-200">
+                  Inline AI Clause Copilot
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                Steer wording with custom prompt
+              </span>
+            </div>
+
+            {/* Quick Directive Chips */}
+            <div className="mb-2.5 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                data-testid={`copilot-chip-mutual-${suggestion.id}`}
+                onClick={() =>
+                  setCopilotInstruction(
+                    "Make this obligation strictly mutual and exclude indirect damages."
+                  )
+                }
+                className="rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+              >
+                Make Strictly Mutual
+              </button>
+              <button
+                type="button"
+                data-testid={`copilot-chip-cap-${suggestion.id}`}
+                onClick={() =>
+                  setCopilotInstruction(
+                    "Cap aggregate liability at $100,000 instead of 12 months of fees."
+                  )
+                }
+                className="rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+              >
+                Cap Liability at $100,000
+              </button>
+              <button
+                type="button"
+                data-testid={`copilot-chip-cure-${suggestion.id}`}
+                onClick={() =>
+                  setCopilotInstruction(
+                    "Add a 30-day written notice and cure period before any termination."
+                  )
+                }
+                className="rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+              >
+                Add 30-Day Cure Period
+              </button>
+              <button
+                type="button"
+                data-testid={`copilot-chip-soften-${suggestion.id}`}
+                onClick={() =>
+                  setCopilotInstruction(
+                    "Soften the legal tone for a strategic partner while keeping core IP protection."
+                  )
+                }
+                className="rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+              >
+                Soften Tone for Partner
+              </button>
+            </div>
+
+            {/* Custom Instruction Input */}
+            <form onSubmit={handleRefineSubmit} className="space-y-2">
+              <textarea
+                aria-label="Custom AI Copilot prompt instruction"
+                data-testid={`copilot-instruction-input-${suggestion.id}`}
+                rows={2}
+                value={copilotInstruction}
+                onChange={(e) => setCopilotInstruction(e.target.value)}
+                placeholder="e.g., Cap liability at $100,000 and add a 30-day notice and cure period..."
+                className="w-full rounded-lg border border-indigo-200/80 bg-white p-2.5 text-xs leading-relaxed text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-indigo-500/30 dark:bg-slate-950 dark:text-indigo-100"
+              />
+
+              {copilotSuccessMsg && (
+                <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                  {copilotSuccessMsg}
+                </p>
+              )}
+              {refineError && (
+                <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                  {refineError}
+                </p>
+              )}
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCopilotOpen(false)}
+                  className="rounded-lg border border-slate-200/90 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  data-testid={`copilot-submit-btn-${suggestion.id}`}
+                  disabled={isRefining || !copilotInstruction.trim()}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                >
+                  {isRefining ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Refining...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3 w-3" />
+                      <span>Refine with AI</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </article>
     );
   }

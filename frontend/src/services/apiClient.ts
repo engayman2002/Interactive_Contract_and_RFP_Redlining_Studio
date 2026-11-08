@@ -30,6 +30,10 @@ import {
   PlaybookRuleDTOSchema,
   ProviderCatalogItemDTO,
   RedlineSuggestionDTO,
+  RefineSuggestionRequestDTO,
+  RefineSuggestionRequestDTOSchema,
+  RefineSuggestionResponseDTO,
+  RefineSuggestionResponseDTOSchema,
   ResolveSuggestionRequestDTO,
   ResolveSuggestionRequestDTOSchema,
   ResolveSuggestionResponseDTO,
@@ -856,6 +860,174 @@ export async function resolveSuggestion(
     }
     throw err;
   }
+}
+
+export async function refineRedlineSuggestion(
+  suggestionId: string,
+  payload: RefineSuggestionRequestDTO,
+  token?: string
+): Promise<RefineSuggestionResponseDTO> {
+  const validatedPayload = RefineSuggestionRequestDTOSchema.parse(payload);
+
+  if (token) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/suggestions/${encodeURIComponent(suggestionId)}/refine`,
+        {
+          method: "POST",
+          headers: buildHeaders(token, true),
+          body: JSON.stringify(validatedPayload),
+        }
+      );
+
+      if (response.ok) {
+        const raw = await response.json();
+        return RefineSuggestionResponseDTOSchema.parse(raw);
+      }
+    } catch {
+      // Fallback to offline local simulation below
+    }
+  }
+
+  // Offline / Demo Fallback Simulation
+  const instructionLower = validatedPayload.instruction.toLowerCase();
+  let talkingPoint = `Refined per instruction: "${validatedPayload.instruction}". Proposed language balances commercial interests while safeguarding standard protections.`;
+
+  // Search across localStorage workspaces or DEMO_WORKSPACE_DATA
+  let matchedSuggestion: RedlineSuggestionDTO | null = null;
+  let targetWs: DocumentWorkspaceDTO | null = null;
+
+  if (typeof window !== "undefined") {
+    try {
+      const docList = getLocalDocuments();
+      for (const d of docList) {
+        const ws = getLocalDocumentWorkspace(d.id);
+        if (ws) {
+          const found = ws.redlines.find((r) => r.id === suggestionId);
+          if (found) {
+            matchedSuggestion = found;
+            targetWs = ws;
+            break;
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!matchedSuggestion) {
+    matchedSuggestion =
+      DEMO_WORKSPACE_DATA.redlines.find((r) => r.id === suggestionId) ?? {
+        id: suggestionId,
+        clause_id: "demo-clause-1",
+        risk: "HIGH",
+        proposed_text:
+          "1.1 In no event shall either party's aggregate cumulative liability under this Agreement exceed $100,000, subject to a 30-day written cure period.",
+        rationale: `[AI Copilot Refined: "${validatedPayload.instruction}"] Updated clause language based on reviewer direction.`,
+        status: "PENDING",
+        created_at: new Date().toISOString(),
+      };
+  }
+
+  let updatedText = matchedSuggestion.proposed_text;
+
+  // Custom dollar cap replacement
+  const capMatch = validatedPayload.instruction.match(
+    /(\$[\d,]+(?:\.\d+)?|\b\d+k\b)/i
+  );
+  if (capMatch) {
+    const rawVal = capMatch[1];
+    const formattedCap = rawVal.toLowerCase().endsWith("k")
+      ? `$${parseInt(rawVal, 10) * 1000}`
+      : rawVal;
+    updatedText = updatedText.replace(
+      /(exceed\s+)(?:two\s+times\s+\(2x\)\s+the\s+annual\s+fees|\$[\d,]+|the\s+total\s+fees\s+paid)/i,
+      `$1${formattedCap}`
+    );
+    if (!updatedText.includes(formattedCap)) {
+      updatedText =
+        updatedText.replace(/\.\s*$/, "") + `, capped at ${formattedCap}.`;
+    }
+    talkingPoint = `We have revised our proposal to cap aggregate liability at ${formattedCap}, establishing a clear, predictable ceiling for both parties.`;
+  }
+
+  // Cure period addition
+  const cureMatch = validatedPayload.instruction.match(
+    /(\d+[\s-]?(?:day|days|business\s+days))/i
+  );
+  if (cureMatch) {
+    const cureStr = cureMatch[1];
+    if (!updatedText.toLowerCase().includes("cure")) {
+      updatedText =
+        updatedText.replace(/\.\s*$/, "") +
+        `, provided that either party receives a ${cureStr} written notice and cure period before any termination.`;
+    }
+    talkingPoint = `Added standard ${cureStr} notice and cure protection so administrative delays do not trigger immediate termination.`;
+  }
+
+  // Mutual / Reciprocal
+  if (
+    instructionLower.includes("mutual") ||
+    instructionLower.includes("bilateral") ||
+    instructionLower.includes("reciprocal")
+  ) {
+    updatedText = updatedText
+      .replace(/\bCustomer shall\b/gi, "Each party shall")
+      .replace(/\bVendor shall\b/gi, "Each party shall")
+      .replace(/\beither party's\b/gi, "each party's");
+    talkingPoint =
+      "We propose making these covenants bilateral and mutual so both organizations share equivalent protections.";
+  }
+
+  // Soften tone
+  if (
+    instructionLower.includes("soften") ||
+    instructionLower.includes("partner") ||
+    instructionLower.includes("friendly")
+  ) {
+    updatedText = updatedText.replace(
+      /strictly prohibited/gi,
+      "subject to prior written mutual approval"
+    );
+    talkingPoint =
+      "Adopted a collaborative, partnership-friendly phrasing while upholding our core compliance baseline.";
+  }
+
+  const refinedSuggestion: RedlineSuggestionDTO = {
+    ...matchedSuggestion,
+    proposed_text: updatedText,
+    rationale: `[AI Copilot Refined: "${validatedPayload.instruction}"] Updated wording per prompt instruction.`,
+  };
+
+  if (targetWs) {
+    targetWs.redlines = targetWs.redlines.map((r) =>
+      r.id === suggestionId ? refinedSuggestion : r
+    );
+    const auditEntry: AuditLogEntryDTO = {
+      id: `audit-${Date.now()}`,
+      org_id: targetWs.org_id,
+      document_id: targetWs.document_id,
+      clause_id: refinedSuggestion.clause_id,
+      actor_user_id: DEMO_USER_ID,
+      actor_role: "ADMIN",
+      action: "SUGGESTION_REFINED",
+      details: {
+        suggestion_id: suggestionId,
+        instruction: validatedPayload.instruction,
+        stance: validatedPayload.stance,
+      },
+      created_at: new Date().toISOString(),
+    };
+    targetWs.audit_logs = [...(targetWs.audit_logs ?? []), auditEntry];
+    saveLocalDocumentWorkspace(targetWs);
+  }
+
+  return {
+    suggestion: refinedSuggestion,
+    negotiation_talking_point: talkingPoint,
+    latency_ms: 120,
+  };
 }
 
 export async function createClauseComment(

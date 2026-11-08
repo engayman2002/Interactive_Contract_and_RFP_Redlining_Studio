@@ -9,7 +9,7 @@ from pydantic import Field, field_validator
 from src.application.dtos import ImmutableDTO
 from src.application.dtos.redline_dtos import RedlineSuggestionResponseDTO
 from src.domain.entities import ClauseComment
-from src.domain.enums import UserRole
+from src.domain.enums import NegotiationStance, UserRole
 
 ResolutionAction = Literal["ACCEPT", "REJECT", "MODIFY"]
 
@@ -99,11 +99,48 @@ class ResolveSuggestionResponseDTO(ImmutableDTO):
     document_version: int
 
 
+class RefineSuggestionRequestDTO(ImmutableDTO):
+    """REST request body DTO for `POST /api/v1/suggestions/{suggestion_id}/refine`."""
+
+    instruction: str = Field(min_length=3, max_length=1000)
+    stance: NegotiationStance = NegotiationStance.BALANCED
+
+    @field_validator("instruction")
+    @classmethod
+    def validate_instruction(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Refinement instruction cannot be empty or whitespace only.")
+        return cleaned
+
+
+class RefineSuggestionCommand(ImmutableDTO):
+    """Application command DTO for refining an existing AI redline suggestion."""
+
+    org_id: UUID
+    suggestion_id: UUID
+    actor_user_id: UUID
+    actor_role: UserRole
+    instruction: str
+    stance: NegotiationStance = NegotiationStance.BALANCED
+
+
+class RefineSuggestionResponseDTO(ImmutableDTO):
+    """Output DTO returned by `POST /api/v1/suggestions/{suggestion_id}/refine`."""
+
+    suggestion: RedlineSuggestionResponseDTO
+    negotiation_talking_point: str
+    latency_ms: float
+
+
 __all__ = [
     "ClauseCommentResponseDTO",
     "ClauseResolutionStateDTO",
     "CreateClauseCommentCommand",
     "CreateClauseCommentRequestDTO",
+    "RefineSuggestionCommand",
+    "RefineSuggestionRequestDTO",
+    "RefineSuggestionResponseDTO",
     "ResolutionAction",
     "ResolveSuggestionCommand",
     "ResolveSuggestionRequestDTO",

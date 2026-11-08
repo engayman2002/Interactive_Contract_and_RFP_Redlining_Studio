@@ -277,6 +277,7 @@ from src.application.use_cases.analyze_document import (  # noqa: E402
 from src.application.use_cases.collaboration import (  # noqa: E402
     CreateClauseCommentUseCase,
     ListClauseCommentsUseCase,
+    RefineRedlineSuggestionUseCase,
     ResolveRedlineSuggestionUseCase,
 )
 from src.application.use_cases.export_and_audit import (  # noqa: E402
@@ -318,6 +319,7 @@ __all__ = [
     "ListOrganizationDocumentsUseCase",
     "ListOrganizationUsersUseCase",
     "ListPlaybookRulesUseCase",
+    "RefineRedlineSuggestionUseCase",
     "RegisterOrganizationAndAdminUseCase",
     "ResolveRedlineSuggestionUseCase",
     "SearchPlaybookRulesUseCase",

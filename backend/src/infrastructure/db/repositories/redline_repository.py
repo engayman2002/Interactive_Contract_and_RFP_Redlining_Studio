@@ -180,5 +180,35 @@ class SqlAlchemyRedlineRepository(MultiTenantRepositoryBase, RedlineRepositoryPo
         await self._session.flush()
         return self._to_domain(model)
 
+    async def update_suggestion_content(
+        self,
+        org_id: UUID,
+        suggestion: RedlineSuggestion,
+    ) -> RedlineSuggestion:
+        """Persist updated suggestion content (proposed_text, rationale, status) in org_id."""
+        stmt = (
+            select(RedlineSuggestionModel)
+            .join(DocumentClauseModel, RedlineSuggestionModel.clause_id == DocumentClauseModel.id)
+            .join(DocumentModel, DocumentClauseModel.document_id == DocumentModel.id)
+            .where(
+                DocumentModel.org_id == org_id,
+                RedlineSuggestionModel.id == suggestion.id,
+            )
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            raise SuggestionNotFoundError(
+                f"Redline suggestion '{suggestion.id}' not found in organization '{org_id}'."
+            )
+
+        model.proposed_text = suggestion.proposed_text
+        model.rationale = suggestion.rationale
+        model.status = suggestion.status
+        model.resolved_by = suggestion.resolved_by
+        model.resolved_at = suggestion.resolved_at
+        await self._session.flush()
+        return self._to_domain(model)
+
 
 __all__ = ["SqlAlchemyRedlineRepository"]

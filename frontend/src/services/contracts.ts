@@ -68,10 +68,28 @@ export const AuditActionSchema = z.enum([
   "SUGGESTION_ACCEPTED",
   "SUGGESTION_MODIFIED",
   "SUGGESTION_REJECTED",
+  "SUGGESTION_REFINED",
   "COMMENT_CREATED",
   "DOCUMENT_EXPORTED",
 ]);
 export type AuditAction = z.infer<typeof AuditActionSchema>;
+
+export const RefineSuggestionRequestDTOSchema = z.object({
+  instruction: z.string().min(3).max(1000),
+  stance: NegotiationStanceSchema.default("balanced"),
+});
+export type RefineSuggestionRequestDTO = z.infer<
+  typeof RefineSuggestionRequestDTOSchema
+>;
+
+export const RefineSuggestionResponseDTOSchema = z.object({
+  suggestion: RedlineSuggestionDTOSchema,
+  negotiation_talking_point: z.string(),
+  latency_ms: z.number(),
+});
+export type RefineSuggestionResponseDTO = z.infer<
+  typeof RefineSuggestionResponseDTOSchema
+>;
 
 export const AuditLogEntryDTOSchema = z.object({
   id: z.string(),

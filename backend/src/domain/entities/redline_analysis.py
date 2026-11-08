@@ -74,10 +74,67 @@ class AuditProgressEvent:
     status: str
 
 
+@dataclass(frozen=True, slots=True)
+class ClauseCopilotRefineInput:
+    """Immutable input payload for refining an existing redline suggestion via AI Copilot."""
+
+    org_id: UUID
+    document_id: UUID
+    clause_id: UUID
+    suggestion_id: UUID
+    clause_index: int
+    heading: str | None
+    original_clause_text: str
+    current_proposed_text: str
+    user_instruction: str
+    stance: NegotiationStance = NegotiationStance.BALANCED
+
+    def __post_init__(self) -> None:
+        if self.clause_index < 0:
+            raise DomainValidationError("clause_index must be non-negative.")
+        cleaned_orig = self.original_clause_text.strip()
+        cleaned_prop = self.current_proposed_text.strip()
+        cleaned_instr = self.user_instruction.strip()
+        if not cleaned_orig:
+            raise DomainValidationError("original_clause_text cannot be empty.")
+        if not cleaned_prop:
+            raise DomainValidationError("current_proposed_text cannot be empty.")
+        if not cleaned_instr:
+            raise DomainValidationError("user_instruction cannot be empty.")
+        object.__setattr__(self, "original_clause_text", cleaned_orig)
+        object.__setattr__(self, "current_proposed_text", cleaned_prop)
+        object.__setattr__(self, "user_instruction", cleaned_instr)
+
+
+@dataclass(frozen=True, slots=True)
+class ClauseCopilotRefineResult:
+    """Immutable output value object produced by `ClauseAuditorPort.refine_clause_suggestion`."""
+
+    suggestion_id: UUID
+    clause_id: UUID
+    risk: RiskLevel
+    proposed_text: str
+    rationale: str
+    negotiation_talking_point: str
+    latency_ms: float
+
+    def __post_init__(self) -> None:
+        if not self.proposed_text.strip():
+            raise DomainValidationError("Refine result proposed_text cannot be empty.")
+        if not self.rationale.strip():
+            raise DomainValidationError("Refine result rationale cannot be empty.")
+        if not self.negotiation_talking_point.strip():
+            raise DomainValidationError(
+                "Refine result negotiation_talking_point cannot be empty."
+            )
+
+
 __all__ = [
     "AuditEventType",
     "AuditProgressEvent",
     "ClauseAuditInput",
     "ClauseAuditResult",
+    "ClauseCopilotRefineInput",
+    "ClauseCopilotRefineResult",
 ]
 

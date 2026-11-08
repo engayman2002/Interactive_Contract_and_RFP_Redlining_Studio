@@ -7,6 +7,8 @@ from uuid import UUID
 from src.domain.entities import (
     ClauseAuditInput,
     ClauseAuditResult,
+    ClauseCopilotRefineInput,
+    ClauseCopilotRefineResult,
     MatchedPlaybookRule,
     RedlineSuggestion,
 )
@@ -22,6 +24,14 @@ class ClauseAuditorPort(Protocol):
         matched_rules: Sequence[MatchedPlaybookRule],
     ) -> ClauseAuditResult:
         """Evaluate `audit_input` against `matched_rules` and return `ClauseAuditResult`."""
+        ...
+
+    async def refine_clause_suggestion(
+        self,
+        refine_input: ClauseCopilotRefineInput,
+        matched_rules: Sequence[MatchedPlaybookRule],
+    ) -> ClauseCopilotRefineResult:
+        """Refine an existing redline suggestion using custom user prompt instruction."""
         ...
 
 
@@ -67,6 +77,14 @@ class RedlineRepositoryPort(Protocol):
         suggestion: RedlineSuggestion,
     ) -> RedlineSuggestion:
         """Persist resolution state (`status`, `proposed_text`, `resolved_by`) in `org_id`."""
+        ...
+
+    async def update_suggestion_content(
+        self,
+        org_id: UUID,
+        suggestion: RedlineSuggestion,
+    ) -> RedlineSuggestion:
+        """Persist updated suggestion content (proposed_text, rationale, status) in org_id."""
         ...
 
 

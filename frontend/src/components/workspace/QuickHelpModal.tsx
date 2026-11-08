@@ -14,7 +14,7 @@ export interface QuickHelpModalProps {
   onClose: () => void;
 }
 
-type QuickHelpTab = "workflow" | "stance" | "heatmap" | "export";
+type QuickHelpTab = "workflow" | "copilot" | "stance" | "heatmap" | "export";
 
 export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
   isOpen,
@@ -77,7 +77,19 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            1. Workflow Cheat-Sheet
+            1. Workflow
+          </button>
+          <button
+            type="button"
+            data-testid="quick-help-tab-copilot"
+            onClick={() => setActiveTab("copilot")}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              activeTab === "copilot"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            2. ✨ AI Copilot
           </button>
           <button
             type="button"
@@ -89,7 +101,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            2. AI Stances (Strict / Balanced / Commercial)
+            3. AI Stances
           </button>
           <button
             type="button"
@@ -101,7 +113,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            3. Risk Heatmap &amp; Diff Legend
+            4. Risk Heatmap
           </button>
           <button
             type="button"
@@ -113,7 +125,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            4. Export Modes (.docx)
+            5. Export (.docx)
           </button>
         </div>
 
@@ -134,6 +146,71 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                   </p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeTab === "copilot" && (
+            <div data-testid="quick-help-content-copilot" className="space-y-3">
+              <div className="rounded-xl border border-indigo-200/90 bg-indigo-50/50 p-4 dark:border-indigo-500/30 dark:bg-indigo-950/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">
+                    Inline Clause AI Copilot &amp; Custom Prompting
+                  </span>
+                  <span className="rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-800 dark:border-indigo-500/40 dark:bg-indigo-900/50 dark:text-indigo-200">
+                    COPILOT
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                  Steer AI redlining on any individual clause. Click the <strong className="text-indigo-700 dark:text-indigo-300">✨ AI Copilot</strong> button on any redline card to open the copilot drawer with one-click quick directive chips or type custom natural-language instructions.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
+                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
+                    Make Strictly Mutual
+                  </h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Converts unilateral covenants into bilateral obligations (&ldquo;Each party shall...&rdquo;) and carves out indirect or consequential damages.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
+                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
+                    Cap Liability at $100,000
+                  </h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Replaces fee-multiple formulas with an explicit, predictable dollar ceiling ($100,000) for aggregate commercial exposure.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
+                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
+                    Add 30-Day Cure Period
+                  </h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Inserts standard written notice and a 30-day opportunity to cure prior to any termination for cause or service cancellation.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
+                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
+                    Soften Tone for Partner
+                  </h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Softens contentious language while preserving core IP and confidentiality boundaries—ideal for strategic alliance negotiations.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/40 p-3.5 dark:border-emerald-500/25 dark:bg-slate-950">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                  Compliance Audit Trail Guarantee
+                </span>
+                <p className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                  Every refinement logs an immutable <code className="font-mono text-[11px]">SUGGESTION_REFINED</code> event with the exact prompt instruction, actor role, timestamp, and generated rationale.
+                </p>
+              </div>
             </div>
           )}
 
