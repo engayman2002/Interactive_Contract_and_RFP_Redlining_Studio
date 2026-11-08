@@ -233,6 +233,8 @@ from src.domain.entities.redline_analysis import (  # noqa: E402
     ClauseAuditResult,
     ClauseCopilotRefineInput,
     ClauseCopilotRefineResult,
+    CrossClauseAnalysisReport,
+    CrossClauseFinding,
 )
 
 __all__ = [
@@ -244,6 +246,8 @@ __all__ = [
     "ClauseComment",
     "ClauseCopilotRefineInput",
     "ClauseCopilotRefineResult",
+    "CrossClauseAnalysisReport",
+    "CrossClauseFinding",
     "Document",
     "DocumentClause",
     "DocumentWithClauses",

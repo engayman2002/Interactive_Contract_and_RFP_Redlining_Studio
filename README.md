@@ -27,6 +27,7 @@ The **Interactive Contract & RFP Redlining Studio** is an enterprise-grade, mult
 - **Deterministic LangChain LCEL Auditing & Real-Time SSE:** Evaluates up to 20 clauses concurrently (`asyncio.Semaphore(20)`) at `temperature = 0.0`, validating every LLM response against the strict [`RedlineOutput`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/redline_chain.py#L31-L44) schema with automatic JSON repair/retry and streaming live progress events over W3C Server-Sent Events (`text/event-stream`).
 - **AI Negotiation Stance Selector (`STRICT` vs. `BALANCED` vs. `COMMERCIAL`):** Dynamically adjusts AI redline aggressiveness to match transaction posture. `STRICT` enforces zero-compromise adherence to the Playbook's `standard_position` with firm non-negotiable justifications; `BALANCED` (default) creates fair, reciprocal bilateral (`"Each party..."`) commitments; `COMMERCIAL` adopts pre-approved `fallback_position` terms (e.g., 2x annual fee cap) to accelerate deal velocity and close transactions rapidly without endless redline cycles.
 - **Inline Clause AI Copilot & Custom Prompting:** Empowers reviewers to steer the AI redline engine per clause using custom natural-language instructions (e.g., *"Cap aggregate liability at $100,000"*, *"Add a 30-day cure period"*, *"Make obligation strictly mutual"*, *"Soften tone for partner"*). Dynamically refines `proposed_text`, `rationale`, and `negotiation_talking_point` in real time via `POST /api/v1/suggestions/{id}/refine`, records immutable `SUGGESTION_REFINED` audit trail entries, and instantly updates the live word-level diff preview.
+- **Cross-Clause Contradiction, Broken Reference & Undefined Terms Radar:** Evaluates the full multi-clause contract graph to detect document-wide structural integrity defects that escape paragraph-level analysis: pairwise logical contradictions (such as liability caps vs uncapped indemnity, conflicting Net 30 vs Net 15 payment terms, or conflicting notice/cure vs immediate termination timelines), broken section citations (e.g., citing non-existent "Section 99.4"), and undefined capitalized legal terms. Computes a dynamic 0-100% Document Integrity Score with weighted severity deductions and provides bilateral one-click clause navigation between conflicting provisions.
 - **Bidirectional Split-Screen Editor & Surgical Word Diffs:** Binds each PostgreSQL `document_clauses` row to a custom TipTap/ProseMirror [`ClauseNodeExtension`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/ClauseNodeExtension.ts#L23-L84) (`div[data-clause-id]`) paired with a visual [`RiskHeatmapGutter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/RiskHeatmapGutter.tsx#L44-L92) and hover-activated [`InlineDiffPreview`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/diff/InlineDiffPreview.tsx#L12-L72).
 - **Optimistic Concurrency & Multi-Tenant RBAC:** Enforces `org_id` isolation on every repository query, 4-tier RBAC (`ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD`, `VIEWER`), and `expected_clause_version` optimistic locking that automatically rejects stale concurrent edits with `409 Conflict` and rolls back client state.
 - **Native Microsoft Word OpenXML Track-Changes Export:** Reconstructs valid `.docx` archives embedding native `<w:del>` (`<w:delText>`) and `<w:ins>` (`<w:t>`) revision tags with `w:author` and ISO-8601 `w:date` attributes, `<w:commentRangeStart/>`/`<w:commentRangeEnd/>` anchors, AI rationales, and reviewer comments.
@@ -869,18 +870,19 @@ The OpenXML `.docx` reconstruction engine is located in [`backend/src/infrastruc
 | 16 | `GET /api/v1/documents/{document_id}/workspace` | All Authenticated Roles | `200 OK` | Fetch full workspace (document, ordered clauses, redlines, comments, audit logs) |
 | 17 | `POST /api/v1/documents/{document_id}/analyze` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Run concurrent AI clause auditing & persist `RedlineSuggestion` records. Accepts optional body `{"stance": "strict" \| "balanced" \| "commercial"}` (or `?stance=` query param; defaults to `balanced`) |
 | 18 | `GET /api/v1/documents/{document_id}/stream` | All Authenticated Roles | `200 OK` (`text/event-stream`) | Stream real-time `clause_audited` and `completed` SSE events with optional `?stance=strict\|balanced\|commercial` |
-| 19 | `POST /api/v1/suggestions/{suggestion_id}/resolve` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` (`409` on version mismatch) | Atomically `ACCEPT`, `MODIFY`, or `REJECT` suggestion with `expected_clause_version` |
-| 20 | `POST /api/v1/suggestions/{suggestion_id}/refine` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Refine clause suggestion wording, rationale, and talking points via natural-language copilot prompt instructions & log `SUGGESTION_REFINED` |
-| 21 | `POST /api/v1/clauses/{clause_id}/comments` | All Authenticated Roles | `201 Created` | Post a threaded comment on a clause & log `COMMENT_CREATED` |
-| 22 | `GET /api/v1/clauses/{clause_id}/comments` | All Authenticated Roles | `200 OK` | List chronological comments on a clause |
-| 23 | `GET /api/v1/documents/{document_id}/audit-trail` | All Authenticated Roles | `200 OK` | Retrieve chronological immutable compliance audit trail for `document_id` |
-| 24 | `GET /api/v1/documents/{document_id}/export` | All Authenticated Roles | `200 OK` (`.docx` binary) | Export `.docx` in `mode=track_changes` (`<w:ins>`/`<w:del>`) or `mode=clean` |
-| 25 | `GET /api/v1/ai-settings` | All Authenticated Roles | `200 OK` | Inspect active LLM & Embedding providers, masked API key flags, and provider catalog |
-| 26 | `PUT /api/v1/ai-settings` | `ADMIN` | `200 OK` (`403` non-admin) | Hot-swap active runtime LLM & Vector Embedding providers/models (including custom model IDs) |
-| 27 | `POST /api/v1/ai-settings/test-connection` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Live probe candidate LLM & 1536-d Embedding settings and report `latency_ms` |
-| 28 | `POST /api/v1/ai-settings/discover-models` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Dynamically fetch live LLM & Embedding models from provider `/models` or `/api/tags` |
-| 29 | `POST /api/v1/ai-settings/export-vault` | `ADMIN` | `200 OK` (`403` non-admin) | Encrypt active/typed AI settings & API keys into an AES-256-GCM `.rsvault.json` envelope |
-| 30 | `POST /api/v1/ai-settings/import-vault` | `ADMIN` | `200 OK` (`400` bad passphrase) | Decrypt, validate (SSRF & registry), and activate an AES-256-GCM `.rsvault.json` vault |
+| 19 | `POST /api/v1/documents/{document_id}/cross-clause-check` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Run multi-clause integrity check (contradictions, broken citations, undefined terms), calculate 0-100% score, and log `CROSS_CLAUSE_CHECKED` |
+| 20 | `POST /api/v1/suggestions/{suggestion_id}/resolve` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` (`409` on version mismatch) | Atomically `ACCEPT`, `MODIFY`, or `REJECT` suggestion with `expected_clause_version` |
+| 21 | `POST /api/v1/suggestions/{suggestion_id}/refine` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Refine clause suggestion wording, rationale, and talking points via natural-language copilot prompt instructions & log `SUGGESTION_REFINED` |
+| 22 | `POST /api/v1/clauses/{clause_id}/comments` | All Authenticated Roles | `201 Created` | Post a threaded comment on a clause & log `COMMENT_CREATED` |
+| 23 | `GET /api/v1/clauses/{clause_id}/comments` | All Authenticated Roles | `200 OK` | List chronological comments on a clause |
+| 24 | `GET /api/v1/documents/{document_id}/audit-trail` | All Authenticated Roles | `200 OK` | Retrieve chronological immutable compliance audit trail for `document_id` |
+| 25 | `GET /api/v1/documents/{document_id}/export` | All Authenticated Roles | `200 OK` (`.docx` binary) | Export `.docx` in `mode=track_changes` (`<w:ins>`/`<w:del>`) or `mode=clean` |
+| 26 | `GET /api/v1/ai-settings` | All Authenticated Roles | `200 OK` | Inspect active LLM & Embedding providers, masked API key flags, and provider catalog |
+| 27 | `PUT /api/v1/ai-settings` | `ADMIN` | `200 OK` (`403` non-admin) | Hot-swap active runtime LLM & Vector Embedding providers/models (including custom model IDs) |
+| 28 | `POST /api/v1/ai-settings/test-connection` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Live probe candidate LLM & 1536-d Embedding settings and report `latency_ms` |
+| 29 | `POST /api/v1/ai-settings/discover-models` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Dynamically fetch live LLM & Embedding models from provider `/models` or `/api/tags` |
+| 30 | `POST /api/v1/ai-settings/export-vault` | `ADMIN` | `200 OK` (`403` non-admin) | Encrypt active/typed AI settings & API keys into an AES-256-GCM `.rsvault.json` envelope |
+| 31 | `POST /api/v1/ai-settings/import-vault` | `ADMIN` | `200 OK` (`400` bad passphrase) | Decrypt, validate (SSRF & registry), and activate an AES-256-GCM `.rsvault.json` vault |
 
 ---
 
@@ -1007,7 +1009,13 @@ curl -sS -X POST "${API_URL}/suggestions/${SUGGESTION_ID}/refine" \
   }'
 
 # -----------------------------------------------------------------------------
-# 9. Resolve the AI Redline Suggestion with Optimistic Concurrency Control
+# 9. Run Cross-Clause Contradiction, Reference & Undefined Terms Radar
+# -----------------------------------------------------------------------------
+curl -sS -X POST "${API_URL}/documents/${DOC_ID}/cross-clause-check" \
+  -H "Authorization: Bearer ${ADMIN_TOKEN}"
+
+# -----------------------------------------------------------------------------
+# 10. Resolve the AI Redline Suggestion with Optimistic Concurrency Control
 # -----------------------------------------------------------------------------
 curl -sS -X POST "${API_URL}/suggestions/${SUGGESTION_ID}/resolve" \
   -H "Authorization: Bearer ${ADMIN_TOKEN}" \
@@ -1018,7 +1026,7 @@ curl -sS -X POST "${API_URL}/suggestions/${SUGGESTION_ID}/resolve" \
   }'
 
 # -----------------------------------------------------------------------------
-# 10. Post a Threaded Reviewer Comment on the Clause
+# 11. Post a Threaded Reviewer Comment on the Clause
 # -----------------------------------------------------------------------------
 curl -sS -X POST "${API_URL}/clauses/${CLAUSE_ID}/comments" \
   -H "Authorization: Bearer ${ADMIN_TOKEN}" \
@@ -1028,13 +1036,13 @@ curl -sS -X POST "${API_URL}/clauses/${CLAUSE_ID}/comments" \
   }'
 
 # -----------------------------------------------------------------------------
-# 11. Inspect the Immutable Compliance Audit Trail
+# 12. Inspect the Immutable Compliance Audit Trail
 # -----------------------------------------------------------------------------
 curl -sS -H "Authorization: Bearer ${ADMIN_TOKEN}" \
   "${API_URL}/documents/${DOC_ID}/audit-trail"
 
 # -----------------------------------------------------------------------------
-# 12. Export the Reviewed Contract as Native Word Track Changes & Clean .docx
+# 13. Export the Reviewed Contract as Native Word Track Changes & Clean .docx
 # -----------------------------------------------------------------------------
 curl -sS -L -H "Authorization: Bearer ${ADMIN_TOKEN}" \
   "${API_URL}/documents/${DOC_ID}/export?mode=track_changes" \

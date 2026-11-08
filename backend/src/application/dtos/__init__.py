@@ -234,6 +234,8 @@ from src.application.dtos.playbook_dtos import (  # noqa: E402
 )
 from src.application.dtos.redline_dtos import (  # noqa: E402
     AnalyzeDocumentRequestDTO,
+    CrossClauseAnalysisReportDTO,
+    CrossClauseFindingDTO,
     DocumentAnalysisSummaryDTO,
     RedlineSuggestionResponseDTO,
 )
@@ -251,6 +253,8 @@ __all__ = [
     "CreatePlaybookRuleCommand",
     "CreatePlaybookRuleRequestDTO",
     "CreateUserRequestDTO",
+    "CrossClauseAnalysisReportDTO",
+    "CrossClauseFindingDTO",
     "DiscoverModelsRequestDTO",
     "DiscoverModelsResponseDTO",
     "DocumentAnalysisSummaryDTO",

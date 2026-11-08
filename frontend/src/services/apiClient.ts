@@ -8,6 +8,9 @@ import {
   ClauseDTO,
   CreateClauseCommentRequestDTOSchema,
   CreatePlaybookRuleRequestDTO,
+  CrossClauseAnalysisReportDTO,
+  CrossClauseAnalysisReportDTOSchema,
+  CrossClauseFindingDTO,
   DiscoverModelsRequestDTO,
   DiscoverModelsResponseDTO,
   DiscoverModelsResponseDTOSchema,
@@ -1133,6 +1136,292 @@ export async function fetchDocumentAuditTrail(
   }
   const raw = (await response.json()) as unknown[];
   return raw.map((item) => AuditLogEntryDTOSchema.parse(item));
+}
+
+export async function runCrossClauseCheck(
+  documentId: string,
+  token?: string
+): Promise<CrossClauseAnalysisReportDTO> {
+  if (token) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}/cross-clause-check`,
+        {
+          method: "POST",
+          headers: buildHeaders(token, true),
+        }
+      );
+
+      if (response.ok) {
+        const raw = await response.json();
+        return CrossClauseAnalysisReportDTOSchema.parse(raw);
+      }
+    } catch {
+      // Fallback to offline / demo mode
+    }
+  }
+
+  // Offline / Demo Simulation
+  const local = getLocalDocumentWorkspace(documentId);
+  const clauses = local?.clauses ?? DEMO_WORKSPACE_DATA.clauses;
+  const findings: CrossClauseFindingDTO[] = [];
+
+  // Pass 1: Build known sections
+  const knownSections = new Set<string>();
+  clauses.forEach((c) => {
+    knownSections.add(String(c.clause_index + 1));
+    const hMatch = c.heading?.match(/^(\d+(?:\.\d+)*)/);
+    if (hMatch) {
+      knownSections.add(hMatch[1]);
+      if (hMatch[1].includes(".")) {
+        knownSections.add(hMatch[1].split(".")[0]);
+      }
+    }
+    const tMatch = c.current_text.match(/^(\d+(?:\.\d+)*)\s+/);
+    if (tMatch) {
+      knownSections.add(tMatch[1]);
+      if (tMatch[1].includes(".")) {
+        knownSections.add(tMatch[1].split(".")[0]);
+      }
+    }
+  });
+
+  // Pass 2: Defined terms
+  const definedTerms = new Set<string>();
+  clauses.forEach((c) => {
+    const matches = c.current_text.matchAll(
+      /["“']([A-Z][A-Za-z0-9\s]{2,40})["”']\s+(?:means|shall\s+mean|has\s+the\s+meaning|is\s+defined)/gi
+    );
+    for (const m of matches) {
+      if (m[1]) {
+        definedTerms.add(m[1].toLowerCase().trim());
+      }
+    }
+  });
+
+  // Pass 3: Contradictions between clause pairs
+  for (let i = 0; i < clauses.length; i++) {
+    const c1 = clauses[i];
+    const c1Text = c1.current_text;
+    const c1CapMatch = c1Text.match(
+      /\b(?:exceed|cap(?:ped)?\s+at|limited\s+to|shall\s+not\s+exceed)\s+(\$[\d,]+(?:\.\d+)?|\d+x\b|\d+\s+months?|\bthe\s+total\s+fees\b)/i
+    );
+    const c1PayMatch = c1Text.match(
+      /\b(?:Net|within)\s+(\d{1,3})\s+(?:days?|business\s+days)\b/i
+    );
+    const c1CureMatch = c1Text.match(
+      /(\d+[\s-]?(?:day|days|business\s+days))\s+(?:written\s+)?(?:notice\s+and\s+)?cure/i
+    );
+    const c1ConfMatch = c1Text.match(
+      /\b(?:not\s+use\s+Customer\s+Confidential\s+Information\s+to\s+train|Customer\s+Confidential\s+Data\s+shall\s+remain|strictly\s+confidential\s+and\s+proprietary)\b/i
+    );
+
+    for (let j = i + 1; j < clauses.length; j++) {
+      const c2 = clauses[j];
+      const c2Text = c2.current_text;
+
+      // Liability Cap vs Uncapped Indemnity
+      const c2Uncapped = c2Text.match(
+        /\b(?:uncapped|unlimited|without\s+limit(?:ation)?|without\s+regard\s+to\s+any\s+limitation|negligence\s+without\s+limit|shall\s+have\s+uncapped\s+liability)\b/i
+      );
+      if (c1CapMatch && c2Uncapped) {
+        findings.push({
+          id: `finding-${c1.id}-${c2.id}-liability`,
+          issue_type: "CONTRADICTION",
+          severity: "CRITICAL",
+          source_clause_id: c1.id,
+          source_clause_index: c1.clause_index,
+          target_clause_id: c2.id,
+          target_clause_index: c2.clause_index,
+          title: "Cross-Clause Liability & Indemnification Contradiction",
+          description: `Clause #${c1.clause_index + 1} (${c1.heading || "Liability"}) caps exposure at ${c1CapMatch[1]}, but Clause #${c2.clause_index + 1} (${c2.heading || "Indemnity"}) creates uncapped, unlimited exposure without a limitation carve-out.`,
+          recommended_fix: `Harmonize clauses by making indemnification obligations subject to the aggregate liability cap in Clause #${c1.clause_index + 1}.`,
+        });
+      }
+
+      // Payment days conflict
+      const c2PayMatch = c2Text.match(
+        /\b(?:Net|within)\s+(\d{1,3})\s+(?:days?|business\s+days)\b/i
+      );
+      if (c1PayMatch && c2PayMatch) {
+        const d1 = parseInt(c1PayMatch[1], 10);
+        const d2 = parseInt(c2PayMatch[1], 10);
+        if (d1 !== d2) {
+          findings.push({
+            id: `finding-${c1.id}-${c2.id}-payment`,
+            issue_type: "CONTRADICTION",
+            severity: "HIGH",
+            source_clause_id: c1.id,
+            source_clause_index: c1.clause_index,
+            target_clause_id: c2.id,
+            target_clause_index: c2.clause_index,
+            title: `Conflicting Payment Timelines (Net ${d1} vs. Net ${d2} Days)`,
+            description: `Clause #${c1.clause_index + 1} stipulates Net ${d1} days, whereas Clause #${c2.clause_index + 1} requires payment within ${d2} days.`,
+            recommended_fix: `Align payment terms across both provisions to a single agreed deadline (e.g., Net ${d1} days).`,
+          });
+        }
+      }
+
+      // Notice & cure vs immediate cancellation
+      const c2Immediate = c2Text.match(
+        /\b(?:terminate\s+immediately\s+without\s+notice|sole\s+remedy\s+waiver|without\s+(?:prior\s+)?(?:written\s+)?notice\s+or\s+cure)\b/i
+      );
+      if (c1CureMatch && c2Immediate) {
+        findings.push({
+          id: `finding-${c1.id}-${c2.id}-cure`,
+          issue_type: "CONTRADICTION",
+          severity: "HIGH",
+          source_clause_id: c1.id,
+          source_clause_index: c1.clause_index,
+          target_clause_id: c2.id,
+          target_clause_index: c2.clause_index,
+          title: "Contradiction in Termination & Cure Rights",
+          description: `Clause #${c1.clause_index + 1} grants a ${c1CureMatch[1]} notice and cure period, while Clause #${c2.clause_index + 1} allows immediate unilateral remedy waiver or cancellation.`,
+          recommended_fix: `Clarify that remedies under Section ${c2.clause_index + 1} remain subject to the cure period in Clause #${c1.clause_index + 1}.`,
+        });
+      }
+
+      // Confidentiality vs model training
+      const c2Train = c2Text.match(
+        /\b(?:train\s+(?:AI\s+)?foundation\s+models|use\s+customer\s+data\s+for\s+model\s+training|machine\s+learning\s+model\s+training)\b/i
+      );
+      if (c1ConfMatch && c2Train) {
+        findings.push({
+          id: `finding-${c1.id}-${c2.id}-ai-train`,
+          issue_type: "CONTRADICTION",
+          severity: "HIGH",
+          source_clause_id: c1.id,
+          source_clause_index: c1.clause_index,
+          target_clause_id: c2.id,
+          target_clause_index: c2.clause_index,
+          title: "Contradiction in Customer Data & AI Model Training",
+          description: `Clause #${c1.clause_index + 1} protects Customer data confidentiality, while Clause #${c2.clause_index + 1} permits training AI models on customer inputs.`,
+          recommended_fix: "Explicitly carve out Customer Confidential Information from any AI model training or commercial data reuse.",
+        });
+      }
+    }
+  }
+
+  // Pass 4: Broken section references
+  for (const c of clauses) {
+    const refMatches = c.current_text.matchAll(
+      /\b(?:Section|Clause|Article|Paragraph)\s+([0-9]+(?:\.[0-9]+)*)\b/gi
+    );
+    for (const rm of refMatches) {
+      const refNum = rm[1];
+      if (!knownSections.has(refNum)) {
+        findings.push({
+          id: `finding-${c.id}-broken-ref-${refNum}`,
+          issue_type: "BROKEN_REFERENCE",
+          severity: "HIGH",
+          source_clause_id: c.id,
+          source_clause_index: c.clause_index,
+          target_clause_id: null,
+          target_clause_index: null,
+          title: `Dangling Reference to Section ${refNum}`,
+          description: `Clause #${c.clause_index + 1} references Section ${refNum}, which does not exist anywhere in the contract structure.`,
+          recommended_fix: `Update citation to refer to an active section or restore the missing Section ${refNum} provision.`,
+        });
+      }
+    }
+  }
+
+  // Pass 5: Undefined terms
+  const specializedTerms = [
+    "Customer Confidential Data",
+    "Public Foundation Models",
+    "Service Level Credits",
+    "Service Credits",
+    "Force Majeure Event",
+    "Direct Infringement Claims",
+  ];
+  for (const c of clauses) {
+    for (const term of specializedTerms) {
+      if (c.current_text.toLowerCase().includes(term.toLowerCase())) {
+        if (!definedTerms.has(term.toLowerCase())) {
+          findings.push({
+            id: `finding-${c.id}-undefined-${term.replace(/\s+/g, "-")}`,
+            issue_type: "UNDEFINED_TERM",
+            severity: "MEDIUM",
+            source_clause_id: c.id,
+            source_clause_index: c.clause_index,
+            target_clause_id: null,
+            target_clause_index: null,
+            title: `Undefined Capitalized Term: '${term}'`,
+            description: `Clause #${c.clause_index + 1} relies on specialized capitalized term '${term}' without a formal definition clause.`,
+            recommended_fix: `Add a formal definition for '${term}' in Section 1 (Definitions) to avoid ambiguity during contractual disputes.`,
+          });
+        }
+      }
+    }
+  }
+
+  // Deduplicate
+  const uniqueFindings: CrossClauseFindingDTO[] = [];
+  const seenKeys = new Set<string>();
+  for (const f of findings) {
+    const key = `${f.issue_type}-${f.source_clause_id}-${f.target_clause_id || ""}-${f.title}`;
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      uniqueFindings.push(f);
+    }
+  }
+
+  const penalties: Record<string, number> = {
+    CRITICAL: 18,
+    HIGH: 12,
+    MEDIUM: 6,
+    LOW: 3,
+  };
+  const totalPenalty = uniqueFindings.reduce(
+    (acc, f) => acc + (penalties[f.severity] ?? 6),
+    0
+  );
+  const score =
+    uniqueFindings.length === 0
+      ? 100
+      : Math.max(15, Math.min(100, 100 - totalPenalty));
+
+  const report: CrossClauseAnalysisReportDTO = {
+    document_id: documentId,
+    total_findings: uniqueFindings.length,
+    contradiction_count: uniqueFindings.filter(
+      (f) => f.issue_type === "CONTRADICTION"
+    ).length,
+    broken_reference_count: uniqueFindings.filter(
+      (f) => f.issue_type === "BROKEN_REFERENCE"
+    ).length,
+    undefined_term_count: uniqueFindings.filter(
+      (f) => f.issue_type === "UNDEFINED_TERM"
+    ).length,
+    integrity_score: score,
+    findings: uniqueFindings,
+    execution_time_ms: 45,
+  };
+
+  if (local) {
+    const auditEntry: AuditLogEntryDTO = {
+      id: `audit-${Date.now()}`,
+      org_id: local.org_id,
+      document_id: local.document_id,
+      clause_id: null,
+      actor_user_id: DEMO_USER_ID,
+      actor_role: "LEGAL_COUNSEL",
+      action: "CROSS_CLAUSE_CHECKED",
+      details: {
+        total_findings: String(report.total_findings),
+        contradiction_count: String(report.contradiction_count),
+        broken_reference_count: String(report.broken_reference_count),
+        undefined_term_count: String(report.undefined_term_count),
+        integrity_score: String(report.integrity_score),
+      },
+      created_at: new Date().toISOString(),
+    };
+    local.audit_logs = [...(local.audit_logs ?? []), auditEntry];
+    saveLocalDocumentWorkspace(local);
+  }
+
+  return report;
 }
 
 export async function checkBackendHealth(): Promise<boolean> {

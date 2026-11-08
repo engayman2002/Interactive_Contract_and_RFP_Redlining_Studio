@@ -271,6 +271,7 @@ class UpdateDocumentFoundationUseCase:
 
 from src.application.use_cases.analyze_document import (  # noqa: E402
     AnalyzeDocumentClausesUseCase,
+    RunCrossClauseCheckUseCase,
     StreamDocumentAnalysisUseCase,
     format_sse_event,
 )
@@ -322,6 +323,7 @@ __all__ = [
     "RefineRedlineSuggestionUseCase",
     "RegisterOrganizationAndAdminUseCase",
     "ResolveRedlineSuggestionUseCase",
+    "RunCrossClauseCheckUseCase",
     "SearchPlaybookRulesUseCase",
     "StreamDocumentAnalysisUseCase",
     "UpdateDocumentFoundationUseCase",

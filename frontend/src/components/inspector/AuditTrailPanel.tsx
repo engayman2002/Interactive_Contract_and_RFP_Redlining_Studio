@@ -24,6 +24,8 @@ const ACTION_BADGE_STYLES: Record<AuditAction, string> = {
     "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300",
   DOCUMENT_EXPORTED:
     "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-500/20 dark:bg-teal-500/10 dark:text-teal-300",
+  CROSS_CLAUSE_CHECKED:
+    "border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-300",
 };
 
 export const AuditTrailPanel: React.FC<AuditTrailPanelProps> = ({

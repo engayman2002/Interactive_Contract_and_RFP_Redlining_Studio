@@ -14,7 +14,13 @@ export interface QuickHelpModalProps {
   onClose: () => void;
 }
 
-type QuickHelpTab = "workflow" | "copilot" | "stance" | "heatmap" | "export";
+type QuickHelpTab =
+  | "workflow"
+  | "copilot"
+  | "radar"
+  | "stance"
+  | "heatmap"
+  | "export";
 
 export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
   isOpen,
@@ -93,6 +99,18 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
           </button>
           <button
             type="button"
+            data-testid="quick-help-tab-radar"
+            onClick={() => setActiveTab("radar")}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              activeTab === "radar"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            3. 🎯 Radar
+          </button>
+          <button
+            type="button"
             data-testid="quick-help-tab-stance"
             onClick={() => setActiveTab("stance")}
             className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
@@ -101,7 +119,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            3. AI Stances
+            4. AI Stances
           </button>
           <button
             type="button"
@@ -113,7 +131,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            4. Risk Heatmap
+            5. Risk Heatmap
           </button>
           <button
             type="button"
@@ -125,7 +143,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            5. Export (.docx)
+            6. Export (.docx)
           </button>
         </div>
 
@@ -209,6 +227,71 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 </span>
                 <p className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
                   Every refinement logs an immutable <code className="font-mono text-[11px]">SUGGESTION_REFINED</code> event with the exact prompt instruction, actor role, timestamp, and generated rationale.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "radar" && (
+            <div data-testid="quick-help-content-radar" className="space-y-3">
+              <div className="rounded-xl border border-indigo-200/90 bg-indigo-50/50 p-4 dark:border-indigo-500/30 dark:bg-indigo-950/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">
+                    Cross-Clause Integrity &amp; Contradiction Radar
+                  </span>
+                  <span className="rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-800 dark:border-indigo-500/40 dark:bg-indigo-900/50 dark:text-indigo-200">
+                    RADAR
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                  Evaluates the entire contract graph to catch multi-clause structural conflicts that single-clause redlines miss. Switch to the <strong className="text-indigo-700 dark:text-indigo-300">Cross-Clause Radar</strong> tab in the right-hand Inspector to trigger or view real-time diagnostics.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                <div className="rounded-xl border border-rose-200/80 bg-rose-50/50 p-3.5 dark:border-rose-900/40 dark:bg-rose-950/30">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-rose-500" />
+                    <h4 className="text-xs font-semibold text-rose-900 dark:text-rose-200">
+                      Contradictions
+                    </h4>
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Opposing obligations, monetary liability caps vs uncapped indemnities, or conflicting payment terms (Net 30 vs Net 15).
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-3.5 dark:border-amber-900/40 dark:bg-amber-950/30">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-amber-500" />
+                    <h4 className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                      Broken References
+                    </h4>
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Citations referencing sections, articles, or exhibits that do not exist anywhere in the agreement body.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-sky-200/80 bg-sky-50/50 p-3.5 dark:border-sky-900/40 dark:bg-sky-950/30">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-sky-500" />
+                    <h4 className="text-xs font-semibold text-sky-900 dark:text-sky-200">
+                      Undefined Terms
+                    </h4>
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Capitalized terms used in operative commitments without prior definitions in the preamble or Section 1.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">
+                  Dynamic Document Integrity Score (0-100%) &amp; Clause Navigation
+                </span>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                  Starts at 100% and deducts weighted penalties for each unresolved issue. Click the interactive <span className="font-semibold text-indigo-600 dark:text-indigo-400">Source: Clause #X</span> and <span className="font-semibold text-rose-600 dark:text-rose-400">Conflicts with: Clause #Y</span> jump buttons to instantly highlight and scroll to either clause in the live editor.
                 </p>
               </div>
             </div>

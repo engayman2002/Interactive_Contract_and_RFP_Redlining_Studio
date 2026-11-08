@@ -10,6 +10,7 @@ from src.application.dtos import (
     AnalyzeDocumentRequestDTO,
     AuditLogEntryResponseDTO,
     CreateDocumentRequestDTO,
+    CrossClauseAnalysisReportDTO,
     DocumentAnalysisSummaryDTO,
     DocumentResponseDTO,
     DocumentUploadResponseDTO,
@@ -27,6 +28,7 @@ from src.application.use_cases import (
     GetDocumentWorkspaceUseCase,
     ListDocumentAuditLogsUseCase,
     ListOrganizationDocumentsUseCase,
+    RunCrossClauseCheckUseCase,
     StreamDocumentAnalysisUseCase,
     UpdateDocumentFoundationUseCase,
     UploadAndIngestDocumentUseCase,
@@ -35,6 +37,7 @@ from src.domain.enums import ExportMode, NegotiationStance, UserRole
 from src.domain.ports import (
     ClauseAuditorPort,
     ClauseSegmenterPort,
+    CrossClauseAnalyzerPort,
     DocumentParserPort,
     DocxExporterPort,
     FileStoragePort,
@@ -45,6 +48,7 @@ from src.infrastructure.config import get_settings
 from src.presentation.dependencies import (
     get_clause_auditor,
     get_clause_segmenter,
+    get_cross_clause_analyzer,
     get_current_user,
     get_document_parser,
     get_docx_exporter,
@@ -343,6 +347,39 @@ async def list_document_audit_trail(
     """List immutable compliance audit trail entries for a document within `org_id`."""
     use_case = ListDocumentAuditLogsUseCase(
         uow=uow,
+        rbac_guard=rbac_guard,
+    )
+    return await use_case.execute(
+        actor=current_user,
+        document_id=document_id,
+    )
+
+
+@documents_router.post(
+    "/{document_id}/cross-clause-check",
+    response_model=CrossClauseAnalysisReportDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def run_cross_clause_check(
+    document_id: UUID,
+    current_user: Annotated[
+        TokenPayloadDTO,
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.LEGAL_COUNSEL,
+                UserRole.TECHNICAL_LEAD,
+            )
+        ),
+    ],
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
+    analyzer: Annotated[CrossClauseAnalyzerPort, Depends(get_cross_clause_analyzer)],
+) -> CrossClauseAnalysisReportDTO:
+    """Evaluate multi-clause contract graph for contradictions, broken refs, and undefined terms."""
+    use_case = RunCrossClauseCheckUseCase(
+        uow=uow,
+        analyzer=analyzer,
         rbac_guard=rbac_guard,
     )
     return await use_case.execute(

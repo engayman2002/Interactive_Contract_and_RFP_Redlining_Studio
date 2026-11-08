@@ -401,3 +401,151 @@ async def test_document_analyze_with_negotiation_stances(
     assert len(completed_events) == 1
     assert completed_events[0].get("stance") == "commercial"
 
+
+def _build_contradictory_contract_docx_bytes() -> bytes:
+    """Create an in-memory DOCX with contradictions, broken references, and undefined terms."""
+    doc = docx.Document()
+    doc.add_heading("Master Cloud Services Agreement", level=1)
+
+    doc.add_heading("1. Limitation of Liability", level=2)
+    doc.add_paragraph(
+        "1.1 Vendor aggregate liability under this Agreement shall not exceed $500, "
+        "and Customer shall have uncapped liability."
+    )
+
+    doc.add_heading("2. Indemnification", level=2)
+    doc.add_paragraph(
+        "2.1 Vendor shall defend, indemnify, and hold harmless Customer without limitation "
+        "or aggregate monetary cap for all third-party intellectual property claims."
+    )
+
+    doc.add_heading("3. Termination & Reference", level=2)
+    doc.add_paragraph(
+        "3.1 Either party may terminate this Agreement immediately pursuant to Section 99.4, "
+        "provided Customer Confidential Data is deleted within 10 days."
+    )
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+
+async def test_cross_clause_contradiction_and_broken_reference_radar(
+    client: AsyncClient,
+) -> None:
+    """Verify cross-clause integrity check, RBAC, tenant isolation, and audit trail logging."""
+    # 1. Register Organization A
+    reg_resp = await client.post(
+        "/api/v1/auth/register-org",
+        json={
+            "organization_name": "Radar Legal Corp",
+            "admin_email": "admin@radar-legal.io",
+            "admin_password": "RadarPassword!2026",
+        },
+    )
+    assert reg_resp.status_code == 201
+    token_admin: str = reg_resp.json()["access_token"]
+    headers_admin = {"Authorization": f"Bearer {token_admin}"}
+
+    # 2. Provision a VIEWER user in Organization A
+    viewer_resp = await client.post(
+        "/api/v1/users",
+        json={
+            "email": "viewer@radar-legal.io",
+            "password": "ViewerPassword!2026",
+            "role": UserRole.VIEWER.value,
+        },
+        headers=headers_admin,
+    )
+    assert viewer_resp.status_code == 201
+
+    viewer_login = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "viewer@radar-legal.io",
+            "password": "ViewerPassword!2026",
+        },
+    )
+    assert viewer_login.status_code == 200
+    token_viewer: str = viewer_login.json()["access_token"]
+    headers_viewer = {"Authorization": f"Bearer {token_viewer}"}
+
+    # 3. Register Organization B (for multi-tenant isolation testing)
+    reg_b_resp = await client.post(
+        "/api/v1/auth/register-org",
+        json={
+            "organization_name": "Competitor Org B",
+            "admin_email": "admin@competitor-b.io",
+            "admin_password": "CompetitorPassword!2026",
+        },
+    )
+    assert reg_b_resp.status_code == 201
+    token_b: str = reg_b_resp.json()["access_token"]
+    headers_org_b = {"Authorization": f"Bearer {token_b}"}
+
+    # 4. Upload document with contradictions and broken references in Org A
+    upload_resp = await client.post(
+        "/api/v1/documents/upload",
+        files={
+            "file": (
+                "contradictory_msa.docx",
+                _build_contradictory_contract_docx_bytes(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+        data={"title": "Contradictory Cloud Agreement"},
+        headers=headers_admin,
+    )
+    assert upload_resp.status_code == 201
+    doc_id = upload_resp.json()["document_id"]
+
+    # 5. RBAC check: VIEWER role cannot trigger cross-clause check (requires MUTATE_DOCUMENT)
+    viewer_check_resp = await client.post(
+        f"/api/v1/documents/{doc_id}/cross-clause-check",
+        headers=headers_viewer,
+    )
+    assert viewer_check_resp.status_code == 403
+
+    # 6. Multi-tenant isolation: Org B admin cannot access Org A's document
+    org_b_check_resp = await client.post(
+        f"/api/v1/documents/{doc_id}/cross-clause-check",
+        headers=headers_org_b,
+    )
+    assert org_b_check_resp.status_code == 404
+
+    # 7. Authorized ADMIN execution: Run Cross-Clause Radar
+    check_resp = await client.post(
+        f"/api/v1/documents/{doc_id}/cross-clause-check",
+        headers=headers_admin,
+    )
+    assert check_resp.status_code == 200
+    report = check_resp.json()
+
+    assert report["document_id"] == doc_id
+    assert report["total_findings"] >= 2
+    assert report["contradiction_count"] >= 1
+    assert report["broken_reference_count"] >= 1
+    assert report["undefined_term_count"] >= 1
+    assert 0 <= report["integrity_score"] < 100
+    assert len(report["findings"]) == report["total_findings"]
+
+    first_finding = report["findings"][0]
+    assert "id" in first_finding
+    assert "issue_type" in first_finding
+    assert "severity" in first_finding
+    assert "source_clause_id" in first_finding
+    assert "source_clause_index" in first_finding
+    assert "title" in first_finding
+    assert "description" in first_finding
+    assert "recommended_fix" in first_finding
+
+    # 8. Verify immutable audit trail records CROSS_CLAUSE_CHECKED
+    audit_resp = await client.get(
+        f"/api/v1/documents/{doc_id}/audit-trail",
+        headers=headers_admin,
+    )
+    assert audit_resp.status_code == 200
+    audit_logs = audit_resp.json()
+    assert any(log["action"] == "CROSS_CLAUSE_CHECKED" for log in audit_logs)
+
+

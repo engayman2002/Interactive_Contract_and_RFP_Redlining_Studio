@@ -422,6 +422,53 @@ export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
       },
     ],
   },
+  {
+    id: "cross-clause-radar",
+    number: 10,
+    title: "Cross-Clause Contradiction & Reference Radar",
+    badge: "Document Integrity",
+    summary:
+      "Detect multi-clause logical contradictions, broken section cross-references, and undefined capitalized legal terms across your entire agreement, complete with a 0-100% Document Integrity Score and bilateral clause navigation.",
+    keywords: [
+      "cross-clause",
+      "radar",
+      "contradiction",
+      "broken reference",
+      "undefined term",
+      "integrity score",
+      "cross-clause check",
+      "section reference",
+      "liability conflict",
+    ],
+    steps: [
+      {
+        title: "The Limitations of Paragraph-by-Paragraph Review",
+        description:
+          "Standard redlining tools evaluate individual clauses in isolation against policy rules. However, sophisticated contract defects span multiple clauses—such as Clause #1 capping liability at $500 while Clause #8 specifies uncapped indemnification, or Clause #3 granting 30 days notice to cure while Clause #12 permits immediate termination without notice.",
+        tip: "Cross-Clause Radar evaluates the full clause graph to catch discrepancies that slip past single-clause checks.",
+      },
+      {
+        title: "The 3 Critical Defect Categories",
+        description:
+          "The Radar categorizes document-wide defects into three distinct issue types: 1) CONTRADICTION: Conflicting liabilities, payment schedules (Net 30 vs Net 15), or conflicting AI model training vs exclusivity covenants; 2) BROKEN_REFERENCE: Cross-citations to non-existent sections (e.g., 'pursuant to Section 99.4' in an 8-section contract); 3) UNDEFINED_TERM: Capitalized, specialized legal terms used in operative obligations without an explicit definition.",
+      },
+      {
+        title: "Document Integrity Score (0-100%)",
+        description:
+          "The Radar assigns a dynamic Document Integrity Score ranging from 0% to 100%. Perfectly harmonized agreements score 100%. Each detected issue applies a weighted deduction based on severity (Critical: -18 pts, High: -12 pts, Medium: -6 pts, Low: -3 pts), clamped to a minimum of 15%. Resolving conflicts and re-scanning drives the score back toward 100%.",
+      },
+      {
+        title: "Bilateral Clause Navigation & One-Click Jumping",
+        description:
+          "Every finding card displays interactive clause navigation buttons: 'Source: Clause #X' and 'Conflicts with: Clause #Y'. Clicking either button instantly scrolls the TipTap rich-text editor to that clause and highlights it in both the document outline and editor canvas.",
+      },
+      {
+        title: "Immutable Compliance Logging",
+        description:
+          "Executing a Cross-Clause Check logs an immutable CROSS_CLAUSE_CHECKED event to the document audit trail, detailing the initiator, total issues identified, and the resulting integrity score for SOC 2 compliance.",
+      },
+    ],
+  },
 ];
 
 export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
@@ -700,6 +747,40 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
       "suggestion_refined",
       "tracking",
       "immutable",
+    ],
+  },
+  {
+    id: "faq-cross-clause-radar",
+    question:
+      "What is the Cross-Clause Integrity Radar and how does it detect contradictions?",
+    answer:
+      "The Cross-Clause Radar evaluates the full contract graph to detect multi-clause structural issues that escape paragraph-level analysis: CONTRADICTION (e.g. liability caps vs uncapped indemnity or conflicting Net 30/Net 15 payment terms), BROKEN_REFERENCE (citations to non-existent sections like 'Section 99.4'), and UNDEFINED_TERM (unanchored capitalized obligations). It computes a 0-100% Document Integrity Score and provides interactive jump buttons to navigate between conflicting clauses.",
+    category: "workflow",
+    keywords: [
+      "cross-clause",
+      "radar",
+      "contradiction",
+      "integrity score",
+      "broken reference",
+      "undefined term",
+      "liability conflict",
+    ],
+  },
+  {
+    id: "faq-integrity-score-calculation",
+    question:
+      "How is the Document Integrity Score calculated and improved?",
+    answer:
+      "The Document Integrity Score starts at 100% for an internally consistent contract and deducts weighted penalties for each finding: Critical deductions (-18 pts), High-severity deductions (-12 pts), Medium deductions (-6 pts), and Low deductions (-3 pts), clamped to a minimum of 15%. As you accept suggested redlines or harmonize conflicting provisions and re-run the scan, the score increases back toward 100%.",
+    category: "workflow",
+    keywords: [
+      "integrity score",
+      "scoring",
+      "penalty",
+      "resolution",
+      "cross-clause",
+      "radar",
+      "harmonization",
     ],
   },
 ];

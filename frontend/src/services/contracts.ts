@@ -71,8 +71,44 @@ export const AuditActionSchema = z.enum([
   "SUGGESTION_REFINED",
   "COMMENT_CREATED",
   "DOCUMENT_EXPORTED",
+  "CROSS_CLAUSE_CHECKED",
 ]);
 export type AuditAction = z.infer<typeof AuditActionSchema>;
+
+export const CrossClauseIssueTypeSchema = z.enum([
+  "CONTRADICTION",
+  "BROKEN_REFERENCE",
+  "UNDEFINED_TERM",
+]);
+export type CrossClauseIssueType = z.infer<typeof CrossClauseIssueTypeSchema>;
+
+export const CrossClauseFindingDTOSchema = z.object({
+  id: z.string(),
+  issue_type: CrossClauseIssueTypeSchema,
+  severity: RiskLevelSchema,
+  source_clause_id: z.string(),
+  source_clause_index: z.number().int().nonnegative(),
+  target_clause_id: z.string().nullable().optional(),
+  target_clause_index: z.number().int().nonnegative().nullable().optional(),
+  title: z.string(),
+  description: z.string(),
+  recommended_fix: z.string(),
+});
+export type CrossClauseFindingDTO = z.infer<typeof CrossClauseFindingDTOSchema>;
+
+export const CrossClauseAnalysisReportDTOSchema = z.object({
+  document_id: z.string(),
+  total_findings: z.number().int().nonnegative(),
+  contradiction_count: z.number().int().nonnegative(),
+  broken_reference_count: z.number().int().nonnegative(),
+  undefined_term_count: z.number().int().nonnegative(),
+  integrity_score: z.number().int().min(0).max(100),
+  findings: z.array(CrossClauseFindingDTOSchema),
+  execution_time_ms: z.number(),
+});
+export type CrossClauseAnalysisReportDTO = z.infer<
+  typeof CrossClauseAnalysisReportDTOSchema
+>;
 
 export const RefineSuggestionRequestDTOSchema = z.object({
   instruction: z.string().min(3).max(1000),

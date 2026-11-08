@@ -15,6 +15,7 @@ from src.domain.exceptions import UnauthorizedError
 from src.domain.ports import (
     ClauseAuditorPort,
     ClauseSegmenterPort,
+    CrossClauseAnalyzerPort,
     DocumentParserPort,
     DocxExporterPort,
     EmbeddingGeneratorPort,
@@ -22,7 +23,7 @@ from src.domain.ports import (
     PlaybookRetrieverPort,
     UnitOfWorkPort,
 )
-from src.infrastructure.ai import RuntimeAISettingsManager
+from src.infrastructure.ai import LangChainCrossClauseAnalyzer, RuntimeAISettingsManager
 from src.infrastructure.config import get_settings
 from src.infrastructure.db.repositories import SqlAlchemyUnitOfWork
 from src.infrastructure.db.session import get_async_db_session
@@ -87,6 +88,12 @@ def get_embedding_generator() -> EmbeddingGeneratorPort:
 def get_clause_auditor() -> ClauseAuditorPort:
     """Provide active ClauseAuditorPort resolved dynamically via RuntimeAISettingsManager."""
     return RuntimeAISettingsManager.get_active_clause_auditor()
+
+
+@lru_cache(maxsize=1)
+def get_cross_clause_analyzer() -> CrossClauseAnalyzerPort:
+    """Provide singleton LangChainCrossClauseAnalyzer for multi-clause integrity checks."""
+    return LangChainCrossClauseAnalyzer()
 
 
 @lru_cache(maxsize=1)
@@ -155,6 +162,7 @@ __all__ = [
     "bearer_scheme",
     "get_clause_auditor",
     "get_clause_segmenter",
+    "get_cross_clause_analyzer",
     "get_current_user",
     "get_document_parser",
     "get_docx_exporter",

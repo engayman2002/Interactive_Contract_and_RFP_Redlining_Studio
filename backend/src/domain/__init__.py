@@ -2,6 +2,7 @@
 
 from src.domain.enums import (
     AuditAction,
+    CrossClauseIssueType,
     DocumentStatus,
     ExportMode,
     NegotiationStance,
@@ -12,6 +13,7 @@ from src.domain.enums import (
 
 __all__ = [
     "AuditAction",
+    "CrossClauseIssueType",
     "DocumentStatus",
     "ExportMode",
     "NegotiationStance",

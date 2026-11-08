@@ -9,6 +9,8 @@ from src.domain.entities import (
     ClauseAuditResult,
     ClauseCopilotRefineInput,
     ClauseCopilotRefineResult,
+    CrossClauseAnalysisReport,
+    DocumentClause,
     MatchedPlaybookRule,
     RedlineSuggestion,
 )
@@ -32,6 +34,20 @@ class ClauseAuditorPort(Protocol):
         matched_rules: Sequence[MatchedPlaybookRule],
     ) -> ClauseCopilotRefineResult:
         """Refine an existing redline suggestion using custom user prompt instruction."""
+        ...
+
+
+@runtime_checkable
+class CrossClauseAnalyzerPort(Protocol):
+    """Port interface for evaluating multi-clause document-wide integrity and contradictions."""
+
+    async def analyze_document_integrity(
+        self,
+        org_id: UUID,
+        document_id: UUID,
+        clauses: list[DocumentClause],
+    ) -> CrossClauseAnalysisReport:
+        """Analyze contract clause graph for contradictions, broken refs, and undefined terms."""
         ...
 
 
@@ -90,5 +106,6 @@ class RedlineRepositoryPort(Protocol):
 
 __all__ = [
     "ClauseAuditorPort",
+    "CrossClauseAnalyzerPort",
     "RedlineRepositoryPort",
 ]

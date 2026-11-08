@@ -11,6 +11,7 @@ from src.infrastructure.ai.config_vault import (
     decrypt_ai_settings_vault,
     encrypt_ai_settings_vault,
 )
+from src.infrastructure.ai.cross_clause_analyzer import LangChainCrossClauseAnalyzer
 from src.infrastructure.ai.model_discovery import (
     DiscoveredModelsResult,
     DiscoverySource,
@@ -56,6 +57,7 @@ __all__ = [
     "GeminiGenerateContentChatRunnable",
     "LLMProviderRegistry",
     "LangChainClauseAuditor",
+    "LangChainCrossClauseAnalyzer",
     "OllamaChatRunnable",
     "OpenAICompatibleChatRunnable",
     "PolicyAwareDeterministicChatModel",

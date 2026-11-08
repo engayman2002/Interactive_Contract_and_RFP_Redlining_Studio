@@ -9,12 +9,14 @@ import {
   exportDocumentDocx,
   refineRedlineSuggestion,
   resolveSuggestion,
+  runCrossClauseCheck,
 } from "@/services/apiClient";
 import type {
   AuditAction,
   AuditLogEntryDTO,
   ClauseCommentDTO,
   ClauseDTO,
+  CrossClauseAnalysisReportDTO,
   DocumentWorkspaceDTO,
   ExportMode,
   NegotiationStance,
@@ -57,6 +59,12 @@ export interface WorkspaceStoreState {
   activeEmbeddingProvider: string;
   activeEmbeddingModel: string;
   negotiationStance: NegotiationStance;
+  crossClauseReport: CrossClauseAnalysisReportDTO | null;
+  isRunningCrossClauseCheck: boolean;
+  runDocumentCrossClauseCheck: (
+    documentId?: string,
+    token?: string
+  ) => Promise<void>;
   setNegotiationStance: (stance: NegotiationStance) => void;
   setActiveAIEngine: (config: {
     llmProvider: string;
@@ -158,6 +166,8 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   activeEmbeddingProvider: "deterministic",
   activeEmbeddingModel: "deterministic-hash-1536",
   negotiationStance: "balanced",
+  crossClauseReport: null,
+  isRunningCrossClauseCheck: false,
 
   setNegotiationStance: (stance) => set({ negotiationStance: stance }),
 
@@ -609,6 +619,34 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
     }
   },
 
+  runDocumentCrossClauseCheck: async (documentId, token) => {
+    const docId = documentId ?? DEMO_DOCUMENT_ID;
+    set({ isRunningCrossClauseCheck: true });
+    try {
+      const report = await runCrossClauseCheck(docId, token);
+      const auditEntry = buildOptimisticAuditEntry(
+        "CROSS_CLAUSE_CHECKED",
+        null,
+        {
+          total_findings: String(report.total_findings),
+          contradiction_count: String(report.contradiction_count),
+          broken_reference_count: String(report.broken_reference_count),
+          undefined_term_count: String(report.undefined_term_count),
+          integrity_score: String(report.integrity_score),
+        },
+        docId
+      );
+      set((state) => ({
+        crossClauseReport: report,
+        isRunningCrossClauseCheck: false,
+        auditLogs: [...state.auditLogs, auditEntry],
+      }));
+    } catch (err) {
+      set({ isRunningCrossClauseCheck: false });
+      throw err;
+    }
+  },
+
   resetWorkspaceState: () =>
     set({
       activeClauseId: null,
@@ -630,5 +668,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       activeEmbeddingProvider: "deterministic",
       activeEmbeddingModel: "deterministic-hash-1536",
       negotiationStance: "balanced",
+      crossClauseReport: null,
+      isRunningCrossClauseCheck: false,
     }),
 }));

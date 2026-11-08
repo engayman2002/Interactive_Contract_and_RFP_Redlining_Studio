@@ -29,6 +29,14 @@ class NegotiationStance(StrEnum):
     COMMERCIAL = "commercial"
 
 
+class CrossClauseIssueType(StrEnum):
+    """Defect categories identified across multi-clause contract structural graphs."""
+
+    CONTRADICTION = "CONTRADICTION"
+    BROKEN_REFERENCE = "BROKEN_REFERENCE"
+    UNDEFINED_TERM = "UNDEFINED_TERM"
+
+
 class SuggestionStatus(StrEnum):
     """Lifecycle states of an AI-generated redline suggestion."""
 
@@ -65,10 +73,12 @@ class AuditAction(StrEnum):
     SUGGESTION_REFINED = "SUGGESTION_REFINED"
     COMMENT_CREATED = "COMMENT_CREATED"
     DOCUMENT_EXPORTED = "DOCUMENT_EXPORTED"
+    CROSS_CLAUSE_CHECKED = "CROSS_CLAUSE_CHECKED"
 
 
 __all__ = [
     "AuditAction",
+    "CrossClauseIssueType",
     "DocumentStatus",
     "ExportMode",
     "NegotiationStance",

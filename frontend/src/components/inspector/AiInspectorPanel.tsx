@@ -11,6 +11,7 @@ import type {
 import { RiskFilterMode, useWorkspaceStore } from "@/store/workspaceStore";
 import { AuditTrailPanel } from "./AuditTrailPanel";
 import { ClauseCommentThread } from "./ClauseCommentThread";
+import { CrossClauseRadarPanel } from "./CrossClauseRadarPanel";
 import { RedlineCard } from "./RedlineCard";
 
 export interface AiInspectorPanelProps {
@@ -146,9 +147,9 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
   const negotiationStance = useWorkspaceStore((state) => state.negotiationStance);
 
   const resolvedAuditLogs = auditLogs ?? storeAuditLogs;
-  const [activeViewTab, setActiveViewTab] = useState<"redlines" | "audit">(
-    "redlines"
-  );
+  const [activeViewTab, setActiveViewTab] = useState<
+    "redlines" | "radar" | "audit"
+  >("redlines");
 
   const cardContainerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -281,25 +282,37 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
           </div>
         </div>
 
-        {/* Segmented Tab Control: AI Redlines vs Audit Trail */}
+        {/* Segmented Tab Control: AI Redlines vs Radar vs Audit Trail */}
         <div className="mt-3.5 flex gap-1 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 dark:border-slate-800 dark:bg-slate-950/70">
           <button
             type="button"
             data-testid="inspector-tab-redlines"
             onClick={() => setActiveViewTab("redlines")}
-            className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+            className={`flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
               activeViewTab === "redlines"
                 ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            AI Redlines ({redlines.length})
+            Redlines ({redlines.length})
+          </button>
+          <button
+            type="button"
+            data-testid="inspector-tab-cross-clause"
+            onClick={() => setActiveViewTab("radar")}
+            className={`flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
+              activeViewTab === "radar"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            Cross-Clause Radar
           </button>
           <button
             type="button"
             data-testid="inspector-tab-audit"
             onClick={() => setActiveViewTab("audit")}
-            className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+            className={`flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
               activeViewTab === "audit"
                 ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
@@ -370,6 +383,8 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
 
       {activeViewTab === "audit" ? (
         <AuditTrailPanel auditLogs={resolvedAuditLogs} />
+      ) : activeViewTab === "radar" ? (
+        <CrossClauseRadarPanel clauses={clauses} />
       ) : (
         <>
           {redlines.length === 0 ? (

@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from uuid import UUID
 
 from src.application.dtos import (
+    CrossClauseAnalysisReportDTO,
     DocumentAnalysisSummaryDTO,
     TokenPayloadDTO,
 )
@@ -31,6 +32,7 @@ from src.domain.enums import (
 from src.domain.exceptions import EntityNotFoundError
 from src.domain.ports import (
     ClauseAuditorPort,
+    CrossClauseAnalyzerPort,
     PlaybookRetrieverPort,
     UnitOfWorkPort,
 )
@@ -349,8 +351,73 @@ class StreamDocumentAnalysisUseCase:
         yield format_sse_event("completed", completed_payload)
 
 
+class RunCrossClauseCheckUseCase:
+    """Evaluate multi-clause contract graph for contradictions, broken refs, and undefined terms."""
+
+    def __init__(
+        self,
+        uow: UnitOfWorkPort,
+        analyzer: CrossClauseAnalyzerPort,
+        rbac_guard: RbacGuardService,
+    ) -> None:
+        self._uow = uow
+        self._analyzer = analyzer
+        self._rbac_guard = rbac_guard
+
+    async def execute(
+        self,
+        actor: TokenPayloadDTO,
+        document_id: UUID,
+    ) -> CrossClauseAnalysisReportDTO:
+        """Enforce RBAC/tenant isolation, run graph integrity check, and log audit event."""
+        # 1. Enforce RBAC (ensure_can_mutate raises ForbiddenRoleError on VIEWER)
+        self._rbac_guard.ensure_can_mutate(actor.role)
+        self._rbac_guard.authorize_action(actor.role, RBACAction.MUTATE_DOCUMENT)
+
+        # 2. Fetch document with ordered clauses scoped strictly to actor.org_id
+        doc_with_clauses = await self._uow.documents.get_with_clauses(
+            org_id=actor.org_id,
+            document_id=document_id,
+        )
+        if doc_with_clauses is None:
+            raise EntityNotFoundError(
+                f"Document '{document_id}' was not found in your organization."
+            )
+
+        document, clauses = doc_with_clauses
+
+        # 3. Execute cross-clause graph integrity analysis
+        report = await self._analyzer.analyze_document_integrity(
+            org_id=actor.org_id,
+            document_id=document_id,
+            clauses=clauses,
+        )
+
+        # 4. Append immutable compliance audit log entry
+        audit_entry = AuditLogEntry(
+            org_id=actor.org_id,
+            document_id=document_id,
+            clause_id=None,
+            actor_user_id=actor.sub,
+            actor_role=actor.role,
+            action=AuditAction.CROSS_CLAUSE_CHECKED,
+            details={
+                "total_findings": str(report.total_findings),
+                "contradiction_count": str(report.contradiction_count),
+                "broken_reference_count": str(report.broken_reference_count),
+                "undefined_term_count": str(report.undefined_term_count),
+                "integrity_score": str(report.integrity_score),
+            },
+        )
+        await self._uow.audit_logs.append(org_id=actor.org_id, entry=audit_entry)
+        await self._uow.commit()
+
+        return CrossClauseAnalysisReportDTO.from_domain(report)
+
+
 __all__ = [
     "AnalyzeDocumentClausesUseCase",
+    "RunCrossClauseCheckUseCase",
     "StreamDocumentAnalysisUseCase",
     "format_sse_event",
 ]

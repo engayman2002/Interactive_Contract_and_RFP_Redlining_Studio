@@ -7,6 +7,7 @@ from uuid import UUID
 from src.domain.entities import Document, DocumentClause, Organization, User
 from src.domain.ports.ai_ports import (
     ClauseAuditorPort,
+    CrossClauseAnalyzerPort,
     RedlineRepositoryPort,
 )
 from src.domain.ports.collaboration_ports import (
@@ -165,6 +166,7 @@ __all__ = [
     "ClauseAuditorPort",
     "ClauseSegmenterPort",
     "CommentRepositoryPort",
+    "CrossClauseAnalyzerPort",
     "DocumentParserPort",
     "DocumentRepositoryPort",
     "DocxExporterPort",

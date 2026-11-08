@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
-from src.domain.enums import NegotiationStance, RiskLevel
+from src.domain.enums import CrossClauseIssueType, NegotiationStance, RiskLevel
 from src.domain.exceptions import DomainValidationError
 
 AuditEventType = Literal["clause_audited", "completed", "error"]
@@ -129,6 +129,56 @@ class ClauseCopilotRefineResult:
             )
 
 
+@dataclass(frozen=True, slots=True)
+class CrossClauseFinding:
+    """Finding representing a cross-clause contradiction, broken ref, or undefined term."""
+
+    id: UUID
+    issue_type: CrossClauseIssueType
+    severity: RiskLevel
+    source_clause_id: UUID
+    source_clause_index: int
+    target_clause_id: UUID | None
+    target_clause_index: int | None
+    title: str
+    description: str
+    recommended_fix: str
+
+    def __post_init__(self) -> None:
+        if self.source_clause_index < 0:
+            raise DomainValidationError("source_clause_index must be non-negative.")
+        if self.target_clause_index is not None and self.target_clause_index < 0:
+            raise DomainValidationError("target_clause_index must be non-negative.")
+        if not self.title.strip():
+            raise DomainValidationError("Finding title cannot be empty.")
+        if not self.description.strip():
+            raise DomainValidationError("Finding description cannot be empty.")
+        if not self.recommended_fix.strip():
+            raise DomainValidationError("Finding recommended_fix cannot be empty.")
+
+
+@dataclass(frozen=True, slots=True)
+class CrossClauseAnalysisReport:
+    """Immutable aggregate analysis report detailing document-wide structural/logical defects."""
+
+    document_id: UUID
+    total_findings: int
+    contradiction_count: int
+    broken_reference_count: int
+    undefined_term_count: int
+    integrity_score: int
+    findings: list[CrossClauseFinding]
+    execution_time_ms: float
+
+    def __post_init__(self) -> None:
+        if self.total_findings < 0:
+            raise DomainValidationError("total_findings must be non-negative.")
+        if not (0 <= self.integrity_score <= 100):
+            raise DomainValidationError("integrity_score must be between 0 and 100.")
+        if self.execution_time_ms < 0:
+            raise DomainValidationError("execution_time_ms must be non-negative.")
+
+
 __all__ = [
     "AuditEventType",
     "AuditProgressEvent",
@@ -136,5 +186,7 @@ __all__ = [
     "ClauseAuditResult",
     "ClauseCopilotRefineInput",
     "ClauseCopilotRefineResult",
+    "CrossClauseAnalysisReport",
+    "CrossClauseFinding",
 ]
 
