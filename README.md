@@ -183,13 +183,14 @@ Interactive_Contract_and_RFP_Redlining_Studio/
 │   │   │   └── ai/
 │   │   │       ├── redline_chain.py                # RedlineOutput, SYSTEM_PROMPT, LangChainClauseAuditor
 │   │   │       ├── provider_registry.py            # LLMProviderRegistry (Deterministic, Groq, OpenAI, Anthropic, Gemini, Ollama, vLLM)
-│   │   │       ├── runtime_settings.py             # Thread-Safe RuntimeAISettingsManager & Secret Key Masking
+│   │   │       ├── runtime_settings.py             # Thread-Safe RuntimeAISettingsManager, Curated Presets & Secret Key Masking
+│   │   │       ├── model_discovery.py              # Async Live Provider Model Discovery (/models & /api/tags) + Preset Fallback
 │   │   │       ├── batch_worker.py                 # BatchDocumentAuditWorker (Bounded Semaphore=20)
 │   │   │       └── celery_app.py                   # Celery Worker App & audit_document_celery_task
 │   │   └── presentation/                           # Delivery & HTTP Layer
 │   │       ├── api/v1/
 │   │       │   ├── __init__.py                     # /health, /auth/*, /users/* Routers
-│   │       │   ├── ai_settings.py                  # /ai-settings (GET, PUT Admin Hot-Swap, POST /test-connection)
+│   │       │   ├── ai_settings.py                  # /ai-settings (GET, PUT Hot-Swap, POST /test-connection, POST /discover-models)
 │   │       │   ├── documents.py                    # /documents/upload, /workspace, /analyze, /stream, /export, /audit-trail
 │   │       │   ├── playbooks.py                    # /playbooks/rules CRUD & /playbooks/search
 │   │       │   └── collaboration.py                # /suggestions/{id}/resolve & /clauses/{id}/comments
@@ -248,7 +249,7 @@ Interactive_Contract_and_RFP_Redlining_Studio/
         │   └── helpContent.ts                      # Structured User Guide Modules, Playbook Templates & FAQ Library
         ├── store/
         │   └── workspaceStore.ts                   # Zustand Store (Bidirectional Sync, Optimistic Edits & Rollback)
-        └── __tests__/                              # 7 Vitest + React Testing Library Test Suites (22 Tests)
+        └── __tests__/                              # 7 Vitest + React Testing Library Test Suites (24 Tests)
 ```
 
 ### 1.4 Frontend User Journey, Multi-Page Routes & Automatic Session Bootstrapper
@@ -544,7 +545,10 @@ All backend configuration variables are defined and validated via Pydantic Setti
 
 The backend implements a vendor-agnostic **Plugin Registry Architecture** strictly inside the Infrastructure layer ([`backend/src/infrastructure/ai/provider_registry.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py) and [`backend/src/infrastructure/vector/provider_registry.py`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/vector/provider_registry.py)). The Domain and Application layers depend exclusively on [`ClauseAuditorPort`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/domain/ports/ai_ports.py) and [`EmbeddingGeneratorPort`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/domain/ports/playbook_ports.py#L11-L21), allowing you to switch between offline deterministic evaluation, cloud APIs (Google Gemini, Groq, OpenAI, Anthropic), **100% private local models (Ollama, vLLM, LM Studio, llama.cpp)**, or custom enterprise gateways either via `.env` variables **or live at runtime via the In-App AI Provider & Model Switcher**.
 
-> **Zero-Restart In-App AI Switcher:** Click the **`AI: ...`** pill button in the global navigation bar ([`TopNavBar.tsx`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/navigation/TopNavBar.tsx)) or Redlining Studio toolbar to open [`AISettingsModal.tsx`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/workspace/AISettingsModal.tsx). Workspace administrators can select any cloud or local preset, paste an API key (masked server-side via [`mask_api_key`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/runtime_settings.py) and never exposed in `GET` responses), run **`Test Connection`** (`POST /api/v1/ai-settings/test-connection`) to verify `1536-d` vector generation and structured LLM auditing latency in milliseconds, and hot-swap the active engine via [`RuntimeAISettingsManager`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/runtime_settings.py) (`PUT /api/v1/ai-settings`) without restarting containers.
+> **Zero-Restart In-App AI Switcher, Live Model Discovery & Custom Model IDs:** Click the **`AI: ...`** pill button in the global navigation bar ([`TopNavBar.tsx`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/navigation/TopNavBar.tsx)) or Redlining Studio toolbar to open [`AISettingsModal.tsx`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/workspace/AISettingsModal.tsx):
+> - **Live Model Discovery (`POST /api/v1/ai-settings/discover-models`):** Click **`Fetch Live Models`** inside the modal (or select **Local Ollama** to auto-discover `/api/tags`) to query the selected provider's live `/models` API (`Gemini`, `Groq`, `OpenAI`, `Anthropic`, `Ollama`, `vLLM / LM Studio`) via [`discover_provider_models`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/model_discovery.py), separating LLM and Embedding models automatically and falling back gracefully (`source: "catalog_fallback"`) if offline or unauthenticated.
+> - **Free-Form Custom Model Input:** Type or paste **any custom model ID** directly into the editable Model ID field (fine-tuned enterprise checkpoints, newly released preview IDs, or HuggingFace/GGUF tags) OR click any live-discovered/preset model chip.
+> - **Secret Masking, Live Latency Probe & Hot-Swap:** API keys are masked server-side via [`mask_api_key`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/runtime_settings.py) and never exposed in `GET` responses; **`Test Connection`** (`POST /api/v1/ai-settings/test-connection`) verifies `1536-d` vector generation and structured LLM auditing latency in milliseconds before **`Save & Activate Engine`** (`PUT /api/v1/ai-settings`) hot-swaps [`RuntimeAISettingsManager`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/runtime_settings.py) with zero container restarts.
 
 #### 5.1.1 Supported Built-in Providers Matrix
 
@@ -553,11 +557,11 @@ The backend implements a vendor-agnostic **Plugin Registry Architecture** strict
 | `LLM_PROVIDER` Value | Adapter Class | Default Endpoint (`LLM_BASE_URL`) | Recommended Models (`LLM_MODEL_NAME`) | API Key Required? |
 | :--- | :--- | :--- | :--- | :--- |
 | `"deterministic"` *(default)* | [`PolicyAwareDeterministicChatModel`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/redline_chain.py#L249-L440) | In-process (Offline / CI) | N/A | **No** |
-| `"groq"` | [`OpenAICompatibleChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L94-L198) | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile`, `qwen-qwq-32b`, `mixtral-8x7b-32768` | **Yes** (`LLM_API_KEY` or `GROQ_API_KEY`) |
-| `"openai"` | [`OpenAICompatibleChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L94-L198) | `https://api.openai.com/v1` | `gpt-4o-mini`, `gpt-4o` | **Yes** (`LLM_API_KEY` or `OPENAI_API_KEY`) |
-| `"anthropic"` | [`AnthropicMessagesChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L201-L289) | `https://api.anthropic.com` (`/v1/messages`) | `claude-3-5-sonnet-latest`, `claude-3-5-haiku-latest` | **Yes** (`LLM_API_KEY` or `ANTHROPIC_API_KEY`) |
-| `"gemini"` | [`GeminiGenerateContentChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py) | `https://generativelanguage.googleapis.com/v1beta` | `gemini-2.5-flash`, `gemini-2.5-pro` | **Yes** (`LLM_API_KEY` or `GEMINI_API_KEY`) |
-| `"ollama"` *(100% Local)* | [`OllamaChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L292-L360) | `http://localhost:11434` (`/api/chat`) | `llama3.1:8b`, `qwen2.5:14b`, `mistral:7b`, `deepseek-r1:14b` | **No** |
+| `"groq"` | [`OpenAICompatibleChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L94-L198) | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile`, `meta-llama/llama-4-scout-17b-16e-instruct`, `deepseek-r1-distill-llama-70b`, `qwen-qwq-32b` | **Yes** (`LLM_API_KEY` or `GROQ_API_KEY`) |
+| `"openai"` | [`OpenAICompatibleChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L94-L198) | `https://api.openai.com/v1` | `gpt-4.1`, `gpt-4.1-mini`, `gpt-4o`, `o3-mini`, `o4-mini` | **Yes** (`LLM_API_KEY` or `OPENAI_API_KEY`) |
+| `"anthropic"` | [`AnthropicMessagesChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L201-L289) | `https://api.anthropic.com` (`/v1/messages`) | `claude-sonnet-4-20250514`, `claude-opus-4-20250514`, `claude-3-7-sonnet-latest`, `claude-3-5-haiku-latest` | **Yes** (`LLM_API_KEY` or `ANTHROPIC_API_KEY`) |
+| `"gemini"` | [`GeminiGenerateContentChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py) | `https://generativelanguage.googleapis.com/v1beta` | `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.5-flash-lite`, `gemini-2.0-flash` | **Yes** (`LLM_API_KEY` or `GEMINI_API_KEY`) |
+| `"ollama"` *(100% Local)* | [`OllamaChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L292-L360) | `http://localhost:11434` (`/api/chat`) | `llama3.3`, `qwen2.5:14b`, `deepseek-r1:14b`, `gemma3:12b` | **No** |
 | `"openai_compatible"` *(Local vLLM / LM Studio / llama.cpp)* | [`OpenAICompatibleChatRunnable`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/provider_registry.py#L94-L198) | `http://localhost:8000/v1` (vLLM) or `http://localhost:1234/v1` (LM Studio) | `Qwen/Qwen2.5-14B-Instruct`, `meta-llama/Llama-3.1-8B-Instruct` | Optional (`LLM_API_KEY` if gated) |
 
 ##### B. Built-in Vector Embedding Providers (`EMBEDDING_PROVIDER`)
@@ -866,8 +870,9 @@ The OpenXML `.docx` reconstruction engine is located in [`backend/src/infrastruc
 | 22 | `GET /api/v1/documents/{document_id}/audit-trail` | All Authenticated Roles | `200 OK` | Retrieve chronological immutable compliance audit trail for `document_id` |
 | 23 | `GET /api/v1/documents/{document_id}/export` | All Authenticated Roles | `200 OK` (`.docx` binary) | Export `.docx` in `mode=track_changes` (`<w:ins>`/`<w:del>`) or `mode=clean` |
 | 24 | `GET /api/v1/ai-settings` | All Authenticated Roles | `200 OK` | Inspect active LLM & Embedding providers, masked API key flags, and provider catalog |
-| 25 | `PUT /api/v1/ai-settings` | `ADMIN` | `200 OK` (`403` non-admin) | Hot-swap active runtime LLM & Vector Embedding providers/models without restart |
+| 25 | `PUT /api/v1/ai-settings` | `ADMIN` | `200 OK` (`403` non-admin) | Hot-swap active runtime LLM & Vector Embedding providers/models (including custom model IDs) |
 | 26 | `POST /api/v1/ai-settings/test-connection` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Live probe candidate LLM & 1536-d Embedding settings and report `latency_ms` |
+| 27 | `POST /api/v1/ai-settings/discover-models` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Dynamically fetch live LLM & Embedding models from provider `/models` or `/api/tags` with preset fallback |
 
 ---
 
@@ -1032,10 +1037,10 @@ cd /home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend
 # 1. Lint & Security Checks (pycodestyle, pyflakes, isort, bugbear, bandit)
 ./.venv/bin/ruff check .
 
-# 2. Strict Static Type Checking (96 source & test files)
+# 2. Strict Static Type Checking (97 source & test files)
 ./.venv/bin/mypy --strict src tests
 
-# 3. Full Unit & Multi-Tenant Integration Test Suite (52 tests)
+# 3. Full Unit & Multi-Tenant Integration Test Suite (54 tests)
 ./.venv/bin/pytest -v
 ```
 
@@ -1050,7 +1055,7 @@ node ./node_modules/.bin/tsc --noEmit
 # 2. Next.js ESLint Verification
 node ./node_modules/.bin/next lint
 
-# 3. Vitest + React Testing Library Suite (7 test files, 22 tests)
+# 3. Vitest + React Testing Library Suite (7 test files, 24 tests)
 node ./node_modules/.bin/vitest run
 
 # 4. Next.js 15 Standalone Production Build Verification (/, /playbooks, /documents/[id], /help)

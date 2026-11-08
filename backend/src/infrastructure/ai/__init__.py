@@ -6,6 +6,11 @@ from src.infrastructure.ai.celery_app import (
     celery_app,
     create_celery_app,
 )
+from src.infrastructure.ai.model_discovery import (
+    DiscoveredModelsResult,
+    DiscoverySource,
+    discover_provider_models,
+)
 from src.infrastructure.ai.provider_registry import (
     AnthropicMessagesChatRunnable,
     GeminiGenerateContentChatRunnable,
@@ -26,6 +31,9 @@ from src.infrastructure.ai.redline_chain import (
     parse_and_validate_redline_output,
 )
 from src.infrastructure.ai.runtime_settings import (
+    CURATED_PROVIDER_PRESET_MAP,
+    CURATED_PROVIDER_PRESETS,
+    CuratedProviderPreset,
     RuntimeAISettingsManager,
     mask_api_key,
     sanitize_secret_from_text,
@@ -34,6 +42,11 @@ from src.infrastructure.ai.runtime_settings import (
 __all__ = [
     "AnthropicMessagesChatRunnable",
     "BatchDocumentAuditWorker",
+    "CURATED_PROVIDER_PRESETS",
+    "CURATED_PROVIDER_PRESET_MAP",
+    "CuratedProviderPreset",
+    "DiscoveredModelsResult",
+    "DiscoverySource",
     "GeminiGenerateContentChatRunnable",
     "LLMProviderRegistry",
     "LangChainClauseAuditor",
@@ -49,6 +62,7 @@ __all__ = [
     "celery_app",
     "create_celery_app",
     "create_llm_runnable",
+    "discover_provider_models",
     "format_playbook_rules_context",
     "mask_api_key",
     "parse_and_validate_redline_output",

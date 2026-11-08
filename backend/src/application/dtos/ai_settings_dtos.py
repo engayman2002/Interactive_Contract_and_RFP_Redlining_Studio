@@ -117,8 +117,42 @@ class TestAIConnectionResponseDTO(ImmutableDTO):
     sample_output_preview: str | None = None
 
 
+class DiscoverModelsRequestDTO(ImmutableDTO):
+    """Request payload for live model discovery from a provider's `/models` or `/api/tags` API."""
+
+    provider_id: str = Field(min_length=1, max_length=64)
+    api_key: str | None = Field(default=None, max_length=512)
+    base_url: str | None = Field(default=None, max_length=512)
+
+    @field_validator("provider_id")
+    @classmethod
+    def normalize_provider_id(cls, value: str) -> str:
+        cleaned = value.strip().lower()
+        if not cleaned:
+            raise ValueError("provider_id cannot be empty.")
+        return cleaned
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_base_url(cls, value: str | None) -> str | None:
+        return _validate_optional_base_url(value)
+
+
+class DiscoverModelsResponseDTO(ImmutableDTO):
+    """Sanitized live or fallback catalog from `POST /api/v1/ai-settings/discover-models`."""
+
+    provider_id: str
+    source: Literal["live_api", "catalog_fallback"]
+    llm_models: list[str] = Field(default_factory=list)
+    embedding_models: list[str] = Field(default_factory=list)
+    latency_ms: float
+    message: str
+
+
 __all__ = [
     "AISettingsResponseDTO",
+    "DiscoverModelsRequestDTO",
+    "DiscoverModelsResponseDTO",
     "ProviderCatalogItemDTO",
     "TestAIConnectionRequestDTO",
     "TestAIConnectionResponseDTO",

@@ -63,7 +63,7 @@ describe("In-App AI Provider & Model Switcher Modal", () => {
 
     // Select Local Ollama preset card -> reveals Base URL pre-populated with http://localhost:11434
     fireEvent.click(screen.getByTestId("provider-preset-ollama"));
-    expect(llmModelInput.value).toBe("llama3.1:8b");
+    expect(llmModelInput.value).toBe("llama3.3");
     expect(embModelInput.value).toBe("nomic-embed-text");
 
     const baseUrlInput = screen.getByTestId(
@@ -74,6 +74,107 @@ describe("In-App AI Provider & Model Switcher Modal", () => {
     expect(screen.getByTestId("ai-settings-key-status-badge")).toHaveTextContent(
       "No Key Required"
     );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("live-models-status-badge")).toBeInTheDocument();
+    });
+  });
+
+  it("allows typing and saving any free-form custom model ID and updates the active AI badge", async () => {
+    const updateSpy = vi.spyOn(apiClient, "updateAISettings");
+
+    render(<RedliningStudioWorkspace initialWorkspace={DEMO_WORKSPACE_DATA} />);
+
+    fireEvent.click(screen.getByTestId("open-ai-settings-btn"));
+    await screen.findByTestId("ai-settings-modal");
+
+    fireEvent.click(screen.getByTestId("provider-preset-ollama"));
+    await waitFor(() => {
+      expect(screen.getByTestId("live-models-status-badge")).toBeInTheDocument();
+    });
+
+    const llmModelInput = screen.getByTestId(
+      "ai-settings-llm-model-input"
+    ) as HTMLInputElement;
+
+    fireEvent.change(llmModelInput, {
+      target: { value: "my-custom-llama-finetune-v2" },
+    });
+    expect(llmModelInput.value).toBe("my-custom-llama-finetune-v2");
+    expect(screen.getByText("Custom ID")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("save-ai-settings-btn"));
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalledTimes(1);
+      expect(
+        screen.queryByTestId("ai-settings-modal")
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("open-ai-settings-btn")).toHaveTextContent(
+        "AI: Ollama · my-custom-llama-finetune-v2"
+      );
+    });
+  });
+
+  it("fetches live models from provider API on clicking Fetch Live Models and allows picking a discovered model", async () => {
+    const discoverSpy = vi
+      .spyOn(apiClient, "discoverProviderModels")
+      .mockResolvedValue({
+        provider_id: "gemini",
+        source: "live_api",
+        llm_models: [
+          "gemini-2.5-pro-preview-live",
+          "gemini-2.5-flash-live-001",
+        ],
+        embedding_models: ["gemini-embedding-exp-live"],
+        latency_ms: 84.2,
+        message: "Fetched 2 LLM and 1 embedding models from Google Gemini.",
+      });
+
+    render(<TopNavBar />);
+
+    fireEvent.click(screen.getByTestId("open-ai-settings-btn"));
+    await screen.findByTestId("ai-settings-modal");
+
+    fireEvent.click(screen.getByTestId("provider-preset-gemini"));
+    fireEvent.change(screen.getByTestId("ai-settings-api-key-input"), {
+      target: { value: "AIzaSyLiveDiscoveryKey1234" },
+    });
+
+    fireEvent.click(screen.getByTestId("fetch-live-models-btn"));
+
+    await waitFor(() => {
+      expect(discoverSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider_id: "gemini",
+          api_key: "AIzaSyLiveDiscoveryKey1234",
+        }),
+        undefined
+      );
+      expect(screen.getByTestId("live-models-status-badge")).toHaveTextContent(
+        "Fetched 2 live LLM models from provider API (84.2 ms)"
+      );
+    });
+
+    const liveChip = screen.getByTestId(
+      "llm-model-chip-gemini-2.5-pro-preview-live"
+    );
+    expect(liveChip).toBeInTheDocument();
+    fireEvent.click(liveChip);
+
+    const llmModelInput = screen.getByTestId(
+      "ai-settings-llm-model-input"
+    ) as HTMLInputElement;
+    expect(llmModelInput.value).toBe("gemini-2.5-pro-preview-live");
+
+    const liveEmbChip = screen.getByTestId(
+      "embedding-model-chip-gemini-embedding-exp-live"
+    );
+    fireEvent.click(liveEmbChip);
+    const embModelInput = screen.getByTestId(
+      "ai-settings-embedding-model-input"
+    ) as HTMLInputElement;
+    expect(embModelInput.value).toBe("gemini-embedding-exp-live");
   });
 
   it("runs Live Connection Testing with latency diagnostics and updates the global header badge on Save & Activate", async () => {

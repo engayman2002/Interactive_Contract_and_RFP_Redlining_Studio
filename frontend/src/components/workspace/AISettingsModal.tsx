@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertCircle,
@@ -12,6 +12,7 @@ import {
   Globe,
   KeyRound,
   Loader2,
+  RefreshCw,
   Server,
   Sparkles,
   X,
@@ -19,12 +20,14 @@ import {
 } from "lucide-react";
 import {
   DEFAULT_AI_PROVIDER_CATALOG,
+  discoverProviderModels,
   fetchAISettings,
   testAIConnection,
   updateAISettings,
 } from "@/services/apiClient";
 import type {
   AISettingsResponseDTO,
+  DiscoverModelsResponseDTO,
   ProviderCatalogItemDTO,
   TestAIConnectionResponseDTO,
 } from "@/services/contracts";
@@ -54,19 +57,19 @@ const PRESET_DISPLAY_META: Record<string, PresetDisplayMeta> = {
     badge: "Google AI",
   },
   groq: {
-    tagline: "llama-3.3-70b-versatile / deepseek-r1-distill-llama-70b",
+    tagline: "llama-3.3-70b-versatile / llama-4-scout / qwen-qwq-32b",
     badge: "Ultra-Fast LPU",
   },
   openai: {
-    tagline: "gpt-4o / gpt-4o-mini + text-embedding-3-small",
+    tagline: "gpt-4.1 / gpt-4o / o4-mini + text-embedding-3-small",
     badge: "OpenAI Cloud",
   },
   anthropic: {
-    tagline: "claude-3-5-sonnet-latest / claude-3-5-haiku-latest",
+    tagline: "claude-sonnet-4-20250514 / claude-opus-4 / claude-3-7-sonnet",
     badge: "Legal Reasoning",
   },
   ollama: {
-    tagline: "llama3.1:8b / qwen2.5:14b + nomic-embed-text (localhost:11434)",
+    tagline: "llama3.3 / qwen2.5:14b / gemma3:12b + nomic-embed-text",
     badge: "100% Private Local",
     defaultBaseUrl: "http://localhost:11434",
     defaultEmbeddingBaseUrl: "http://localhost:11434",
@@ -139,6 +142,29 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     null
   );
 
+  // Live Model Discovery State (keyed by provider_id)
+  const [discoveredLlmByProvider, setDiscoveredLlmByProvider] = useState<
+    Record<string, string[]>
+  >({});
+  const [discoveredEmbByProvider, setDiscoveredEmbByProvider] = useState<
+    Record<string, string[]>
+  >({});
+  const [discoveryStatusByProvider, setDiscoveryStatusByProvider] = useState<
+    Record<string, DiscoverModelsResponseDTO>
+  >({});
+  const [isFetchingLlmModels, setIsFetchingLlmModels] =
+    useState<boolean>(false);
+  const [isFetchingEmbeddingModels, setIsFetchingEmbeddingModels] =
+    useState<boolean>(false);
+
+  const isMountedRef = useRef<boolean>(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Connection Test & Save State
   const [isTesting, setIsTesting] = useState<boolean>(false);
   const [testResult, setTestResult] =
@@ -151,6 +177,9 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
 
   const applyFetchedSettings = useCallback(
     (data: AISettingsResponseDTO) => {
+      if (!isMountedRef.current) {
+        return;
+      }
       if (data.available_providers && data.available_providers.length > 0) {
         setCatalog(data.available_providers);
       }
@@ -193,7 +222,9 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
         applyFetchedSettings(settings);
       })
       .finally(() => {
-        setIsLoadingSettings(false);
+        if (isMountedRef.current) {
+          setIsLoadingSettings(false);
+        }
       });
   }, [isOpen, token, applyFetchedSettings]);
 
@@ -217,6 +248,98 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     [catalog]
   );
 
+  const availableLlmModels = useMemo(() => {
+    const live = discoveredLlmByProvider[llmProvider];
+    if (live && live.length > 0) {
+      return live;
+    }
+    return selectedLlmCatalog?.recommended_llm_models ?? [];
+  }, [discoveredLlmByProvider, llmProvider, selectedLlmCatalog]);
+
+  const availableEmbeddingModels = useMemo(() => {
+    const live = discoveredEmbByProvider[embeddingProvider];
+    if (live && live.length > 0) {
+      return live;
+    }
+    return selectedEmbeddingCatalog?.recommended_embedding_models ?? [];
+  }, [discoveredEmbByProvider, embeddingProvider, selectedEmbeddingCatalog]);
+
+  const activeLlmDiscoveryStatus = discoveryStatusByProvider[llmProvider];
+  const activeEmbDiscoveryStatus = discoveryStatusByProvider[embeddingProvider];
+
+  const runLiveDiscovery = async (
+    target: "llm" | "embedding",
+    providerOverride?: string,
+    apiKeyOverride?: string,
+    baseUrlOverride?: string
+  ) => {
+    const providerId =
+      providerOverride ?? (target === "llm" ? llmProvider : embeddingProvider);
+    const providerCatalog = catalog.find((p) => p.provider_id === providerId);
+    const candidateKey =
+      apiKeyOverride !== undefined
+        ? apiKeyOverride.trim() || undefined
+        : target === "llm"
+        ? llmApiKeyInput.trim() || undefined
+        : embeddingApiKeyInput.trim() ||
+          (embeddingProvider === llmProvider
+            ? llmApiKeyInput.trim() || undefined
+            : undefined);
+    const candidateBaseUrl =
+      baseUrlOverride !== undefined
+        ? baseUrlOverride.trim() || undefined
+        : providerCatalog?.supports_base_url
+        ? (target === "llm" ? llmBaseUrl : embeddingBaseUrl).trim() || undefined
+        : undefined;
+
+    if (target === "llm") {
+      setIsFetchingLlmModels(true);
+    } else {
+      setIsFetchingEmbeddingModels(true);
+    }
+
+    try {
+      const result = await discoverProviderModels(
+        {
+          provider_id: providerId,
+          api_key: candidateKey,
+          base_url: candidateBaseUrl,
+        },
+        token ?? undefined
+      );
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setDiscoveryStatusByProvider((prev) => ({
+        ...prev,
+        [providerId]: result,
+      }));
+
+      if (result.llm_models.length > 0) {
+        setDiscoveredLlmByProvider((prev) => ({
+          ...prev,
+          [providerId]: result.llm_models,
+        }));
+      }
+      if (result.embedding_models.length > 0) {
+        setDiscoveredEmbByProvider((prev) => ({
+          ...prev,
+          [providerId]: result.embedding_models,
+        }));
+      }
+    } finally {
+      if (isMountedRef.current) {
+        if (target === "llm") {
+          setIsFetchingLlmModels(false);
+        } else {
+          setIsFetchingEmbeddingModels(false);
+        }
+      }
+    }
+  };
+
   if (!isOpen) {
     return null;
   }
@@ -227,14 +350,15 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     setSaveSuccessBanner(null);
 
     const meta = PRESET_DISPLAY_META[preset.provider_id];
+    const nextLlmUrl = preset.supports_base_url
+      ? meta?.defaultBaseUrl ?? ""
+      : "";
     if (preset.supports_llm) {
       setLlmProvider(preset.provider_id);
       if (preset.default_llm_model) {
         setLlmModelName(preset.default_llm_model);
       }
-      setLlmBaseUrl(
-        preset.supports_base_url ? meta?.defaultBaseUrl ?? "" : ""
-      );
+      setLlmBaseUrl(nextLlmUrl);
     }
 
     if (preset.supports_embeddings) {
@@ -245,6 +369,10 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
       setEmbeddingBaseUrl(
         preset.supports_base_url ? meta?.defaultEmbeddingBaseUrl ?? "" : ""
       );
+    }
+
+    if (preset.provider_id === "ollama") {
+      void runLiveDiscovery("llm", "ollama", "", nextLlmUrl || "http://localhost:11434");
     }
   };
 
@@ -257,7 +385,11 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     if (found?.default_llm_model) {
       setLlmModelName(found.default_llm_model);
     }
-    setLlmBaseUrl(found?.supports_base_url ? meta?.defaultBaseUrl ?? "" : "");
+    const nextUrl = found?.supports_base_url ? meta?.defaultBaseUrl ?? "" : "";
+    setLlmBaseUrl(nextUrl);
+    if (nextProviderId === "ollama") {
+      void runLiveDiscovery("llm", "ollama", "", nextUrl || "http://localhost:11434");
+    }
   };
 
   const handleEmbeddingProviderSelect = (nextProviderId: string) => {
@@ -269,9 +401,13 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     if (found?.default_embedding_model) {
       setEmbeddingModelName(found.default_embedding_model);
     }
-    setEmbeddingBaseUrl(
-      found?.supports_base_url ? meta?.defaultEmbeddingBaseUrl ?? "" : ""
-    );
+    const nextUrl = found?.supports_base_url
+      ? meta?.defaultEmbeddingBaseUrl ?? ""
+      : "";
+    setEmbeddingBaseUrl(nextUrl);
+    if (nextProviderId === "ollama") {
+      void runLiveDiscovery("embedding", "ollama", "", nextUrl || "http://localhost:11434");
+    }
   };
 
   const resolveEffectiveEmbeddingKeyPayload = (): string | undefined => {
@@ -533,54 +669,133 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 </select>
               </div>
 
-              {/* Recommended Model Presets + Custom Model Input */}
+              {/* Live Model Picker + Free-Form Custom Model Input */}
               <div>
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="ai-llm-model-input"
-                    className="block text-xs font-medium text-slate-700 dark:text-slate-300"
-                  >
-                    Model ID (Preset or Custom)
-                  </label>
-                  {selectedLlmCatalog &&
-                  selectedLlmCatalog.recommended_llm_models.length > 0 ? (
-                    <select
-                      aria-label="Recommended LLM Model Presets"
-                      data-testid="ai-settings-llm-preset-select"
-                      value={
-                        selectedLlmCatalog.recommended_llm_models.includes(
-                          llmModelName
-                        )
-                          ? llmModelName
-                          : ""
-                      }
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          setLlmModelName(e.target.value);
-                        }
-                      }}
-                      className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <label
+                      htmlFor="ai-llm-model-input"
+                      className="block text-xs font-medium text-slate-700 dark:text-slate-300"
                     >
-                      <option value="" disabled>
-                        Select preset...
-                      </option>
-                      {selectedLlmCatalog.recommended_llm_models.map((m) => (
-                        <option key={m} value={m}>
-                          Preset: {m}
+                      Model ID (Live, Preset, or Custom)
+                    </label>
+                    {llmModelName.trim() &&
+                    !availableLlmModels.includes(llmModelName.trim()) ? (
+                      <span className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300">
+                        Custom ID
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      data-testid="fetch-live-models-btn"
+                      disabled={isFetchingLlmModels}
+                      onClick={() => void runLiveDiscovery("llm")}
+                      className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50/80 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-50 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
+                    >
+                      <RefreshCw
+                        className={`h-3 w-3 ${
+                          isFetchingLlmModels ? "animate-spin" : ""
+                        }`}
+                      />
+                      <span>
+                        {isFetchingLlmModels
+                          ? "Fetching..."
+                          : "Fetch Live Models"}
+                      </span>
+                    </button>
+
+                    {availableLlmModels.length > 0 ? (
+                      <select
+                        aria-label="Recommended LLM Model Presets"
+                        data-testid="ai-settings-llm-preset-select"
+                        value={
+                          availableLlmModels.includes(llmModelName)
+                            ? llmModelName
+                            : ""
+                        }
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setLlmModelName(e.target.value);
+                          }
+                        }}
+                        className="max-w-[165px] truncate rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
+                      >
+                        <option value="" disabled>
+                          {activeLlmDiscoveryStatus?.source === "live_api"
+                            ? "Pick live model..."
+                            : "Select preset..."}
                         </option>
-                      ))}
-                    </select>
-                  ) : null}
+                        {availableLlmModels.map((m) => (
+                          <option key={m} value={m}>
+                            {activeLlmDiscoveryStatus?.source === "live_api"
+                              ? `Live: ${m}`
+                              : `Preset: ${m}`}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+                  </div>
                 </div>
+
                 <input
                   id="ai-llm-model-input"
                   type="text"
+                  list="ai-llm-models-datalist"
                   data-testid="ai-settings-llm-model-input"
                   value={llmModelName}
                   onChange={(e) => setLlmModelName(e.target.value)}
-                  placeholder="e.g., gemini-2.5-flash or llama3.1:8b"
+                  placeholder="Type any custom model ID or select below (e.g., gemini-2.5-flash, gpt-4.1, llama3.3)"
                   className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
+                <datalist id="ai-llm-models-datalist">
+                  {availableLlmModels.map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
+
+                {activeLlmDiscoveryStatus ? (
+                  <div
+                    data-testid="live-models-status-badge"
+                    className={`mt-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
+                      activeLlmDiscoveryStatus.source === "live_api"
+                        ? "border-emerald-200 bg-emerald-50/80 text-emerald-800 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
+                        : "border-amber-200 bg-amber-50/80 text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
+                    }`}
+                  >
+                    {activeLlmDiscoveryStatus.source === "live_api"
+                      ? `✓ Fetched ${activeLlmDiscoveryStatus.llm_models.length} live LLM models from provider API (${activeLlmDiscoveryStatus.latency_ms} ms)`
+                      : `Using built-in presets — ${activeLlmDiscoveryStatus.message}`}
+                  </div>
+                ) : null}
+
+                {availableLlmModels.length > 0 ? (
+                  <div
+                    aria-label="Quick-pick LLM models"
+                    className="mt-2 flex max-h-20 flex-wrap gap-1.5 overflow-y-auto"
+                  >
+                    {availableLlmModels.slice(0, 12).map((m) => {
+                      const active = llmModelName === m;
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          data-testid={`llm-model-chip-${m}`}
+                          onClick={() => setLlmModelName(m)}
+                          className={`rounded-md border px-2 py-0.5 font-mono text-[10px] transition-colors ${
+                            active
+                              ? "border-indigo-500 bg-indigo-600 font-semibold text-white"
+                              : "border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-indigo-500/40"
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
 
               {/* Conditional Base URL Input for Local Ollama / OpenAI-Compatible */}
@@ -738,57 +953,120 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 </select>
               </div>
 
-              {/* Embedding Model Input + Presets */}
+              {/* Embedding Model Input + Live Discovery + Presets */}
               <div>
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="ai-embedding-model-input"
-                    className="block text-xs font-medium text-slate-700 dark:text-slate-300"
-                  >
-                    Embedding Model ID
-                  </label>
-                  {selectedEmbeddingCatalog &&
-                  selectedEmbeddingCatalog.recommended_embedding_models.length >
-                    0 ? (
-                    <select
-                      aria-label="Recommended Embedding Model Presets"
-                      data-testid="ai-settings-embedding-preset-select"
-                      value={
-                        selectedEmbeddingCatalog.recommended_embedding_models.includes(
-                          embeddingModelName
-                        )
-                          ? embeddingModelName
-                          : ""
-                      }
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          setEmbeddingModelName(e.target.value);
-                        }
-                      }}
-                      className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <label
+                      htmlFor="ai-embedding-model-input"
+                      className="block text-xs font-medium text-slate-700 dark:text-slate-300"
                     >
-                      <option value="" disabled>
-                        Select preset...
-                      </option>
-                      {selectedEmbeddingCatalog.recommended_embedding_models.map(
-                        (m) => (
+                      Embedding Model ID (Live, Preset, or Custom)
+                    </label>
+                    {embeddingModelName.trim() &&
+                    !availableEmbeddingModels.includes(
+                      embeddingModelName.trim()
+                    ) ? (
+                      <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                        Custom ID
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      data-testid="fetch-live-embedding-models-btn"
+                      disabled={isFetchingEmbeddingModels}
+                      onClick={() => void runLiveDiscovery("embedding")}
+                      className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+                    >
+                      <RefreshCw
+                        className={`h-3 w-3 ${
+                          isFetchingEmbeddingModels ? "animate-spin" : ""
+                        }`}
+                      />
+                      <span>
+                        {isFetchingEmbeddingModels
+                          ? "Fetching..."
+                          : "Fetch Live Models"}
+                      </span>
+                    </button>
+
+                    {availableEmbeddingModels.length > 0 ? (
+                      <select
+                        aria-label="Recommended Embedding Model Presets"
+                        data-testid="ai-settings-embedding-preset-select"
+                        value={
+                          availableEmbeddingModels.includes(embeddingModelName)
+                            ? embeddingModelName
+                            : ""
+                        }
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setEmbeddingModelName(e.target.value);
+                          }
+                        }}
+                        className="max-w-[165px] truncate rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
+                      >
+                        <option value="" disabled>
+                          {activeEmbDiscoveryStatus?.source === "live_api"
+                            ? "Pick live model..."
+                            : "Select preset..."}
+                        </option>
+                        {availableEmbeddingModels.map((m) => (
                           <option key={m} value={m}>
-                            Preset: {m}
+                            {activeEmbDiscoveryStatus?.source === "live_api"
+                              ? `Live: ${m}`
+                              : `Preset: ${m}`}
                           </option>
-                        )
-                      )}
-                    </select>
-                  ) : null}
+                        ))}
+                      </select>
+                    ) : null}
+                  </div>
                 </div>
+
                 <input
                   id="ai-embedding-model-input"
                   type="text"
+                  list="ai-embedding-models-datalist"
                   data-testid="ai-settings-embedding-model-input"
                   value={embeddingModelName}
                   onChange={(e) => setEmbeddingModelName(e.target.value)}
-                  placeholder="e.g., text-embedding-004 or nomic-embed-text"
+                  placeholder="Type any custom embedding model ID or select below (e.g., text-embedding-004, BAAI/bge-m3)"
                   className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
+                <datalist id="ai-embedding-models-datalist">
+                  {availableEmbeddingModels.map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
+
+                {availableEmbeddingModels.length > 0 ? (
+                  <div
+                    aria-label="Quick-pick Embedding models"
+                    className="mt-2 flex max-h-20 flex-wrap gap-1.5 overflow-y-auto"
+                  >
+                    {availableEmbeddingModels.slice(0, 10).map((m) => {
+                      const active = embeddingModelName === m;
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          data-testid={`embedding-model-chip-${m}`}
+                          onClick={() => setEmbeddingModelName(m)}
+                          className={`rounded-md border px-2 py-0.5 font-mono text-[10px] transition-colors ${
+                            active
+                              ? "border-emerald-600 bg-emerald-600 font-semibold text-white"
+                              : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-500/40"
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
 
               {/* Conditional Embedding Base URL */}

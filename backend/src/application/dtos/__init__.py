@@ -190,6 +190,8 @@ class DocumentResponseDTO(ImmutableDTO):
 
 from src.application.dtos.ai_settings_dtos import (  # noqa: E402
     AISettingsResponseDTO,
+    DiscoverModelsRequestDTO,
+    DiscoverModelsResponseDTO,
     ProviderCatalogItemDTO,
     TestAIConnectionRequestDTO,
     TestAIConnectionResponseDTO,
@@ -241,6 +243,8 @@ __all__ = [
     "CreatePlaybookRuleCommand",
     "CreatePlaybookRuleRequestDTO",
     "CreateUserRequestDTO",
+    "DiscoverModelsRequestDTO",
+    "DiscoverModelsResponseDTO",
     "DocumentAnalysisSummaryDTO",
     "DocumentResponseDTO",
     "DocumentUploadResponseDTO",

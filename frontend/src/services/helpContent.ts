@@ -496,7 +496,7 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
     question:
       "Can I switch between Google Gemini, Groq, OpenAI, or Local Ollama without restarting Docker?",
     answer:
-      "Yes. Click the 'AI: ...' badge in the top navigation bar or Studio toolbar to open the AI Engine Switcher. Select a provider preset, enter your API key (masked server-side and never returned in plaintext) or local Ollama/vLLM Base URL, click 'Test Connection' to verify latency and 1536-d vector embeddings, and click 'Save & Activate Engine' to switch immediately.",
+      "Yes. Click the 'AI: ...' badge in the top navigation bar or Studio toolbar to open the AI Engine Switcher. Select a provider preset, enter your API key (masked server-side and never returned in plaintext) or local Ollama/vLLM Base URL, click 'Fetch Live Models' to dynamically query the provider's live model catalog (or type any custom fine-tuned/HuggingFace model ID directly), run 'Test Connection' to verify latency and 1536-d vector embeddings, and click 'Save & Activate Engine' to switch immediately.",
     category: "workflow",
     keywords: [
       "ai switcher",
@@ -507,6 +507,8 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
       "anthropic",
       "api key",
       "test connection",
+      "fetch live models",
+      "custom model",
       "hot swap",
     ],
   },

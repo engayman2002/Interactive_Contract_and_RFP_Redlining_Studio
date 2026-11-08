@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends, status
 
 from src.application.dtos import (
     AISettingsResponseDTO,
+    DiscoverModelsRequestDTO,
+    DiscoverModelsResponseDTO,
     ProviderCatalogItemDTO,
     TestAIConnectionRequestDTO,
     TestAIConnectionResponseDTO,
@@ -17,10 +19,13 @@ from src.application.dtos import (
 from src.domain.entities import ClauseAuditInput
 from src.domain.enums import UserRole
 from src.infrastructure.ai import (
+    CURATED_PROVIDER_PRESETS,
     LangChainClauseAuditor,
     LLMProviderRegistry,
     RuntimeAISettingsManager,
+    UnsupportedAIProviderError,
     create_llm_runnable,
+    discover_provider_models,
     mask_api_key,
     sanitize_secret_from_text,
 )
@@ -34,128 +39,20 @@ from src.presentation.dependencies import get_current_user, require_roles
 
 ai_settings_router = APIRouter(prefix="/ai-settings", tags=["AI Engine Configuration"])
 
-_BUILTIN_PROVIDER_CATALOG: Final[tuple[ProviderCatalogItemDTO, ...]] = (
+_BUILTIN_PROVIDER_CATALOG: Final[tuple[ProviderCatalogItemDTO, ...]] = tuple(
     ProviderCatalogItemDTO(
-        provider_id="deterministic",
-        display_name="Offline Deterministic Engine",
-        supports_llm=True,
-        supports_embeddings=True,
-        requires_api_key=False,
-        supports_base_url=False,
-        default_llm_model="policy-deterministic-v1",
-        recommended_llm_models=["policy-deterministic-v1"],
-        default_embedding_model="deterministic-hash-1536",
-        recommended_embedding_models=["deterministic-hash-1536"],
-    ),
-    ProviderCatalogItemDTO(
-        provider_id="gemini",
-        display_name="Google Gemini",
-        supports_llm=True,
-        supports_embeddings=True,
-        requires_api_key=True,
-        supports_base_url=False,
-        default_llm_model="gemini-2.5-flash",
-        recommended_llm_models=[
-            "gemini-2.5-flash",
-            "gemini-2.5-pro",
-            "gemini-2.0-flash",
-        ],
-        default_embedding_model="text-embedding-004",
-        recommended_embedding_models=[
-            "text-embedding-004",
-            "gemini-embedding-001",
-        ],
-    ),
-    ProviderCatalogItemDTO(
-        provider_id="groq",
-        display_name="Groq Cloud LPU",
-        supports_llm=True,
-        supports_embeddings=False,
-        requires_api_key=True,
-        supports_base_url=False,
-        default_llm_model="llama-3.3-70b-versatile",
-        recommended_llm_models=[
-            "llama-3.3-70b-versatile",
-            "deepseek-r1-distill-llama-70b",
-            "llama-3.1-8b-instant",
-        ],
-        default_embedding_model=None,
-        recommended_embedding_models=[],
-    ),
-    ProviderCatalogItemDTO(
-        provider_id="openai",
-        display_name="OpenAI",
-        supports_llm=True,
-        supports_embeddings=True,
-        requires_api_key=True,
-        supports_base_url=False,
-        default_llm_model="gpt-4o",
-        recommended_llm_models=[
-            "gpt-4o",
-            "gpt-4o-mini",
-            "o3-mini",
-        ],
-        default_embedding_model="text-embedding-3-small",
-        recommended_embedding_models=[
-            "text-embedding-3-small",
-            "text-embedding-3-large",
-        ],
-    ),
-    ProviderCatalogItemDTO(
-        provider_id="anthropic",
-        display_name="Anthropic Claude",
-        supports_llm=True,
-        supports_embeddings=False,
-        requires_api_key=True,
-        supports_base_url=False,
-        default_llm_model="claude-3-5-sonnet-latest",
-        recommended_llm_models=[
-            "claude-3-5-sonnet-latest",
-            "claude-3-5-haiku-latest",
-        ],
-        default_embedding_model=None,
-        recommended_embedding_models=[],
-    ),
-    ProviderCatalogItemDTO(
-        provider_id="ollama",
-        display_name="Local Ollama",
-        supports_llm=True,
-        supports_embeddings=True,
-        requires_api_key=False,
-        supports_base_url=True,
-        default_llm_model="llama3.1:8b",
-        recommended_llm_models=[
-            "llama3.1:8b",
-            "qwen2.5:14b",
-            "mistral:7b",
-            "deepseek-r1:8b",
-        ],
-        default_embedding_model="nomic-embed-text",
-        recommended_embedding_models=[
-            "nomic-embed-text",
-            "mxbai-embed-large",
-            "all-minilm",
-        ],
-    ),
-    ProviderCatalogItemDTO(
-        provider_id="openai_compatible",
-        display_name="OpenAI-Compatible Local Server",
-        supports_llm=True,
-        supports_embeddings=True,
-        requires_api_key=False,
-        supports_base_url=True,
-        default_llm_model="Qwen/Qwen2.5-7B-Instruct",
-        recommended_llm_models=[
-            "Qwen/Qwen2.5-7B-Instruct",
-            "meta-llama/Llama-3.1-8B-Instruct",
-            "local-model",
-        ],
-        default_embedding_model="BAAI/bge-large-en-v1.5",
-        recommended_embedding_models=[
-            "BAAI/bge-large-en-v1.5",
-            "nomic-ai/nomic-embed-text-v1.5",
-        ],
-    ),
+        provider_id=preset.provider_id,
+        display_name=preset.display_name,
+        supports_llm=preset.supports_llm,
+        supports_embeddings=preset.supports_embeddings,
+        requires_api_key=preset.requires_api_key,
+        supports_base_url=preset.supports_base_url,
+        default_llm_model=preset.default_llm_model,
+        recommended_llm_models=list(preset.recommended_llm_models),
+        default_embedding_model=preset.default_embedding_model,
+        recommended_embedding_models=list(preset.recommended_embedding_models),
+    )
+    for preset in CURATED_PROVIDER_PRESETS
 )
 
 
@@ -392,6 +289,57 @@ async def test_ai_connection(
         model_tested=model_tested,
         message=" ".join(messages),
         sample_output_preview=preview,
+    )
+
+
+@ai_settings_router.post(
+    "/discover-models",
+    response_model=DiscoverModelsResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def discover_ai_models(
+    payload: DiscoverModelsRequestDTO,
+    _current_user: Annotated[
+        TokenPayloadDTO,
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.LEGAL_COUNSEL,
+                UserRole.TECHNICAL_LEAD,
+            )
+        ),
+    ],
+) -> DiscoverModelsResponseDTO:
+    """Dynamically fetch live available LLM and Embedding models from a provider API."""
+    known_providers = sorted(
+        set(LLMProviderRegistry.available_providers())
+        | set(EmbeddingProviderRegistry.available_providers())
+    )
+    if payload.provider_id not in known_providers:
+        raise UnsupportedAIProviderError(
+            provider_name=payload.provider_id,
+            provider_kind="llm",
+            available_providers=known_providers,
+        )
+
+    effective_key, effective_base_url = RuntimeAISettingsManager.resolve_discovery_credentials(
+        provider_id=payload.provider_id,
+        candidate_api_key=payload.api_key,
+        candidate_base_url=payload.base_url,
+    )
+
+    discovered = await discover_provider_models(
+        provider_id=payload.provider_id,
+        api_key=effective_key,
+        base_url=effective_base_url,
+    )
+    return DiscoverModelsResponseDTO(
+        provider_id=discovered.provider_id,
+        source=discovered.source,
+        llm_models=discovered.llm_models,
+        embedding_models=discovered.embedding_models,
+        latency_ms=discovered.latency_ms,
+        message=discovered.message,
     )
 
 

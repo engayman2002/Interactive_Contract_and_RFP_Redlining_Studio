@@ -308,5 +308,32 @@ export type TestAIConnectionResponseDTO = z.infer<
   typeof TestAIConnectionResponseDTOSchema
 >;
 
+export const DiscoverModelsSourceSchema = z.enum([
+  "live_api",
+  "catalog_fallback",
+]);
+export type DiscoverModelsSource = z.infer<typeof DiscoverModelsSourceSchema>;
+
+export const DiscoverModelsRequestDTOSchema = z.object({
+  provider_id: z.string().min(1),
+  api_key: z.string().nullable().optional(),
+  base_url: z.string().nullable().optional(),
+});
+export type DiscoverModelsRequestDTO = z.infer<
+  typeof DiscoverModelsRequestDTOSchema
+>;
+
+export const DiscoverModelsResponseDTOSchema = z.object({
+  provider_id: z.string(),
+  source: DiscoverModelsSourceSchema,
+  llm_models: z.array(z.string()).default([]),
+  embedding_models: z.array(z.string()).default([]),
+  latency_ms: z.number(),
+  message: z.string(),
+});
+export type DiscoverModelsResponseDTO = z.infer<
+  typeof DiscoverModelsResponseDTOSchema
+>;
+
 
 

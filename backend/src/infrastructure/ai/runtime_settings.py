@@ -17,6 +17,167 @@ from src.infrastructure.vector.provider_registry import (
 _SENTINEL: Final[object] = object()
 
 
+@dataclass(frozen=True)
+class CuratedProviderPreset:
+    """Curated modern fallback model catalog metadata for a built-in AI provider."""
+
+    provider_id: str
+    display_name: str
+    supports_llm: bool
+    supports_embeddings: bool
+    requires_api_key: bool
+    supports_base_url: bool
+    default_llm_model: str | None
+    recommended_llm_models: tuple[str, ...]
+    default_embedding_model: str | None
+    recommended_embedding_models: tuple[str, ...]
+
+
+CURATED_PROVIDER_PRESETS: Final[tuple[CuratedProviderPreset, ...]] = (
+    CuratedProviderPreset(
+        provider_id="deterministic",
+        display_name="Offline Deterministic Engine",
+        supports_llm=True,
+        supports_embeddings=True,
+        requires_api_key=False,
+        supports_base_url=False,
+        default_llm_model="policy-deterministic-v1",
+        recommended_llm_models=("policy-deterministic-v1",),
+        default_embedding_model="deterministic-hash-1536",
+        recommended_embedding_models=("deterministic-hash-1536",),
+    ),
+    CuratedProviderPreset(
+        provider_id="gemini",
+        display_name="Google Gemini",
+        supports_llm=True,
+        supports_embeddings=True,
+        requires_api_key=True,
+        supports_base_url=False,
+        default_llm_model="gemini-2.5-flash",
+        recommended_llm_models=(
+            "gemini-2.5-flash",
+            "gemini-2.5-pro",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash",
+        ),
+        default_embedding_model="text-embedding-004",
+        recommended_embedding_models=(
+            "text-embedding-004",
+            "gemini-embedding-001",
+        ),
+    ),
+    CuratedProviderPreset(
+        provider_id="groq",
+        display_name="Groq Cloud LPU",
+        supports_llm=True,
+        supports_embeddings=False,
+        requires_api_key=True,
+        supports_base_url=False,
+        default_llm_model="llama-3.3-70b-versatile",
+        recommended_llm_models=(
+            "llama-3.3-70b-versatile",
+            "meta-llama/llama-4-scout-17b-16e-instruct",
+            "meta-llama/llama-4-maverick-17b-128e-instruct",
+            "deepseek-r1-distill-llama-70b",
+            "qwen-qwq-32b",
+            "llama-3.1-8b-instant",
+        ),
+        default_embedding_model=None,
+        recommended_embedding_models=(),
+    ),
+    CuratedProviderPreset(
+        provider_id="openai",
+        display_name="OpenAI",
+        supports_llm=True,
+        supports_embeddings=True,
+        requires_api_key=True,
+        supports_base_url=False,
+        default_llm_model="gpt-4.1",
+        recommended_llm_models=(
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4.1-nano",
+            "gpt-4o",
+            "gpt-4o-mini",
+            "o3-mini",
+            "o4-mini",
+        ),
+        default_embedding_model="text-embedding-3-small",
+        recommended_embedding_models=(
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+        ),
+    ),
+    CuratedProviderPreset(
+        provider_id="anthropic",
+        display_name="Anthropic Claude",
+        supports_llm=True,
+        supports_embeddings=False,
+        requires_api_key=True,
+        supports_base_url=False,
+        default_llm_model="claude-sonnet-4-20250514",
+        recommended_llm_models=(
+            "claude-sonnet-4-20250514",
+            "claude-opus-4-20250514",
+            "claude-3-7-sonnet-latest",
+            "claude-3-5-sonnet-latest",
+            "claude-3-5-haiku-latest",
+        ),
+        default_embedding_model=None,
+        recommended_embedding_models=(),
+    ),
+    CuratedProviderPreset(
+        provider_id="ollama",
+        display_name="Local Ollama",
+        supports_llm=True,
+        supports_embeddings=True,
+        requires_api_key=False,
+        supports_base_url=True,
+        default_llm_model="llama3.3",
+        recommended_llm_models=(
+            "llama3.3",
+            "qwen2.5:14b",
+            "deepseek-r1:14b",
+            "llama3.2",
+            "mistral",
+            "gemma3:12b",
+        ),
+        default_embedding_model="nomic-embed-text",
+        recommended_embedding_models=(
+            "nomic-embed-text",
+            "bge-m3",
+            "mxbai-embed-large",
+            "all-minilm",
+        ),
+    ),
+    CuratedProviderPreset(
+        provider_id="openai_compatible",
+        display_name="OpenAI-Compatible Local Server",
+        supports_llm=True,
+        supports_embeddings=True,
+        requires_api_key=False,
+        supports_base_url=True,
+        default_llm_model="local-model",
+        recommended_llm_models=(
+            "local-model",
+            "Qwen/Qwen2.5-14B-Instruct",
+            "meta-llama/Llama-3.3-70B-Instruct",
+            "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
+        ),
+        default_embedding_model="BAAI/bge-m3",
+        recommended_embedding_models=(
+            "BAAI/bge-m3",
+            "nomic-ai/nomic-embed-text-v1.5",
+            "intfloat/e5-mistral-7b-instruct",
+        ),
+    ),
+)
+
+CURATED_PROVIDER_PRESET_MAP: Final[dict[str, CuratedProviderPreset]] = {
+    preset.provider_id: preset for preset in CURATED_PROVIDER_PRESETS
+}
+
+
 def mask_api_key(key: str | None) -> str | None:
     """Return a masked preview of an API key (e.g., `'AIza...7b1c'`) without exposing plaintext."""
     if key is None:
@@ -398,6 +559,51 @@ class RuntimeAISettingsManager:
             return cls.get_effective_settings()
 
     @classmethod
+    def resolve_discovery_credentials(
+        cls,
+        *,
+        provider_id: str,
+        candidate_api_key: str | None = None,
+        candidate_base_url: str | None = None,
+    ) -> tuple[str | None, str | None]:
+        """Resolve `(api_key, base_url)` for live model discovery without mutating state."""
+        with cls._lock:
+            state = cls._ensure_initialized()
+            base = get_settings()
+            normalized = provider_id.strip().lower()
+
+            stored_override_key: str | None = None
+            if state.llm_provider == normalized and state.llm_api_key:
+                stored_override_key = state.llm_api_key
+            elif state.embedding_provider == normalized and state.embedding_api_key:
+                stored_override_key = state.embedding_api_key
+
+            effective_override_key = (
+                candidate_api_key.strip()
+                if candidate_api_key is not None and candidate_api_key.strip()
+                else stored_override_key
+            )
+            resolved_key = cls._resolve_provider_llm_key(
+                provider=normalized,
+                override_key=effective_override_key,
+                base=base,
+            ) or cls._resolve_provider_embedding_key(
+                provider=normalized,
+                override_key=effective_override_key,
+                base=base,
+            )
+
+            resolved_base_url: str | None = None
+            if candidate_base_url is not None and candidate_base_url.strip():
+                resolved_base_url = candidate_base_url.strip()
+            elif state.llm_provider == normalized and state.llm_base_url:
+                resolved_base_url = state.llm_base_url
+            elif state.embedding_provider == normalized and state.embedding_base_url:
+                resolved_base_url = state.embedding_base_url
+
+            return resolved_key, resolved_base_url
+
+    @classmethod
     def get_active_embedding_generator(cls) -> EmbeddingGeneratorPort:
         """Return cached `EmbeddingGeneratorPort` for the active runtime settings."""
         with cls._lock:
@@ -422,6 +628,9 @@ class RuntimeAISettingsManager:
 
 
 __all__ = [
+    "CURATED_PROVIDER_PRESETS",
+    "CURATED_PROVIDER_PRESET_MAP",
+    "CuratedProviderPreset",
     "RuntimeAISettingsManager",
     "mask_api_key",
     "sanitize_secret_from_text",

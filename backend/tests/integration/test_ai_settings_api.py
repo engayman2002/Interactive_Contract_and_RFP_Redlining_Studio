@@ -1,5 +1,7 @@
-"""Integration tests for In-App AI Provider Switcher, Key Masking, RBAC, and Live Testing."""
+"""Integration tests for In-App AI Provider Switcher, Live Model Discovery, RBAC, and Custom IDs."""
 
+import httpx
+import pytest
 from httpx import AsyncClient
 from src.domain.enums import UserRole
 
@@ -255,3 +257,222 @@ async def test_post_test_ai_connection_reports_latency_and_failure_diagnostics(
     assert fail_body["llm_ok"] is False
     assert fail_body["embedding_ok"] is False
     assert "API key" in fail_body["message"] or "GEMINI_API_KEY" in fail_body["message"]
+
+
+async def test_discover_models_live_api_parsing_fallback_and_secret_scrubbing(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify live model discovery for Gemini, OpenAI, Groq, and Ollama plus catalog fallback."""
+    admin_headers = await _register_org_and_admin(client, "discover")
+    viewer_headers = await _create_and_login_role_user(
+        client,
+        admin_headers,
+        email="viewer-discover@aiswitcher.io",
+        role=UserRole.VIEWER,
+    )
+
+    # 1. RBAC & SSRF guards on /discover-models
+    viewer_resp = await client.post(
+        "/api/v1/ai-settings/discover-models",
+        headers=viewer_headers,
+        json={"provider_id": "ollama"},
+    )
+    assert viewer_resp.status_code == 403
+
+    ssrf_resp = await client.post(
+        "/api/v1/ai-settings/discover-models",
+        headers=admin_headers,
+        json={
+            "provider_id": "ollama",
+            "base_url": "http://169.254.169.254/latest/meta-data/",
+        },
+    )
+    assert ssrf_resp.status_code == 422
+
+    # 2. Graceful fallback when cloud provider has no API key configured
+    no_key_resp = await client.post(
+        "/api/v1/ai-settings/discover-models",
+        headers=admin_headers,
+        json={"provider_id": "gemini"},
+    )
+    assert no_key_resp.status_code == 200
+    no_key_body = no_key_resp.json()
+    assert no_key_body["source"] == "catalog_fallback"
+    assert "gemini-2.5-flash" in no_key_body["llm_models"]
+    assert "text-embedding-004" in no_key_body["embedding_models"]
+
+    # 3. Mock upstream HTTP responses for Gemini, OpenAI, Groq, and Ollama
+    secret_test_key = "sk-live-super-secret-discovery-9911"  # noqa: S105
+
+    def _mock_handler(request: httpx.Request) -> httpx.Response:
+        url_str = str(request.url)
+        if "generativelanguage.googleapis.com" in url_str:
+            assert request.headers.get("x-goog-api-key") == secret_test_key
+            assert secret_test_key not in url_str
+            return httpx.Response(
+                200,
+                json={
+                    "models": [
+                        {
+                            "name": "models/gemini-2.5-pro-preview-06-05",
+                            "supportedGenerationMethods": ["generateContent"],
+                        },
+                        {
+                            "name": "models/gemini-2.5-flash",
+                            "supportedGenerationMethods": ["generateContent"],
+                        },
+                        {
+                            "name": "models/text-embedding-004",
+                            "supportedGenerationMethods": ["embedContent"],
+                        },
+                        {
+                            "name": "models/imagen-3.0-generate-002",
+                            "supportedGenerationMethods": ["generateContent"],
+                        },
+                    ]
+                },
+            )
+        if "api.openai.com" in url_str:
+            if request.headers.get("authorization") == f"Bearer {secret_test_key}":
+                return httpx.Response(
+                    200,
+                    json={
+                        "data": [
+                            {"id": "gpt-4.1"},
+                            {"id": "o4-mini"},
+                            {"id": "text-embedding-3-large"},
+                            {"id": "whisper-1"},
+                            {"id": "dall-e-3"},
+                        ]
+                    },
+                )
+            return httpx.Response(
+                401,
+                text=f"Invalid key provided: {request.headers.get('authorization')}",
+            )
+        if "api.groq.com" in url_str:
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {"id": "llama-3.3-70b-versatile"},
+                        {"id": "meta-llama/llama-4-scout-17b-16e-instruct"},
+                        {"id": "whisper-large-v3-turbo"},
+                    ]
+                },
+            )
+        if "11434/api/tags" in url_str:
+            return httpx.Response(
+                200,
+                json={
+                    "models": [
+                        {"name": "llama3.3:latest"},
+                        {"name": "qwen2.5:14b"},
+                        {"name": "nomic-embed-text:latest"},
+                        {"name": "bge-m3:latest"},
+                    ]
+                },
+            )
+        return httpx.Response(404, text="Not Found")
+
+    mock_transport = httpx.MockTransport(_mock_handler)
+    real_async_client = httpx.AsyncClient
+
+    def _patched_async_client(*args: object, **kwargs: object) -> httpx.AsyncClient:
+        _ = args, kwargs
+        return real_async_client(transport=mock_transport)
+
+    monkeypatch.setattr(httpx, "AsyncClient", _patched_async_client)
+
+    # Gemini live discovery
+    gem_resp = await client.post(
+        "/api/v1/ai-settings/discover-models",
+        headers=admin_headers,
+        json={"provider_id": "gemini", "api_key": secret_test_key},
+    )
+    assert gem_resp.status_code == 200
+    assert secret_test_key not in gem_resp.text
+    gem_body = gem_resp.json()
+    assert gem_body["source"] == "live_api"
+    assert gem_body["llm_models"] == ["gemini-2.5-pro-preview-06-05", "gemini-2.5-flash"]
+    assert gem_body["embedding_models"] == ["text-embedding-004"]
+
+    # OpenAI live discovery
+    oai_resp = await client.post(
+        "/api/v1/ai-settings/discover-models",
+        headers=admin_headers,
+        json={"provider_id": "openai", "api_key": secret_test_key},
+    )
+    assert oai_resp.status_code == 200
+    oai_body = oai_resp.json()
+    assert oai_body["source"] == "live_api"
+    assert oai_body["llm_models"] == ["gpt-4.1", "o4-mini"]
+    assert oai_body["embedding_models"] == ["text-embedding-3-large"]
+
+    # Groq live discovery (excludes whisper audio models)
+    groq_resp = await client.post(
+        "/api/v1/ai-settings/discover-models",
+        headers=admin_headers,
+        json={"provider_id": "groq", "api_key": secret_test_key},
+    )
+    assert groq_resp.status_code == 200
+    groq_body = groq_resp.json()
+    assert groq_body["source"] == "live_api"
+    assert "llama-3.3-70b-versatile" in groq_body["llm_models"]
+    assert "whisper-large-v3-turbo" not in groq_body["llm_models"]
+
+    # Ollama live discovery via /api/tags
+    ollama_resp = await client.post(
+        "/api/v1/ai-settings/discover-models",
+        headers=admin_headers,
+        json={"provider_id": "ollama", "base_url": "http://localhost:11434"},
+    )
+    assert ollama_resp.status_code == 200
+    ollama_body = ollama_resp.json()
+    assert ollama_body["source"] == "live_api"
+    assert ollama_body["llm_models"] == ["llama3.3:latest", "qwen2.5:14b"]
+    assert ollama_body["embedding_models"] == ["nomic-embed-text:latest", "bge-m3:latest"]
+
+    # Upstream 401 error scrubs candidate secret and falls back cleanly (200 OK)
+    bad_key = "sk-bad-secret-value-1234"
+    err_resp = await client.post(
+        "/api/v1/ai-settings/discover-models",
+        headers=admin_headers,
+        json={"provider_id": "openai", "api_key": bad_key},
+    )
+    assert err_resp.status_code == 200
+    assert bad_key not in err_resp.text
+    assert err_resp.json()["source"] == "catalog_fallback"
+
+
+async def test_put_ai_settings_persists_arbitrary_custom_model_ids(
+    client: AsyncClient,
+) -> None:
+    """Verify ADMIN can save any arbitrary custom fine-tuned or local model ID."""
+    admin_headers = await _register_org_and_admin(client, "custom-model")
+
+    put_resp = await client.put(
+        "/api/v1/ai-settings",
+        headers=admin_headers,
+        json={
+            "llm_provider": "openai_compatible",
+            "llm_model_name": "custom-org-legal-llm-v3",
+            "llm_base_url": "http://localhost:8000/v1",
+            "embedding_provider": "openai_compatible",
+            "embedding_model_name": "org-internal/legal-bge-large-ft",
+            "embedding_base_url": "http://localhost:8080/v1",
+        },
+    )
+    assert put_resp.status_code == 200
+    put_body = put_resp.json()
+    assert put_body["llm_model_name"] == "custom-org-legal-llm-v3"
+    assert put_body["embedding_model_name"] == "org-internal/legal-bge-large-ft"
+
+    get_resp = await client.get("/api/v1/ai-settings", headers=admin_headers)
+    assert get_resp.status_code == 200
+    get_body = get_resp.json()
+    assert get_body["llm_provider"] == "openai_compatible"
+    assert get_body["llm_model_name"] == "custom-org-legal-llm-v3"
+    assert get_body["embedding_provider"] == "openai_compatible"
+    assert get_body["embedding_model_name"] == "org-internal/legal-bge-large-ft"

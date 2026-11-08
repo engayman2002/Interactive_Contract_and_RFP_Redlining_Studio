@@ -8,6 +8,9 @@ import {
   ClauseDTO,
   CreateClauseCommentRequestDTOSchema,
   CreatePlaybookRuleRequestDTO,
+  DiscoverModelsRequestDTO,
+  DiscoverModelsResponseDTO,
+  DiscoverModelsResponseDTOSchema,
   DocumentAnalysisSummaryDTO,
   DocumentAnalysisSummaryDTOSchema,
   DocumentListItemDTO,
@@ -1046,6 +1049,7 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     recommended_llm_models: [
       "gemini-2.5-flash",
       "gemini-2.5-pro",
+      "gemini-2.5-flash-lite",
       "gemini-2.0-flash",
     ],
     default_embedding_model: "text-embedding-004",
@@ -1064,7 +1068,10 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     default_llm_model: "llama-3.3-70b-versatile",
     recommended_llm_models: [
       "llama-3.3-70b-versatile",
+      "meta-llama/llama-4-scout-17b-16e-instruct",
+      "meta-llama/llama-4-maverick-17b-128e-instruct",
       "deepseek-r1-distill-llama-70b",
+      "qwen-qwq-32b",
       "llama-3.1-8b-instant",
     ],
     default_embedding_model: null,
@@ -1077,8 +1084,16 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     supports_embeddings: true,
     requires_api_key: true,
     supports_base_url: false,
-    default_llm_model: "gpt-4o",
-    recommended_llm_models: ["gpt-4o", "gpt-4o-mini", "o3-mini"],
+    default_llm_model: "gpt-4.1",
+    recommended_llm_models: [
+      "gpt-4.1",
+      "gpt-4.1-mini",
+      "gpt-4.1-nano",
+      "gpt-4o",
+      "gpt-4o-mini",
+      "o3-mini",
+      "o4-mini",
+    ],
     default_embedding_model: "text-embedding-3-small",
     recommended_embedding_models: [
       "text-embedding-3-small",
@@ -1092,8 +1107,11 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     supports_embeddings: false,
     requires_api_key: true,
     supports_base_url: false,
-    default_llm_model: "claude-3-5-sonnet-latest",
+    default_llm_model: "claude-sonnet-4-20250514",
     recommended_llm_models: [
+      "claude-sonnet-4-20250514",
+      "claude-opus-4-20250514",
+      "claude-3-7-sonnet-latest",
       "claude-3-5-sonnet-latest",
       "claude-3-5-haiku-latest",
     ],
@@ -1107,16 +1125,19 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     supports_embeddings: true,
     requires_api_key: false,
     supports_base_url: true,
-    default_llm_model: "llama3.1:8b",
+    default_llm_model: "llama3.3",
     recommended_llm_models: [
-      "llama3.1:8b",
+      "llama3.3",
       "qwen2.5:14b",
-      "mistral:7b",
-      "deepseek-r1:8b",
+      "deepseek-r1:14b",
+      "llama3.2",
+      "mistral",
+      "gemma3:12b",
     ],
     default_embedding_model: "nomic-embed-text",
     recommended_embedding_models: [
       "nomic-embed-text",
+      "bge-m3",
       "mxbai-embed-large",
       "all-minilm",
     ],
@@ -1128,16 +1149,18 @@ export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [
     supports_embeddings: true,
     requires_api_key: false,
     supports_base_url: true,
-    default_llm_model: "Qwen/Qwen2.5-7B-Instruct",
+    default_llm_model: "local-model",
     recommended_llm_models: [
-      "Qwen/Qwen2.5-7B-Instruct",
-      "meta-llama/Llama-3.1-8B-Instruct",
       "local-model",
+      "Qwen/Qwen2.5-14B-Instruct",
+      "meta-llama/Llama-3.3-70B-Instruct",
+      "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
     ],
-    default_embedding_model: "BAAI/bge-large-en-v1.5",
+    default_embedding_model: "BAAI/bge-m3",
     recommended_embedding_models: [
-      "BAAI/bge-large-en-v1.5",
+      "BAAI/bge-m3",
       "nomic-ai/nomic-embed-text-v1.5",
+      "intfloat/e5-mistral-7b-instruct",
     ],
   },
 ];
@@ -1429,6 +1452,75 @@ export async function testAIConnection(
     return TestAIConnectionResponseDTOSchema.parse(raw);
   } catch {
     return simulateOfflineTest();
+  }
+}
+
+export async function discoverProviderModels(
+  payload: DiscoverModelsRequestDTO,
+  token?: string
+): Promise<DiscoverModelsResponseDTO> {
+  const normalized = payload.provider_id.trim().toLowerCase();
+  const catalogEntry = DEFAULT_AI_PROVIDER_CATALOG.find(
+    (item) => item.provider_id === normalized
+  );
+
+  const buildFallbackResponse = (reason?: string): DiscoverModelsResponseDTO => {
+    const llmModels = catalogEntry?.recommended_llm_models ?? ["default"];
+    const embModels = catalogEntry?.recommended_embedding_models ?? [];
+    if (normalized === "deterministic") {
+      return {
+        provider_id: "deterministic",
+        source: "live_api",
+        llm_models: llmModels,
+        embedding_models: embModels,
+        latency_ms: 0.2,
+        message: "Offline Deterministic Engine models ready (in-process).",
+      };
+    }
+    return {
+      provider_id: normalized,
+      source: "catalog_fallback",
+      llm_models: llmModels,
+      embedding_models: embModels,
+      latency_ms: 1.4,
+      message:
+        reason ??
+        `Using built-in presets for ${catalogEntry?.display_name ?? normalized}.`,
+    };
+  };
+
+  if (!token) {
+    const hasKey =
+      Boolean(payload.api_key?.trim()) ||
+      (normalized === offlineAISettingsState.llm_provider &&
+        offlineAISettingsState.llm_has_api_key);
+    if (catalogEntry?.requires_api_key && !hasKey) {
+      return buildFallbackResponse(
+        `Enter an API key for ${catalogEntry.display_name} to fetch live models; showing built-in presets.`
+      );
+    }
+    return buildFallbackResponse(
+      `Backend offline (Demo Mode) — showing curated ${catalogEntry?.display_name ?? normalized} presets.`
+    );
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/ai-settings/discover-models`, {
+      method: "POST",
+      headers: buildHeaders(token, true),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      return buildFallbackResponse(
+        `Live model discovery returned HTTP ${response.status}; showing built-in presets.`
+      );
+    }
+    const raw = await response.json();
+    return DiscoverModelsResponseDTOSchema.parse(raw);
+  } catch {
+    return buildFallbackResponse(
+      "Could not reach backend model discovery endpoint; showing built-in presets."
+    );
   }
 }
 
