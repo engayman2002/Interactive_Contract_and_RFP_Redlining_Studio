@@ -16,6 +16,7 @@ import type {
   ClauseDTO,
   DocumentWorkspaceDTO,
   ExportMode,
+  NegotiationStance,
   RedlineSuggestionDTO,
 } from "@/services/contracts";
 
@@ -54,6 +55,8 @@ export interface WorkspaceStoreState {
   activeLLMModel: string;
   activeEmbeddingProvider: string;
   activeEmbeddingModel: string;
+  negotiationStance: NegotiationStance;
+  setNegotiationStance: (stance: NegotiationStance) => void;
   setActiveAIEngine: (config: {
     llmProvider: string;
     llmModel: string;
@@ -148,6 +151,9 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   activeLLMModel: "policy-deterministic-v1",
   activeEmbeddingProvider: "deterministic",
   activeEmbeddingModel: "deterministic-hash-1536",
+  negotiationStance: "balanced",
+
+  setNegotiationStance: (stance) => set({ negotiationStance: stance }),
 
   setActiveAIEngine: ({
     llmProvider,
@@ -575,5 +581,6 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       activeLLMModel: "policy-deterministic-v1",
       activeEmbeddingProvider: "deterministic",
       activeEmbeddingModel: "deterministic-hash-1536",
+      negotiationStance: "balanced",
     }),
 }));

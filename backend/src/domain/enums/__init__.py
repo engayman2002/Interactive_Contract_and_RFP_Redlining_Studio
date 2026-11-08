@@ -21,6 +21,14 @@ class RiskLevel(StrEnum):
     CRITICAL = "CRITICAL"
 
 
+class NegotiationStance(StrEnum):
+    """AI negotiation posture guiding aggressiveness and compromise tolerance."""
+
+    STRICT = "strict"
+    BALANCED = "balanced"
+    COMMERCIAL = "commercial"
+
+
 class SuggestionStatus(StrEnum):
     """Lifecycle states of an AI-generated redline suggestion."""
 
@@ -62,6 +70,7 @@ __all__ = [
     "AuditAction",
     "DocumentStatus",
     "ExportMode",
+    "NegotiationStance",
     "RiskLevel",
     "SuggestionStatus",
     "UserRole",

@@ -14,7 +14,7 @@ export interface QuickHelpModalProps {
   onClose: () => void;
 }
 
-type QuickHelpTab = "workflow" | "heatmap" | "export";
+type QuickHelpTab = "workflow" | "stance" | "heatmap" | "export";
 
 export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
   isOpen,
@@ -81,6 +81,18 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
           </button>
           <button
             type="button"
+            data-testid="quick-help-tab-stance"
+            onClick={() => setActiveTab("stance")}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              activeTab === "stance"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            2. AI Stances (Strict / Balanced / Commercial)
+          </button>
+          <button
+            type="button"
             data-testid="quick-help-tab-heatmap"
             onClick={() => setActiveTab("heatmap")}
             className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
@@ -89,7 +101,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            2. Risk Heatmap &amp; Diff Legend
+            3. Risk Heatmap &amp; Diff Legend
           </button>
           <button
             type="button"
@@ -101,7 +113,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            3. Export Modes (.docx)
+            4. Export Modes (.docx)
           </button>
         </div>
 
@@ -122,6 +134,52 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                   </p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeTab === "stance" && (
+            <div data-testid="quick-help-content-stance" className="space-y-3">
+              <div className="rounded-xl border border-rose-200/90 bg-rose-50/50 p-4 dark:border-rose-500/30 dark:bg-rose-950/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-rose-800 dark:text-rose-300">
+                    Strict Posture (Zero Compromise)
+                  </span>
+                  <span className="rounded-full border border-rose-300 bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-800 dark:border-rose-500/40 dark:bg-rose-900/50 dark:text-rose-200">
+                    STRICT
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                  Strictly enforces your organization&apos;s standard position. Escalates borderline risks to Critical/High, prefixes rationales with <code className="text-[11px] font-mono">[Strict Protective Stance]</code>, and crafts firm, non-negotiable talking points. Best for high-liability infrastructure and core IP.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-indigo-200/90 bg-indigo-50/50 p-4 dark:border-indigo-500/30 dark:bg-indigo-950/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-indigo-800 dark:text-indigo-300">
+                    Balanced Posture (Reciprocal Bilateral — Default)
+                  </span>
+                  <span className="rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-800 dark:border-indigo-500/40 dark:bg-indigo-900/50 dark:text-indigo-200">
+                    BALANCED
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                  Converts one-sided clauses into fair, mutual (&ldquo;Each party...&rdquo;) terms while defending core corporate boundaries. Rationale is prefixed with <code className="text-[11px] font-mono">[Balanced Mutual Stance]</code>. Standard for 80% of routine commercial transactions.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/50 p-4 dark:border-emerald-500/30 dark:bg-emerald-950/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                    Commercial Posture (Fast-Close Deal Velocity)
+                  </span>
+                  <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-900/50 dark:text-emerald-200">
+                    COMMERCIAL
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                  Prioritizes deal closing velocity. Automatically adopts pre-approved fallback positions from your Playbook (e.g., 2x fee cap instead of strict 12-month cap), marks acceptable fallback provisions compliant, prefixes rationales with <code className="text-[11px] font-mono">[Commercial Fast-Close Stance]</code>, and crafts deal-closing talking points.
+                </p>
+              </div>
             </div>
           )}
 

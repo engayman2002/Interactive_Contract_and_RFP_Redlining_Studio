@@ -331,6 +331,52 @@ export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
       },
     ],
   },
+  {
+    id: "negotiation-stance-selector",
+    number: 8,
+    title: "AI Negotiation Stance Selector (Strict vs. Balanced vs. Commercial)",
+    badge: "Negotiation Posture",
+    summary:
+      "Dynamically adapt AI redline aggressiveness to match your transaction posture: Strict (zero-compromise standard enforcement), Balanced (reciprocal mutual terms), or Commercial (pre-approved fallback positions for rapid deal velocity).",
+    keywords: [
+      "negotiation stance",
+      "stance",
+      "strict",
+      "balanced",
+      "commercial",
+      "fast close",
+      "posture",
+      "fallback position",
+      "standard position",
+      "velocity",
+      "risk appetite",
+    ],
+    steps: [
+      {
+        title: "Strict Posture: Zero-Compromise Legal Governance",
+        description:
+          "Strict stance strictly enforces your organization's standard position across every clause with zero compromise. Any borderline language or deviation is escalated to CRITICAL/HIGH risk, rationales are tagged [Strict Protective Stance], and talking points provide firm, non-negotiable legal justifications. Ideal for mission-critical vendor agreements, high-liability infrastructure, and core proprietary IP contracts.",
+        tip: "Use Strict mode when your company has strong bargaining power or when counterparty paper poses unacceptable downside risks.",
+      },
+      {
+        title: "Balanced Posture: Fair Bilateral Standards (Default)",
+        description:
+          "Balanced stance converts one-sided counterparty obligations into fair, reciprocal ('Each party...') commitments while defending core company policy boundaries. Rationales are tagged [Balanced Mutual Stance], and talking points offer commercially reasonable compromises aligned with industry norms.",
+        tip: "Recommended for 80% of routine commercial transactions, vendor contracts, and mutual business agreements.",
+      },
+      {
+        title: "Commercial Posture: Fast-Close Deal Velocity",
+        description:
+          "Commercial stance prioritizes closing deals rapidly. The AI automatically selects pre-approved fallback positions from your Playbook (e.g., 2x annual fee cap instead of a 12-month cap) to eliminate protracted redline ping-pong. Rationales are tagged [Commercial Fast-Close Stance], and talking points provide pragmatic business explanations.",
+        tip: "Perfect for high-volume, low-dollar transactions, expedited sales quarter-ends, and low-risk counterparty paper.",
+      },
+      {
+        title: "Switching Stance in the Studio Header",
+        description:
+          "Before clicking 'Analyze Contract with AI', toggle between Strict, Balanced, and Commercial directly on the segmented pill selector beside the audit button. You can re-run the audit anytime with a different stance to view how proposed redlines and risk classifications adapt in real time.",
+      },
+    ],
+  },
 ];
 
 export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
@@ -540,6 +586,41 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
       "backup",
       "restore",
       "api key",
+    ],
+  },
+  {
+    id: "faq-negotiation-stance",
+    question:
+      "How does changing the AI Negotiation Stance (Strict vs. Balanced vs. Commercial) alter redlines?",
+    answer:
+      "The Negotiation Stance directly controls which Playbook position is proposed and how risks are framed. 'Strict' insists on your company's standard position with zero compromise, escalates borderline clauses, and generates firm talking points. 'Balanced' (default) proposes mutual bilateral language. 'Commercial' automatically selects your pre-approved fallback position (e.g. 2x annual fee cap instead of 12-month cap), marks acceptable fallback clauses as low risk, and frames talking points to facilitate rapid closing.",
+    category: "workflow",
+    keywords: [
+      "stance",
+      "negotiation stance",
+      "strict",
+      "balanced",
+      "commercial",
+      "fast close",
+      "fallback",
+      "standard position",
+    ],
+  },
+  {
+    id: "faq-when-to-use-commercial",
+    question:
+      "When should I select the 'Commercial' Fast-Close stance instead of 'Balanced' or 'Strict'?",
+    answer:
+      "Select 'Commercial' stance when deal velocity is paramount—such as end-of-quarter enterprise sales, low-dollar vendor agreements, non-critical SaaS renewals, or when counterparty paper is already close to your pre-approved fallback limits. It minimizes friction and redlines by accepting pre-approved compromises immediately.",
+    category: "workflow",
+    keywords: [
+      "commercial",
+      "fast close",
+      "velocity",
+      "sales",
+      "quarter end",
+      "fallback",
+      "stance",
     ],
   },
 ];

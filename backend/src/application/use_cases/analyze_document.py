@@ -21,7 +21,13 @@ from src.domain.entities import (
     PlaybookSearchQuery,
     RedlineSuggestion,
 )
-from src.domain.enums import AuditAction, DocumentStatus, RiskLevel, SuggestionStatus
+from src.domain.enums import (
+    AuditAction,
+    DocumentStatus,
+    NegotiationStance,
+    RiskLevel,
+    SuggestionStatus,
+)
 from src.domain.exceptions import EntityNotFoundError
 from src.domain.ports import (
     ClauseAuditorPort,
@@ -38,6 +44,7 @@ async def _evaluate_clauses_concurrently(
     auditor: ClauseAuditorPort,
     concurrency: int = 20,
     top_k: int = 3,
+    stance: NegotiationStance = NegotiationStance.BALANCED,
 ) -> list[ClauseAuditResult]:
     """Evaluate all document clauses concurrently using bounded `asyncio.Semaphore`."""
     if not clauses:
@@ -64,6 +71,7 @@ async def _evaluate_clauses_concurrently(
                 clause_index=clause.clause_index,
                 heading=clause.heading,
                 clause_text=clause.current_text,
+                stance=stance,
             )
             return await auditor.audit_clause(
                 audit_input=audit_input,
@@ -123,6 +131,7 @@ class AnalyzeDocumentClausesUseCase:
         self,
         actor: TokenPayloadDTO,
         document_id: UUID,
+        stance: NegotiationStance = NegotiationStance.BALANCED,
     ) -> DocumentAnalysisSummaryDTO:
         """Enforce RBAC, evaluate clauses concurrently, persist suggestions, and update status."""
         self._rbac_guard.ensure_can_mutate(actor.role)
@@ -154,6 +163,7 @@ class AnalyzeDocumentClausesUseCase:
             auditor=self._auditor,
             concurrency=self._concurrency,
             top_k=self._top_k,
+            stance=stance,
         )
 
         suggestions = _build_redline_suggestions(audit_results)
@@ -187,6 +197,7 @@ class AnalyzeDocumentClausesUseCase:
                 details={
                     "total_clauses": len(clauses),
                     "suggestions_created": len(persisted_suggestions),
+                    "stance": stance.value,
                 },
             ),
         )
@@ -210,6 +221,7 @@ class AnalyzeDocumentClausesUseCase:
             low_count=low_count,
             compliant_count=compliant_count,
             execution_time_ms=elapsed_ms,
+            stance=stance,
         )
 
 
@@ -254,6 +266,7 @@ class StreamDocumentAnalysisUseCase:
         actor: TokenPayloadDTO,
         document: Document,
         clauses: list[DocumentClause],
+        stance: NegotiationStance = NegotiationStance.BALANCED,
     ) -> AsyncIterator[str]:
         """Yield SSE-formatted `clause_audited` events followed by a final `completed` event."""
         total_count = len(clauses)
@@ -265,6 +278,7 @@ class StreamDocumentAnalysisUseCase:
             auditor=self._auditor,
             concurrency=self._concurrency,
             top_k=self._top_k,
+            stance=stance,
         )
 
         # Persist suggestions if caller has mutation permissions and none exist yet
@@ -307,6 +321,7 @@ class StreamDocumentAnalysisUseCase:
                 "matched_rule_id": str(res.matched_rule_id) if res.matched_rule_id else None,
                 "proposed_text": res.proposed_text,
                 "rationale": res.rationale,
+                "stance": res.stance.value if res.stance else stance.value,
             }
             yield format_sse_event("clause_audited", payload)
 
@@ -329,6 +344,7 @@ class StreamDocumentAnalysisUseCase:
             "total_count": completed_event.total_count,
             "risk": None,
             "status": completed_event.status,
+            "stance": stance.value,
         }
         yield format_sse_event("completed", completed_payload)
 

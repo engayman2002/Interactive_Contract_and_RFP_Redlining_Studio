@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { API_BASE_URL, DEMO_DOCUMENT_ID } from "@/services/apiClient";
-import { AuditProgressEventDTOSchema } from "@/services/contracts";
+import { AuditProgressEventDTOSchema, NegotiationStance } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 
 export interface UseDocumentStreamOptions {
   documentId: string;
   totalClauses: number;
   token?: string;
+  stance?: NegotiationStance;
   onStreamComplete?: () => void;
 }
 
@@ -16,6 +17,7 @@ export function useDocumentStream({
   documentId,
   totalClauses,
   token,
+  stance = "balanced",
   onStreamComplete,
 }: UseDocumentStreamOptions) {
   const streamProgress = useWorkspaceStore((state) => state.streamProgress);
@@ -79,7 +81,7 @@ export function useDocumentStream({
       return;
     }
 
-    const url = `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}/stream`;
+    const url = `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}/stream?stance=${encodeURIComponent(stance)}`;
     const es = new EventSource(url);
     eventSourceRef.current = es;
 
@@ -125,6 +127,7 @@ export function useDocumentStream({
   }, [
     documentId,
     onStreamComplete,
+    stance,
     stopStream,
     token,
     totalClauses,

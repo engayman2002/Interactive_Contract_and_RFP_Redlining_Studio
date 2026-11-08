@@ -325,3 +325,79 @@ async def test_document_redlining_rbac_and_multi_tenant_isolation(
         headers=headers_admin_b,
     )
     assert b_ws.status_code == 404
+
+
+async def test_document_analyze_with_negotiation_stances(
+    client: AsyncClient,
+) -> None:
+    """Verify that /analyze and /stream respect NegotiationStance payload and query parameters."""
+    reg_resp = await client.post(
+        "/api/v1/auth/register-org",
+        json={
+            "organization_name": "Stance Tech Legal",
+            "admin_email": "admin@stancetech.io",
+            "admin_password": "StancePassword!2026",
+        },
+    )
+    assert reg_resp.status_code == 201
+    token: str = reg_resp.json()["access_token"]
+    headers_admin = {"Authorization": f"Bearer {token}"}
+
+    # 1. Ingest sample agreement
+    upload_resp = await client.post(
+        "/api/v1/documents/upload",
+        files={
+            "file": (
+                "msa_stance.docx",
+                _build_sample_contract_docx_bytes(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+        data={"title": "MSA Negotiation Stance Test"},
+        headers=headers_admin,
+    )
+    assert upload_resp.status_code == 201
+    doc_id = upload_resp.json()["document_id"]
+
+    # 2. Analyze without request body -> defaults to balanced
+    resp_default = await client.post(
+        f"/api/v1/documents/{doc_id}/analyze",
+        headers=headers_admin,
+    )
+    assert resp_default.status_code == 200
+    summary_default = resp_default.json()
+    assert summary_default["stance"] == "balanced"
+
+    # 3. Analyze with commercial stance payload
+    resp_comm = await client.post(
+        f"/api/v1/documents/{doc_id}/analyze",
+        json={"stance": "commercial"},
+        headers=headers_admin,
+    )
+    assert resp_comm.status_code == 200
+    summary_comm = resp_comm.json()
+    assert summary_comm["stance"] == "commercial"
+
+    # 4. Analyze with strict stance payload
+    resp_strict = await client.post(
+        f"/api/v1/documents/{doc_id}/analyze",
+        json={"stance": "strict"},
+        headers=headers_admin,
+    )
+    assert resp_strict.status_code == 200
+    summary_strict = resp_strict.json()
+    assert summary_strict["stance"] == "strict"
+
+    # 5. Stream with commercial stance query parameter
+    stream_resp = await client.get(
+        f"/api/v1/documents/{doc_id}/stream?stance=commercial",
+        headers=headers_admin,
+    )
+    assert stream_resp.status_code == 200
+    events = _parse_sse_stream(stream_resp.text)
+    assert len(events) >= 1
+    # Verify completed event contains stance == commercial
+    completed_events = [data for name, data in events if name == "completed"]
+    assert len(completed_events) == 1
+    assert completed_events[0].get("stance") == "commercial"
+

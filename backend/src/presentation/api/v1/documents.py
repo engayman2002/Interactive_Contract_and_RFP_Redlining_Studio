@@ -3,10 +3,11 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, Form, Query, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from src.application.dtos import (
+    AnalyzeDocumentRequestDTO,
     AuditLogEntryResponseDTO,
     CreateDocumentRequestDTO,
     DocumentAnalysisSummaryDTO,
@@ -30,7 +31,7 @@ from src.application.use_cases import (
     UpdateDocumentFoundationUseCase,
     UploadAndIngestDocumentUseCase,
 )
-from src.domain.enums import ExportMode, UserRole
+from src.domain.enums import ExportMode, NegotiationStance, UserRole
 from src.domain.ports import (
     ClauseAuditorPort,
     ClauseSegmenterPort,
@@ -155,8 +156,15 @@ async def analyze_document_clauses(
     rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
     retriever: Annotated[PlaybookRetrieverPort, Depends(get_playbook_retriever)],
     auditor: Annotated[ClauseAuditorPort, Depends(get_clause_auditor)],
+    payload: AnalyzeDocumentRequestDTO | None = Body(default=None),
+    stance: Annotated[NegotiationStance | None, Query()] = None,
 ) -> DocumentAnalysisSummaryDTO:
     """Trigger concurrent AI redline evaluation across all clauses in a document."""
+    effective_stance = (
+        payload.stance
+        if payload is not None and payload.stance is not None
+        else (stance or NegotiationStance.BALANCED)
+    )
     settings = get_settings()
     use_case = AnalyzeDocumentClausesUseCase(
         uow=uow,
@@ -166,7 +174,11 @@ async def analyze_document_clauses(
         concurrency=settings.REDLINE_BATCH_CONCURRENCY,
         top_k=settings.PLAYBOOK_DEFAULT_TOP_K,
     )
-    return await use_case.execute(actor=current_user, document_id=document_id)
+    return await use_case.execute(
+        actor=current_user,
+        document_id=document_id,
+        stance=effective_stance,
+    )
 
 
 @documents_router.get(
@@ -180,6 +192,7 @@ async def stream_document_analysis(
     rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
     retriever: Annotated[PlaybookRetrieverPort, Depends(get_playbook_retriever)],
     auditor: Annotated[ClauseAuditorPort, Depends(get_clause_auditor)],
+    stance: Annotated[NegotiationStance, Query()] = NegotiationStance.BALANCED,
 ) -> StreamingResponse:
     """Stream Server-Sent Events (`text/event-stream`) of real-time AI clause audit results."""
     settings = get_settings()
@@ -200,6 +213,7 @@ async def stream_document_analysis(
             actor=current_user,
             document=document,
             clauses=clauses,
+            stance=stance,
         ),
         media_type="text/event-stream",
         headers={

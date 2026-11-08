@@ -7,6 +7,7 @@ from uuid import UUID
 from celery import Celery
 
 from src.domain.entities import DocumentClause
+from src.domain.enums import NegotiationStance
 from src.infrastructure.ai.batch_worker import BatchDocumentAuditWorker
 from src.infrastructure.ai.provider_registry import create_llm_runnable
 from src.infrastructure.ai.redline_chain import LangChainClauseAuditor
@@ -47,6 +48,7 @@ async def _run_batch_audit_for_clauses(
     org_id: UUID,
     document_id: UUID,
     clauses: list[DocumentClause],
+    stance: NegotiationStance = NegotiationStance.BALANCED,
 ) -> list[dict[str, Any]]:
     settings = RuntimeAISettingsManager.get_effective_settings()
     async with AsyncSessionFactory() as session:
@@ -74,6 +76,7 @@ async def _run_batch_audit_for_clauses(
             org_id=org_id,
             document_id=document_id,
             clauses=clauses,
+            stance=stance,
         )
         return [
             {
@@ -87,6 +90,7 @@ async def _run_batch_audit_for_clauses(
                 "rationale": r.rationale,
                 "negotiation_talking_point": r.negotiation_talking_point,
                 "latency_ms": r.latency_ms,
+                "stance": r.stance.value,
             }
             for r in results
         ]
@@ -97,10 +101,16 @@ def audit_document_celery_task(
     org_id_str: str,
     document_id_str: str,
     serialized_clauses: list[dict[str, Any]],
+    stance_str: str = "balanced",
 ) -> list[dict[str, Any]]:
     """Celery task entry point delegating to `BatchDocumentAuditWorker`."""
     org_id = UUID(org_id_str)
     document_id = UUID(document_id_str)
+    try:
+        stance = NegotiationStance(stance_str.lower())
+    except ValueError:
+        stance = NegotiationStance.BALANCED
+
     clauses = [
         DocumentClause(
             id=UUID(str(c["id"])),
@@ -113,7 +123,7 @@ def audit_document_celery_task(
         )
         for c in serialized_clauses
     ]
-    return asyncio.run(_run_batch_audit_for_clauses(org_id, document_id, clauses))
+    return asyncio.run(_run_batch_audit_for_clauses(org_id, document_id, clauses, stance))
 
 
 __all__ = [

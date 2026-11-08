@@ -23,6 +23,7 @@ import {
   ExportMode,
   ExportModeSchema,
   ImportAIVaultRequestDTO,
+  NegotiationStance,
   OnboardingResponseDTO,
   OnboardingResponseDTOSchema,
   PlaybookRuleDTO,
@@ -581,62 +582,166 @@ export async function uploadDocument(
 
 export async function triggerDocumentAnalysis(
   documentId: string,
-  token?: string
+  token?: string,
+  stance: NegotiationStance = "balanced"
 ): Promise<DocumentAnalysisSummaryDTO> {
   const local = getLocalDocumentWorkspace(documentId);
 
   if (documentId === DEMO_DOCUMENT_ID || documentId === "demo" || !token || local) {
-    if (local && local.redlines.length === 0) {
-      const simulatedRedlines: RedlineSuggestionDTO[] = [
-        {
-          id: `r-${documentId}-1`,
-          clause_id: local.clauses[0]?.id ?? "c1",
-          matched_rule_id: "p0000000-0000-4000-8000-000000000301",
-          risk: "CRITICAL",
-          proposed_text:
-            "1.1 Each party's aggregate cumulative liability under this Agreement shall not exceed twelve (12) months of fees paid or payable, with mutual consequential damages waiver.",
-          rationale:
-            "Playbook mandates a balanced mutual 12-month liability cap and mutual waiver of indirect or consequential damages.",
-          status: "PENDING",
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: `r-${documentId}-2`,
-          clause_id: local.clauses[1]?.id ?? "c2",
-          matched_rule_id: "p0000000-0000-4000-8000-000000000302",
-          risk: "CRITICAL",
-          proposed_text:
-            "2.1 Vendor shall defend and indemnify Customer against third-party IP infringement claims and gross negligence.",
-          rationale:
-            "Customer cannot indemnify Vendor unilaterally; Vendor must provide standard IP infringement indemnity.",
-          status: "PENDING",
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: `r-${documentId}-3`,
-          clause_id: local.clauses[2]?.id ?? "c3",
-          matched_rule_id: "p0000000-0000-4000-8000-000000000303",
-          risk: "HIGH",
-          proposed_text:
-            "3.1 Vendor guarantees 99.95% monthly uptime with 10% service credits per 0.1% downtime and chronic failure termination rights.",
-          rationale:
-            "Best-efforts availability without service credits violates company SLA standards.",
-          status: "PENDING",
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: `r-${documentId}-4`,
-          clause_id: local.clauses[3]?.id ?? "c4",
-          matched_rule_id: "p0000000-0000-4000-8000-000000000304",
-          risk: "CRITICAL",
-          proposed_text:
-            "4.1 Vendor shall process Customer data solely to deliver the service and is strictly prohibited from training AI models on Customer data.",
-          rationale:
-            "Prohibits training foundation models on Customer confidential information per data privacy policy.",
-          status: "PENDING",
-          created_at: new Date().toISOString(),
-        },
-      ];
+    if (local) {
+      const simulatedRedlines: RedlineSuggestionDTO[] =
+        stance === "commercial"
+          ? [
+              {
+                id: `r-${documentId}-1`,
+                clause_id: local.clauses[0]?.id ?? "c1",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+                risk: "HIGH",
+                proposed_text:
+                  "1.1 Each party's aggregate cumulative liability under this Agreement shall not exceed two times (2x) the annual fees paid under this Agreement, to facilitate fast closing.",
+                rationale:
+                  "[Commercial Fast-Close Stance] Pre-approved commercial fallback position adopted to expedite deal closure: 2x annual fees cap. | Talking Point: To accelerate deal closure, we have pre-approved our commercial fallback terms (2x fees).",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+              {
+                id: `r-${documentId}-2`,
+                clause_id: local.clauses[1]?.id ?? "c2",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+                risk: "HIGH",
+                proposed_text:
+                  "2.1 Vendor shall defend and indemnify Customer against third-party claims alleging direct infringement of United States patents or copyrights.",
+                rationale:
+                  "[Commercial Fast-Close Stance] Commercial fallback indemnity adopted to expedite deal closure. | Talking Point: Standard commercial indemnity provided for fast close.",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+              {
+                id: `r-${documentId}-3`,
+                clause_id: local.clauses[2]?.id ?? "c3",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+                risk: "MEDIUM",
+                proposed_text:
+                  "3.1 Vendor targets 99.9% monthly availability with commercially standard service credit remedies.",
+                rationale:
+                  "[Commercial Fast-Close Stance] Standard commercial SLA adopted to accelerate deal velocity. | Talking Point: Commercially balanced availability target.",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+              {
+                id: `r-${documentId}-4`,
+                clause_id: local.clauses[3]?.id ?? "c4",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+                risk: "HIGH",
+                proposed_text:
+                  "4.1 Vendor shall not use Customer Confidential Information to train public foundation models without written consent.",
+                rationale:
+                  "[Commercial Fast-Close Stance] Commercial fallback standard: public model training prohibited. | Talking Point: Practical protection for Customer data.",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+            ]
+          : stance === "strict"
+          ? [
+              {
+                id: `r-${documentId}-1`,
+                clause_id: local.clauses[0]?.id ?? "c1",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+                risk: "CRITICAL",
+                proposed_text:
+                  "1.1 Each party's aggregate cumulative liability under this Agreement shall not exceed twelve (12) months of fees paid or payable, with strict mutual consequential damages waiver and no carve-outs.",
+                rationale:
+                  "[Strict Protective Stance] Playbook strictly mandates zero-compromise mutual 12-month liability cap and mutual waiver of indirect or consequential damages. | Talking Point: Our corporate policy strictly requires standard 12-month cap without compromise.",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+              {
+                id: `r-${documentId}-2`,
+                clause_id: local.clauses[1]?.id ?? "c2",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+                risk: "CRITICAL",
+                proposed_text:
+                  "2.1 Vendor shall unconditionally defend, indemnify, and hold harmless Customer against all third-party IP infringement claims, data breaches, and gross negligence without limitation.",
+                rationale:
+                  "[Strict Protective Stance] Customer cannot indemnify Vendor unilaterally; Vendor must provide full IP and data breach indemnity. | Talking Point: Strict non-negotiable protection against third-party infringement.",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+              {
+                id: `r-${documentId}-3`,
+                clause_id: local.clauses[2]?.id ?? "c3",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+                risk: "CRITICAL",
+                proposed_text:
+                  "3.1 Vendor guarantees 99.99% monthly uptime with 20% service credits per 0.1% downtime and immediate termination rights upon consecutive failures.",
+                rationale:
+                  "[Strict Protective Stance] Best-efforts availability violates strict company SLA standards. Full enterprise commitments required. | Talking Point: Enterprise mission-critical uptime is non-negotiable.",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+              {
+                id: `r-${documentId}-4`,
+                clause_id: local.clauses[3]?.id ?? "c4",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+                risk: "CRITICAL",
+                proposed_text:
+                  "4.1 Vendor shall process Customer data strictly to deliver the service and is absolutely prohibited from training AI models or retaining Customer confidential information.",
+                rationale:
+                  "[Strict Protective Stance] Absolute prohibition on training AI foundation models on Customer confidential information per strict governance. | Talking Point: Strict data protection boundary.",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+            ]
+          : [
+              {
+                id: `r-${documentId}-1`,
+                clause_id: local.clauses[0]?.id ?? "c1",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+                risk: "CRITICAL",
+                proposed_text:
+                  "1.1 Each party's aggregate cumulative liability under this Agreement shall not exceed twelve (12) months of fees paid or payable, with mutual consequential damages waiver.",
+                rationale:
+                  "[Balanced Mutual Stance] Playbook mandates a balanced mutual 12-month liability cap and mutual waiver of indirect or consequential damages. | Talking Point: Our standard corporate policy requires balanced 12-month terms.",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+              {
+                id: `r-${documentId}-2`,
+                clause_id: local.clauses[1]?.id ?? "c2",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+                risk: "CRITICAL",
+                proposed_text:
+                  "2.1 Vendor shall defend and indemnify Customer against third-party IP infringement claims and gross negligence.",
+                rationale:
+                  "[Balanced Mutual Stance] Customer cannot indemnify Vendor unilaterally; Vendor must provide standard IP infringement indemnity. | Talking Point: Standard mutual indemnity provisions required.",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+              {
+                id: `r-${documentId}-3`,
+                clause_id: local.clauses[2]?.id ?? "c3",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+                risk: "HIGH",
+                proposed_text:
+                  "3.1 Vendor guarantees 99.95% monthly uptime with 10% service credits per 0.1% downtime and chronic failure termination rights.",
+                rationale:
+                  "[Balanced Mutual Stance] Best-efforts availability without service credits violates company SLA standards. | Talking Point: Please align SLA with standard 99.95% target.",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+              {
+                id: `r-${documentId}-4`,
+                clause_id: local.clauses[3]?.id ?? "c4",
+                matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+                risk: "CRITICAL",
+                proposed_text:
+                  "4.1 Vendor shall process Customer data solely to deliver the service and is strictly prohibited from training AI models on Customer data.",
+                rationale:
+                  "[Balanced Mutual Stance] Prohibits training foundation models on Customer confidential information per data privacy policy. | Talking Point: Customer proprietary data may not be used for AI training.",
+                status: "PENDING",
+                created_at: new Date().toISOString(),
+              },
+            ];
 
       local.redlines = simulatedRedlines;
       local.status = "ANALYZED";
@@ -651,6 +756,7 @@ export async function triggerDocumentAnalysis(
         details: {
           total_clauses: local.clauses.length,
           suggestions_created: simulatedRedlines.length,
+          stance,
         },
         created_at: new Date().toISOString(),
       });
@@ -671,12 +777,13 @@ export async function triggerDocumentAnalysis(
       status: "ANALYZED",
       total_clauses: local ? local.clauses.length : DEMO_WORKSPACE_DATA.clauses.length,
       suggestions_created: local ? local.redlines.length : DEMO_WORKSPACE_DATA.redlines.length,
-      critical_count: 3,
-      high_count: 1,
+      critical_count: stance === "strict" ? 4 : stance === "commercial" ? 0 : 3,
+      high_count: stance === "strict" ? 0 : stance === "commercial" ? 3 : 1,
       medium_count: 1,
-      low_count: 1,
-      compliant_count: 1,
+      low_count: stance === "commercial" ? 2 : 1,
+      compliant_count: stance === "commercial" ? 2 : 1,
       execution_time_ms: 142.5,
+      stance,
     });
   }
 
@@ -685,13 +792,17 @@ export async function triggerDocumentAnalysis(
     {
       method: "POST",
       headers: buildHeaders(token),
+      body: JSON.stringify({ stance }),
     }
   );
   if (!response.ok) {
     throw new Error(`Failed to trigger analysis (${response.status})`);
   }
   const raw = await response.json();
-  return DocumentAnalysisSummaryDTOSchema.parse(raw);
+  return DocumentAnalysisSummaryDTOSchema.parse({
+    ...raw,
+    stance: raw.stance ?? stance,
+  });
 }
 
 export async function resolveSuggestion(

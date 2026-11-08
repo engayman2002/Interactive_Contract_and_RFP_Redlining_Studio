@@ -67,6 +67,12 @@ export const RedliningStudioWorkspace: React.FC<
   const setActiveAIEngine = useWorkspaceStore(
     (state) => state.setActiveAIEngine
   );
+  const negotiationStance = useWorkspaceStore(
+    (state) => state.negotiationStance
+  );
+  const setNegotiationStance = useWorkspaceStore(
+    (state) => state.setNegotiationStance
+  );
   const { session } = useAuthSession();
   const effectiveToken = token ?? session.token ?? undefined;
 
@@ -137,13 +143,14 @@ export const RedliningStudioWorkspace: React.FC<
     documentId: resolvedDocId,
     totalClauses: clauses.length,
     token,
+    stance: negotiationStance,
     onStreamComplete: handleStreamComplete,
   });
 
   const handleTriggerAiAnalysis = useCallback(async () => {
-    await triggerDocumentAnalysis(resolvedDocId, token);
+    await triggerDocumentAnalysis(resolvedDocId, token, negotiationStance);
     await startStream();
-  }, [resolvedDocId, token, startStream]);
+  }, [resolvedDocId, token, negotiationStance, startStream]);
 
   const handleAcceptSuggestion = useCallback(
     async (suggestionId: string) => {
@@ -330,6 +337,54 @@ export const RedliningStudioWorkspace: React.FC<
             <FileCheck2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Export Clean (.docx)</span>
           </button>
+
+          {/* AI Negotiation Stance Selector */}
+          <div
+            data-testid="negotiation-stance-selector"
+            className="inline-flex items-center rounded-lg border border-slate-200/90 bg-slate-100/80 p-0.5 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-800/80"
+            role="group"
+            aria-label="AI Negotiation Stance"
+          >
+            <button
+              type="button"
+              data-testid="stance-option-strict"
+              onClick={() => setNegotiationStance("strict")}
+              className={`rounded-md px-2 py-1 font-medium transition-all ${
+                negotiationStance === "strict"
+                  ? "bg-rose-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              }`}
+              title="Strict / Protective Posture: Zero-compromise standard playbook enforcement"
+            >
+              Strict
+            </button>
+            <button
+              type="button"
+              data-testid="stance-option-balanced"
+              onClick={() => setNegotiationStance("balanced")}
+              className={`rounded-md px-2 py-1 font-medium transition-all ${
+                negotiationStance === "balanced"
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              }`}
+              title="Balanced / Mutual Posture (Default): Bilateral terms protecting core boundaries"
+            >
+              Balanced
+            </button>
+            <button
+              type="button"
+              data-testid="stance-option-commercial"
+              onClick={() => setNegotiationStance("commercial")}
+              className={`rounded-md px-2 py-1 font-medium transition-all ${
+                negotiationStance === "commercial"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              }`}
+              title="Commercial / Fast-Close Posture: Pre-approved fallback positions for rapid deal velocity"
+            >
+              Commercial
+            </button>
+          </div>
 
           {/* Primary High-Contrast CTA */}
           <button

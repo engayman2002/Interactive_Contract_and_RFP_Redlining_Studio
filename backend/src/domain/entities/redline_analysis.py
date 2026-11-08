@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
-from src.domain.enums import RiskLevel
+from src.domain.enums import NegotiationStance, RiskLevel
 from src.domain.exceptions import DomainValidationError
 
 AuditEventType = Literal["clause_audited", "completed", "error"]
@@ -20,6 +20,7 @@ class ClauseAuditInput:
     clause_index: int
     heading: str | None
     clause_text: str
+    stance: NegotiationStance = NegotiationStance.BALANCED
 
     def __post_init__(self) -> None:
         if self.clause_index < 0:
@@ -44,6 +45,7 @@ class ClauseAuditResult:
     rationale: str
     negotiation_talking_point: str
     latency_ms: float
+    stance: NegotiationStance = NegotiationStance.BALANCED
 
     def __post_init__(self) -> None:
         if not self.category.strip():

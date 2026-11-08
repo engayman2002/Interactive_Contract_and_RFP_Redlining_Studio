@@ -5,7 +5,13 @@ from uuid import UUID
 
 from src.application.dtos import ImmutableDTO
 from src.domain.entities import RedlineSuggestion
-from src.domain.enums import RiskLevel, SuggestionStatus
+from src.domain.enums import NegotiationStance, RiskLevel, SuggestionStatus
+
+
+class AnalyzeDocumentRequestDTO(ImmutableDTO):
+    """Input DTO for requesting AI clause analysis with an explicit negotiation stance."""
+
+    stance: NegotiationStance = NegotiationStance.BALANCED
 
 
 class RedlineSuggestionResponseDTO(ImmutableDTO):
@@ -52,9 +58,11 @@ class DocumentAnalysisSummaryDTO(ImmutableDTO):
     low_count: int
     compliant_count: int
     execution_time_ms: float
+    stance: NegotiationStance = NegotiationStance.BALANCED
 
 
 __all__ = [
+    "AnalyzeDocumentRequestDTO",
     "DocumentAnalysisSummaryDTO",
     "RedlineSuggestionResponseDTO",
 ]

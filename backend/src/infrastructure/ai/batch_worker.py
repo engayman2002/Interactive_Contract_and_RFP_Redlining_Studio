@@ -11,6 +11,7 @@ from src.domain.entities import (
     DocumentClause,
     PlaybookSearchQuery,
 )
+from src.domain.enums import NegotiationStance
 from src.domain.ports import ClauseAuditorPort, PlaybookRetrieverPort
 
 
@@ -36,6 +37,7 @@ class BatchDocumentAuditWorker:
         clause: DocumentClause,
         semaphore: asyncio.Semaphore,
         retriever_lock: asyncio.Lock,
+        stance: NegotiationStance = NegotiationStance.BALANCED,
     ) -> ClauseAuditResult:
         async with semaphore:
             query = PlaybookSearchQuery(
@@ -54,6 +56,7 @@ class BatchDocumentAuditWorker:
                 clause_index=clause.clause_index,
                 heading=clause.heading,
                 clause_text=clause.current_text,
+                stance=stance,
             )
             return await self._auditor.audit_clause(
                 audit_input=audit_input,
@@ -65,6 +68,7 @@ class BatchDocumentAuditWorker:
         org_id: UUID,
         document_id: UUID,
         clauses: Sequence[DocumentClause],
+        stance: NegotiationStance = NegotiationStance.BALANCED,
     ) -> list[ClauseAuditResult]:
         """Concurrently evaluate all `clauses` and return results ordered by `clause_index`."""
         if not clauses:
@@ -80,6 +84,7 @@ class BatchDocumentAuditWorker:
                 clause=clause,
                 semaphore=semaphore,
                 retriever_lock=retriever_lock,
+                stance=stance,
             )
             for clause in clauses
         ]
@@ -91,6 +96,7 @@ class BatchDocumentAuditWorker:
         org_id: UUID,
         document_id: UUID,
         clauses: Sequence[DocumentClause],
+        stance: NegotiationStance = NegotiationStance.BALANCED,
     ) -> AsyncIterator[tuple[ClauseAuditResult, AuditProgressEvent]]:
         """Evaluate clauses concurrently and yield `(ClauseAuditResult, AuditProgressEvent)`."""
         total_count = len(clauses)
@@ -101,6 +107,7 @@ class BatchDocumentAuditWorker:
             org_id=org_id,
             document_id=document_id,
             clauses=clauses,
+            stance=stance,
         )
         for idx, result in enumerate(results, start=1):
             event = AuditProgressEvent(

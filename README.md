@@ -25,6 +25,7 @@ The **Interactive Contract & RFP Redlining Studio** is an enterprise-grade, mult
 - **Clause-Level Structural Intelligence:** Preserves legal section numbering (`1.1`, `Article IV`, `(a)`), nested headings, and cross-references during `.docx` and `.pdf` ingestion while stripping repeating page headers/footers and guarding against Zip-Slip and XML External Entity (XXE) attacks.
 - **Hybrid Vector + Lexical Playbook Retrieval:** Combines 1536-dimensional `pgvector` cosine similarity (`0.7` weight) with BM25 lexical & legal-stem overlap (`0.3` weight) to retrieve the top 3 governing corporate policy rules per clause in `<150ms`.
 - **Deterministic LangChain LCEL Auditing & Real-Time SSE:** Evaluates up to 20 clauses concurrently (`asyncio.Semaphore(20)`) at `temperature = 0.0`, validating every LLM response against the strict [`RedlineOutput`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/backend/src/infrastructure/ai/redline_chain.py#L31-L44) schema with automatic JSON repair/retry and streaming live progress events over W3C Server-Sent Events (`text/event-stream`).
+- **AI Negotiation Stance Selector (`STRICT` vs. `BALANCED` vs. `COMMERCIAL`):** Dynamically adjusts AI redline aggressiveness to match transaction posture. `STRICT` enforces zero-compromise adherence to the Playbook's `standard_position` with firm non-negotiable justifications; `BALANCED` (default) creates fair, reciprocal bilateral (`"Each party..."`) commitments; `COMMERCIAL` adopts pre-approved `fallback_position` terms (e.g., 2x annual fee cap) to accelerate deal velocity and close transactions rapidly without endless redline cycles.
 - **Bidirectional Split-Screen Editor & Surgical Word Diffs:** Binds each PostgreSQL `document_clauses` row to a custom TipTap/ProseMirror [`ClauseNodeExtension`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/ClauseNodeExtension.ts#L23-L84) (`div[data-clause-id]`) paired with a visual [`RiskHeatmapGutter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/RiskHeatmapGutter.tsx#L44-L92) and hover-activated [`InlineDiffPreview`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/diff/InlineDiffPreview.tsx#L12-L72).
 - **Optimistic Concurrency & Multi-Tenant RBAC:** Enforces `org_id` isolation on every repository query, 4-tier RBAC (`ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD`, `VIEWER`), and `expected_clause_version` optimistic locking that automatically rejects stale concurrent edits with `409 Conflict` and rolls back client state.
 - **Native Microsoft Word OpenXML Track-Changes Export:** Reconstructs valid `.docx` archives embedding native `<w:del>` (`<w:delText>`) and `<w:ins>` (`<w:t>`) revision tags with `w:author` and ISO-8601 `w:date` attributes, `<w:commentRangeStart/>`/`<w:commentRangeEnd/>` anchors, AI rationales, and reviewer comments.
@@ -865,8 +866,8 @@ The OpenXML `.docx` reconstruction engine is located in [`backend/src/infrastruc
 | 14 | `POST /api/v1/documents/upload` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `201 Created` | Upload `.docx`/`.pdf`, segment into semantic clauses, log `DOCUMENT_INGESTED` |
 | 15 | `GET /api/v1/documents` | All Authenticated Roles | `200 OK` | List all documents in the caller's organization |
 | 16 | `GET /api/v1/documents/{document_id}/workspace` | All Authenticated Roles | `200 OK` | Fetch full workspace (document, ordered clauses, redlines, comments, audit logs) |
-| 17 | `POST /api/v1/documents/{document_id}/analyze` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Run concurrent AI clause auditing & persist `RedlineSuggestion` records |
-| 18 | `GET /api/v1/documents/{document_id}/stream` | All Authenticated Roles | `200 OK` (`text/event-stream`) | Stream real-time `clause_audited` and `completed` SSE events |
+| 17 | `POST /api/v1/documents/{document_id}/analyze` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Run concurrent AI clause auditing & persist `RedlineSuggestion` records. Accepts optional body `{"stance": "strict" \| "balanced" \| "commercial"}` (or `?stance=` query param; defaults to `balanced`) |
+| 18 | `GET /api/v1/documents/{document_id}/stream` | All Authenticated Roles | `200 OK` (`text/event-stream`) | Stream real-time `clause_audited` and `completed` SSE events with optional `?stance=strict\|balanced\|commercial` |
 | 19 | `POST /api/v1/suggestions/{suggestion_id}/resolve` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` (`409` on version mismatch) | Atomically `ACCEPT`, `MODIFY`, or `REJECT` suggestion with `expected_clause_version` |
 | 20 | `POST /api/v1/clauses/{clause_id}/comments` | All Authenticated Roles | `201 Created` | Post a threaded comment on a clause & log `COMMENT_CREATED` |
 | 21 | `GET /api/v1/clauses/{clause_id}/comments` | All Authenticated Roles | `200 OK` | List chronological comments on a clause |
@@ -977,11 +978,14 @@ export DOC_ID=$(echo "${UPLOAD_RESP}" | python3 -c "import sys,json; print(json.
 # -----------------------------------------------------------------------------
 # 7. Trigger Concurrent AI Clause Analysis & Stream Real-Time SSE Progress
 # -----------------------------------------------------------------------------
+# Default stance: "balanced". You can pass {"stance": "strict" | "balanced" | "commercial"}
 curl -sS -X POST "${API_URL}/documents/${DOC_ID}/analyze" \
-  -H "Authorization: Bearer ${ADMIN_TOKEN}"
+  -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"stance": "commercial"}'
 
 curl -sS -N -H "Authorization: Bearer ${ADMIN_TOKEN}" \
-  "${API_URL}/documents/${DOC_ID}/stream"
+  "${API_URL}/documents/${DOC_ID}/stream?stance=commercial"
 
 # Fetch Workspace to extract Clause ID and Redline Suggestion ID
 WORKSPACE_JSON=$(curl -sS -H "Authorization: Bearer ${ADMIN_TOKEN}" \

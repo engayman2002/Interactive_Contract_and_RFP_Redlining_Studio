@@ -13,7 +13,7 @@ from src.domain.entities import (
     PlaybookRule,
     PlaybookSearchQuery,
 )
-from src.domain.enums import RiskLevel
+from src.domain.enums import NegotiationStance, RiskLevel
 from src.domain.exceptions import StructuredOutputValidationError
 from src.infrastructure.ai import (
     BatchDocumentAuditWorker,
@@ -383,3 +383,85 @@ async def test_100_clause_batch_audit_completes_under_25s_with_zero_malformed_ou
     assert streamed_events[-1].completed_count == 5
     assert streamed_events[-1].total_count == 5
     assert PlaybookSearchQuery(org_id=org_id, query_text="test", top_k=3).top_k == 3
+
+
+@pytest.mark.asyncio
+async def test_negotiation_stances_strict_vs_commercial_differentiation() -> None:
+    """Verify that STRICT vs BALANCED vs COMMERCIAL negotiation stances adapt redlines."""
+    org_id = uuid4()
+    doc_id = uuid4()
+    auditor = LangChainClauseAuditor()
+
+    test_rule = PlaybookRule(
+        id=uuid4(),
+        org_id=org_id,
+        category="Limitation of Liability",
+        standard_position=(
+            "1.1 Each party's aggregate liability shall not exceed 12 months of fees paid, "
+            "with mutual waiver of consequential damages."
+        ),
+        fallback_position=(
+            "1.1 Each party's aggregate liability shall not exceed 2x annual fees paid under "
+            "the agreement."
+        ),
+        unacceptable_triggers=(
+            "Customer shall have uncapped liability, or vendor liability capped under $1,000."
+        ),
+    )
+    matched = [
+        MatchedPlaybookRule(
+            rule=test_rule,
+            combined_score=0.95,
+            vector_score=0.95,
+            keyword_score=0.95,
+        )
+    ]
+    non_compliant_clause_text = (
+        "1.1 Vendor's liability shall not exceed $500, and Customer shall have uncapped liability."
+    )
+
+    # 1. Commercial Stance: should adopt pre-approved fallback position
+    comm_input = ClauseAuditInput(
+        org_id=org_id,
+        document_id=doc_id,
+        clause_id=uuid4(),
+        clause_index=0,
+        heading="1. Limitation of Liability",
+        clause_text=non_compliant_clause_text,
+        stance=NegotiationStance.COMMERCIAL,
+    )
+    comm_result = await auditor.audit_clause(comm_input, matched)
+    assert comm_result.stance == NegotiationStance.COMMERCIAL
+    assert "[Commercial Fast-Close Stance]" in comm_result.rationale
+    assert "2x annual fees" in comm_result.proposed_text
+
+    # 2. Strict Stance: should strictly enforce standard position
+    strict_input = ClauseAuditInput(
+        org_id=org_id,
+        document_id=doc_id,
+        clause_id=uuid4(),
+        clause_index=0,
+        heading="1. Limitation of Liability",
+        clause_text=non_compliant_clause_text,
+        stance=NegotiationStance.STRICT,
+    )
+    strict_result = await auditor.audit_clause(strict_input, matched)
+    assert strict_result.stance == NegotiationStance.STRICT
+    assert "[Strict Protective Stance]" in strict_result.rationale
+    assert "12 months of fees paid" in strict_result.proposed_text
+
+    # 3. Balanced Stance (Default): should enforce standard balanced position
+    balanced_input = ClauseAuditInput(
+        org_id=org_id,
+        document_id=doc_id,
+        clause_id=uuid4(),
+        clause_index=0,
+        heading="1. Limitation of Liability",
+        clause_text=non_compliant_clause_text,
+        stance=NegotiationStance.BALANCED,
+    )
+    balanced_result = await auditor.audit_clause(balanced_input, matched)
+    assert balanced_result.stance == NegotiationStance.BALANCED
+    assert "[Balanced Mutual Stance]" in balanced_result.rationale
+    assert "12 months of fees paid" in balanced_result.proposed_text
+

@@ -17,7 +17,7 @@ from src.domain.entities import (
     ClauseAuditResult,
     MatchedPlaybookRule,
 )
-from src.domain.enums import RiskLevel
+from src.domain.enums import NegotiationStance, RiskLevel
 from src.domain.exceptions import ClauseAnalysisError, StructuredOutputValidationError
 from src.domain.ports import ClauseAuditorPort
 from src.infrastructure.vector.embedding_service import (
@@ -47,6 +47,24 @@ SYSTEM_PROMPT: Final[str] = """You are a Principal Legal and Technical Contract 
 Compare the provided contract clause against the retrieved Company Playbook Rules.
 If the clause violates policy or introduces unmitigated risk, generate a precise surgical redline
 that protects the company while remaining commercially reasonable."""
+
+STANCE_INSTRUCTIONS: Final[dict[NegotiationStance, str]] = {
+    NegotiationStance.STRICT: (
+        "NEGOTIATION STANCE: STRICT / PROTECTIVE. Enforce the Company Playbook's Standard Position "
+        "with zero compromise. Do not use fallback compromises. Draft protective language that "
+        "strictly insulates the company from liability and risk."
+    ),
+    NegotiationStance.BALANCED: (
+        "NEGOTIATION STANCE: BALANCED / MUTUAL. Enforce Company Playbook protections using fair, "
+        "reciprocal, bilateral obligations ('Each party...') that are commercially reasonable to "
+        "both parties."
+    ),
+    NegotiationStance.COMMERCIAL: (
+        "NEGOTIATION STANCE: COMMERCIAL / FAST-CLOSE. Prioritize deal velocity and fast signature. "
+        "Where a clause conflicts with policy, use the Company Playbook's pre-approved Fallback "
+        "Position and draft collaborative, minimal-friction redlines."
+    ),
+}
 
 CRITICAL_RISK_PATTERNS: Final[tuple[tuple[str, str, str, str], ...]] = (
     (
@@ -258,12 +276,20 @@ class PolicyAwareDeterministicChatModel(Runnable[Any, str]):
         self.temperature = temperature
 
     @staticmethod
-    def _extract_inputs(input_data: Any) -> tuple[str, list[MatchedPlaybookRule]]:
-        """Extract `clause_text` and `matched_rules` from LCEL dict or ChatPromptValue."""
+    def _extract_inputs(
+        input_data: Any,
+    ) -> tuple[str, list[MatchedPlaybookRule], NegotiationStance]:
+        """Extract `clause_text`, `matched_rules`, and `stance` from input."""
         if isinstance(input_data, dict):
             clause_text = str(input_data.get("clause_text", ""))
             matched_rules = list(input_data.get("matched_rules", []))
-            return clause_text, matched_rules
+            raw_stance = input_data.get("stance", NegotiationStance.BALANCED)
+            stance = (
+                raw_stance
+                if isinstance(raw_stance, NegotiationStance)
+                else NegotiationStance(str(raw_stance).lower())
+            )
+            return clause_text, matched_rules, stance
 
         # When invoked after ChatPromptTemplate (`ChatPromptValue` or message list)
         text_repr = str(input_data)
@@ -272,15 +298,16 @@ class PolicyAwareDeterministicChatModel(Runnable[Any, str]):
             clause_text = text_repr.split(clause_marker, maxsplit=1)[1].strip()
         else:
             clause_text = text_repr.strip()
-        return clause_text, []
+        return clause_text, [], NegotiationStance.BALANCED
 
     def evaluate_to_redline_output(
         self,
         clause_text: str,
         matched_rules: Sequence[MatchedPlaybookRule],
         heading: str | None = None,
+        stance: NegotiationStance = NegotiationStance.BALANCED,
     ) -> RedlineOutput:
-        """Deterministically evaluate `clause_text` against `matched_rules` and risk patterns."""
+        """Deterministically evaluate `clause_text` against rules, risk patterns, and stance."""
         lower_clause = clause_text.lower()
         clause_stems = _extract_meaningful_stems(clause_text)
         top_rule = matched_rules[0].rule if matched_rules else None
@@ -290,7 +317,7 @@ class PolicyAwareDeterministicChatModel(Runnable[Any, str]):
             else (heading.strip() if heading and heading.strip() else "General Commercial")
         )
 
-        # 1. Check matched PlaybookRule unacceptable triggers vs standard position
+        # 1. Check matched PlaybookRule unacceptable triggers vs standard/fallback position
         for match in matched_rules:
             rule = match.rule
             trigger_stems = _extract_meaningful_stems(rule.unacceptable_triggers)
@@ -322,59 +349,144 @@ class PolicyAwareDeterministicChatModel(Runnable[Any, str]):
                     )
                 )
                 risk_level: Literal["CRITICAL", "HIGH"] = "CRITICAL" if is_critical else "HIGH"
-                proposed = _preserve_clause_numbering(clause_text, rule.standard_position)
+
+                if stance == NegotiationStance.COMMERCIAL:
+                    proposed = _preserve_clause_numbering(clause_text, rule.fallback_position)
+                    rationale = (
+                        f"[Commercial Fast-Close Stance] Clause conflicts with "
+                        f"'{rule.category}' playbook policy ({rule.unacceptable_triggers}). "
+                        "Pre-approved commercial fallback position adopted to expedite deal "
+                        f"closure: {rule.fallback_position}"
+                    )
+                    talking_point = (
+                        f"To accelerate deal closure, we have pre-approved our commercial fallback "
+                        f"terms for {rule.category} ({rule.fallback_position})."
+                    )
+                elif stance == NegotiationStance.STRICT:
+                    proposed = _preserve_clause_numbering(clause_text, rule.standard_position)
+                    rationale = (
+                        f"[Strict Protective Stance] Clause triggers unacceptable risk under the "
+                        f"'{rule.category}' playbook policy ({rule.unacceptable_triggers}). "
+                        f"Strictly enforcing company standard position with zero compromise: "
+                        f"{rule.standard_position}"
+                    )
+                    talking_point = (
+                        "Our corporate risk governance strictly mandates adherence to our "
+                        f"standard position for {rule.category} without compromise: "
+                        f"{rule.standard_position}"
+                    )
+                else:  # BALANCED
+                    proposed = _preserve_clause_numbering(clause_text, rule.standard_position)
+                    rationale = (
+                        f"[Balanced Mutual Stance] Clause triggers unacceptable risk under the "
+                        f"'{rule.category}' playbook policy ({rule.unacceptable_triggers}). "
+                        f"Replaced with balanced standard position: {rule.standard_position}"
+                    )
+                    talking_point = (
+                        f"Our standard corporate policy for {rule.category} requires balanced "
+                        f"terms aligned with industry norms ({rule.fallback_position})."
+                    )
+
                 return RedlineOutput(
                     is_compliant=False,
                     risk=risk_level,
                     category=rule.category,
                     proposed_text=proposed,
-                    rationale=(
-                        f"Clause triggers unacceptable risk under the '{rule.category}' playbook "
-                        f"policy ({rule.unacceptable_triggers}). Replaced with company standard "
-                        f"position: {rule.standard_position}"
-                    ),
-                    negotiation_talking_point=(
-                        f"Our standard corporate policy for {rule.category} requires balanced "
-                        f"terms aligned with industry norms ({rule.fallback_position})."
-                    ),
+                    rationale=rationale,
+                    negotiation_talking_point=talking_point,
                 )
 
         # 2. Check explicit CRITICAL legal/technical risk patterns
         for pattern, pat_category, replacement_body, reason in CRITICAL_RISK_PATTERNS:
             if pattern in lower_clause:
                 resolved_cat = top_rule.category if top_rule is not None else pat_category
-                chosen_body = (
-                    top_rule.standard_position if top_rule is not None else replacement_body
-                )
+                if stance == NegotiationStance.COMMERCIAL and top_rule is not None:
+                    chosen_body = top_rule.fallback_position
+                    rationale = (
+                        f"[Commercial Fast-Close Stance] {reason} "
+                        "Applied commercial fallback terms."
+                    )
+                    talking_point = (
+                        f"To accelerate deal closure, we offer our pre-approved commercial "
+                        f"fallback position for {resolved_cat}."
+                    )
+                elif stance == NegotiationStance.STRICT:
+                    chosen_body = (
+                        top_rule.standard_position if top_rule is not None else replacement_body
+                    )
+                    rationale = (
+                        f"[Strict Protective Stance] {reason} "
+                        "Standard position strictly required."
+                    )
+                    talking_point = (
+                        f"Our corporate policy strictly mandates full {resolved_cat} protection."
+                    )
+                else:
+                    chosen_body = (
+                        top_rule.standard_position if top_rule is not None else replacement_body
+                    )
+                    rationale = (
+                        f"[Balanced Mutual Stance] {reason}" if top_rule is not None else reason
+                    )
+                    talking_point = (
+                        f"We require our standard {resolved_cat} protection to ensure mutual and "
+                        f"commercially reasonable risk allocation."
+                    )
+
                 return RedlineOutput(
                     is_compliant=False,
                     risk="CRITICAL",
                     category=resolved_cat,
                     proposed_text=_preserve_clause_numbering(clause_text, chosen_body),
-                    rationale=reason,
-                    negotiation_talking_point=(
-                        f"We require our standard {resolved_cat} protection to ensure mutual "
-                        f"and commercially reasonable risk allocation."
-                    ),
+                    rationale=rationale,
+                    negotiation_talking_point=talking_point,
                 )
 
         # 3. Check explicit HIGH legal/technical risk patterns
         for pattern, pat_category, replacement_body, reason in HIGH_RISK_PATTERNS:
             if pattern in lower_clause:
                 resolved_cat = top_rule.category if top_rule is not None else pat_category
-                chosen_body = (
-                    top_rule.standard_position if top_rule is not None else replacement_body
-                )
+                if stance == NegotiationStance.COMMERCIAL and top_rule is not None:
+                    chosen_body = top_rule.fallback_position
+                    rationale = (
+                        f"[Commercial Fast-Close Stance] {reason} "
+                        "Applied commercial fallback position."
+                    )
+                    talking_point = (
+                        f"We have adopted our commercial fallback baseline for {resolved_cat} "
+                        f"to expedite deal completion."
+                    )
+                elif stance == NegotiationStance.STRICT:
+                    chosen_body = (
+                        top_rule.standard_position if top_rule is not None else replacement_body
+                    )
+                    rationale = (
+                        f"[Strict Protective Stance] {reason} "
+                        "Standard terms strictly required."
+                    )
+                    talking_point = (
+                        f"Our corporate policy strictly requires standard {resolved_cat} "
+                        "provisions."
+                    )
+                else:
+                    chosen_body = (
+                        top_rule.standard_position if top_rule is not None else replacement_body
+                    )
+                    rationale = (
+                        f"[Balanced Mutual Stance] {reason}" if top_rule is not None else reason
+                    )
+                    talking_point = (
+                        f"Please align this {resolved_cat} provision with our standard "
+                        "commercial baseline."
+                    )
+
                 return RedlineOutput(
                     is_compliant=False,
                     risk="HIGH",
                     category=resolved_cat,
                     proposed_text=_preserve_clause_numbering(clause_text, chosen_body),
-                    rationale=reason,
-                    negotiation_talking_point=(
-                        f"Please align this {resolved_cat} provision with our standard "
-                        f"commercial baseline."
-                    ),
+                    rationale=rationale,
+                    negotiation_talking_point=talking_point,
                 )
 
         # 4. Check MEDIUM risk when a relevant playbook rule exists but standard position isn't met
@@ -385,6 +497,40 @@ class PolicyAwareDeterministicChatModel(Runnable[Any, str]):
             fb_overlap = len(clause_stems & fb_stems) / max(1, len(fb_stems))
 
             if std_overlap < 0.45 and fb_overlap >= 0.35:
+                if stance == NegotiationStance.COMMERCIAL:
+                    return RedlineOutput(
+                        is_compliant=True,
+                        risk="LOW",
+                        category=top_rule.category,
+                        proposed_text=clause_text,
+                        rationale=(
+                            f"[Commercial Fast-Close Stance] Clause aligns with company "
+                            f"pre-approved fallback terms for '{top_rule.category}'; "
+                            "accepted to expedite closure."
+                        ),
+                        negotiation_talking_point=(
+                            "Fallback terms accepted to facilitate rapid signing."
+                        ),
+                    )
+                if stance == NegotiationStance.STRICT:
+                    return RedlineOutput(
+                        is_compliant=False,
+                        risk="HIGH",
+                        category=top_rule.category,
+                        proposed_text=_preserve_clause_numbering(
+                            clause_text, top_rule.standard_position
+                        ),
+                        rationale=(
+                            f"[Strict Protective Stance] Clause reflects fallback terms. Standard "
+                            f"position is strictly required for '{top_rule.category}': "
+                            f"{top_rule.standard_position}"
+                        ),
+                        negotiation_talking_point=(
+                            f"Our strict risk policy requires standard position for "
+                            f"{top_rule.category}; fallback compromises are not permitted."
+                        ),
+                    )
+                # BALANCED
                 return RedlineOutput(
                     is_compliant=False,
                     risk="MEDIUM",
@@ -393,8 +539,8 @@ class PolicyAwareDeterministicChatModel(Runnable[Any, str]):
                         clause_text, top_rule.standard_position
                     ),
                     rationale=(
-                        f"Clause reflects fallback terms rather than the preferred standard "
-                        f"position for '{top_rule.category}'."
+                        f"[Balanced Mutual Stance] Clause reflects fallback terms rather than "
+                        f"preferred standard position for '{top_rule.category}'."
                     ),
                     negotiation_talking_point=(
                         f"We prefer our standard {top_rule.category} wording, though our "
@@ -403,15 +549,28 @@ class PolicyAwareDeterministicChatModel(Runnable[Any, str]):
                 )
 
         # 5. Compliant / Low Risk clause
+        if stance == NegotiationStance.STRICT:
+            comp_rationale = (
+                f"[Strict Protective Stance] Clause satisfies strict company policy "
+                f"requirements for '{inferred_category}' with no unacceptable triggers detected."
+            )
+        elif stance == NegotiationStance.COMMERCIAL:
+            comp_rationale = (
+                f"[Commercial Fast-Close Stance] Clause satisfies commercial baseline "
+                f"requirements for '{inferred_category}'."
+            )
+        else:
+            comp_rationale = (
+                f"Clause satisfies company policy requirements for '{inferred_category}' "
+                f"with no unacceptable triggers detected."
+            )
+
         return RedlineOutput(
             is_compliant=True,
             risk="LOW",
             category=inferred_category,
             proposed_text=clause_text,
-            rationale=(
-                f"Clause satisfies company policy requirements for '{inferred_category}' "
-                f"with no unacceptable triggers detected."
-            ),
+            rationale=comp_rationale,
             negotiation_talking_point="No redline required; clause is acceptable as drafted.",
         )
 
@@ -423,10 +582,11 @@ class PolicyAwareDeterministicChatModel(Runnable[Any, str]):
     ) -> str:
         """Synchronously invoke the deterministic model and return a JSON string."""
         _ = config, kwargs
-        clause_text, matched_rules = self._extract_inputs(input)
+        clause_text, matched_rules, stance = self._extract_inputs(input)
         output = self.evaluate_to_redline_output(
             clause_text=clause_text,
             matched_rules=matched_rules,
+            stance=stance,
         )
         return output.model_dump_json()
 
@@ -474,7 +634,7 @@ def build_redline_chain(
     """Build the LangChain Expression Language (LCEL) redline evaluation pipeline."""
     prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", SYSTEM_PROMPT),
+            ("system", "{system_prompt}\n\n{stance_instruction}"),
             (
                 "human",
                 "Company Playbook Rules:\n{playbook_context}\n\nContract Clause:\n{clause_text}",
@@ -489,9 +649,20 @@ def build_redline_chain(
     )
 
     if isinstance(active_llm, PolicyAwareDeterministicChatModel):
-        # Pass structured context (including matched_rules) while still rendering prompt for LCEL
+        # Pass structured context (including rules & stance) while rendering prompt for LCEL
         def _invoke_policy_aware(payload: dict[str, Any]) -> str:
+            raw_stance = payload.get("stance", NegotiationStance.BALANCED)
+            stance = (
+                raw_stance
+                if isinstance(raw_stance, NegotiationStance)
+                else NegotiationStance(str(raw_stance).lower())
+            )
+            stance_instruction = STANCE_INSTRUCTIONS.get(
+                stance, STANCE_INSTRUCTIONS[NegotiationStance.BALANCED]
+            )
             _rendered_messages = prompt.format_messages(
+                system_prompt=SYSTEM_PROMPT,
+                stance_instruction=stance_instruction,
                 playbook_context=payload.get("playbook_context", ""),
                 clause_text=payload.get("clause_text", ""),
             )
@@ -499,12 +670,30 @@ def build_redline_chain(
                 clause_text=str(payload.get("clause_text", "")),
                 matched_rules=payload.get("matched_rules", []),
                 heading=payload.get("heading"),
+                stance=stance,
             )
             return output.model_dump_json()
 
         return RunnableLambda(_invoke_policy_aware) | parser_runnable
 
-    return prompt | active_llm | parser_runnable
+    def _prepare_prompt_inputs(payload: dict[str, Any]) -> dict[str, Any]:
+        raw_stance = payload.get("stance", NegotiationStance.BALANCED)
+        stance = (
+            raw_stance
+            if isinstance(raw_stance, NegotiationStance)
+            else NegotiationStance(str(raw_stance).lower())
+        )
+        stance_instruction = STANCE_INSTRUCTIONS.get(
+            stance, STANCE_INSTRUCTIONS[NegotiationStance.BALANCED]
+        )
+        return {
+            "system_prompt": SYSTEM_PROMPT,
+            "stance_instruction": stance_instruction,
+            "playbook_context": payload.get("playbook_context", ""),
+            "clause_text": payload.get("clause_text", ""),
+        }
+
+    return RunnableLambda(_prepare_prompt_inputs) | prompt | active_llm | parser_runnable
 
 
 class LangChainClauseAuditor(ClauseAuditorPort):
@@ -546,11 +735,16 @@ class LangChainClauseAuditor(ClauseAuditorPort):
         started_at = time.perf_counter()
         playbook_context = format_playbook_rules_context(matched_rules)
 
+        stance_instruction = STANCE_INSTRUCTIONS.get(
+            audit_input.stance, STANCE_INSTRUCTIONS[NegotiationStance.BALANCED]
+        )
         chain_input: dict[str, Any] = {
             "playbook_context": playbook_context,
             "clause_text": audit_input.clause_text,
             "heading": audit_input.heading,
             "matched_rules": list(matched_rules),
+            "stance": audit_input.stance,
+            "stance_instruction": stance_instruction,
         }
         run_config = RunnableConfig(
             metadata={
@@ -559,8 +753,13 @@ class LangChainClauseAuditor(ClauseAuditorPort):
                 "clause_id": str(audit_input.clause_id),
                 "clause_index": audit_input.clause_index,
                 "temperature": self._temperature,
+                "stance": audit_input.stance.value,
             },
-            tags=["phase4-redline-audit", f"org:{audit_input.org_id}"],
+            tags=[
+                "phase4-redline-audit",
+                f"org:{audit_input.org_id}",
+                f"stance:{audit_input.stance.value}",
+            ],
         )
 
         validated_output: RedlineOutput | None = None
@@ -601,6 +800,7 @@ class LangChainClauseAuditor(ClauseAuditorPort):
                     clause_text=audit_input.clause_text,
                     matched_rules=matched_rules,
                     heading=audit_input.heading,
+                    stance=audit_input.stance,
                 )
             elif isinstance(last_error, (ValidationError, ValueError, json.JSONDecodeError)):
                 raise StructuredOutputValidationError(
@@ -621,6 +821,7 @@ class LangChainClauseAuditor(ClauseAuditorPort):
             "clause_index": audit_input.clause_index,
             "latency_ms": latency_ms,
             "temperature": self._temperature,
+            "stance": audit_input.stance.value,
         }
 
         matched_rule_id = self._resolve_matched_rule_id(matched_rules, validated_output)
@@ -635,6 +836,7 @@ class LangChainClauseAuditor(ClauseAuditorPort):
             rationale=validated_output.rationale,
             negotiation_talking_point=validated_output.negotiation_talking_point,
             latency_ms=latency_ms,
+            stance=audit_input.stance,
         )
 
 
@@ -642,6 +844,7 @@ __all__ = [
     "LangChainClauseAuditor",
     "PolicyAwareDeterministicChatModel",
     "RedlineOutput",
+    "STANCE_INSTRUCTIONS",
     "SYSTEM_PROMPT",
     "build_redline_chain",
     "format_playbook_rules_context",

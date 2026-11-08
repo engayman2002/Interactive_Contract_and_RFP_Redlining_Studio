@@ -230,12 +230,14 @@ from src.application.dtos.playbook_dtos import (  # noqa: E402
     UpdatePlaybookRuleRequestDTO,
 )
 from src.application.dtos.redline_dtos import (  # noqa: E402
+    AnalyzeDocumentRequestDTO,
     DocumentAnalysisSummaryDTO,
     RedlineSuggestionResponseDTO,
 )
 
 __all__ = [
     "AISettingsResponseDTO",
+    "AnalyzeDocumentRequestDTO",
     "AuditLogEntryResponseDTO",
     "ClauseCommentResponseDTO",
     "ClauseResolutionStateDTO",

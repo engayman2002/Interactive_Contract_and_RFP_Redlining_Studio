@@ -143,6 +143,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
   const streamProgress = useWorkspaceStore((state) => state.streamProgress);
   const selectClause = useWorkspaceStore((state) => state.selectClause);
   const storeAuditLogs = useWorkspaceStore((state) => state.auditLogs);
+  const negotiationStance = useWorkspaceStore((state) => state.negotiationStance);
 
   const resolvedAuditLogs = auditLogs ?? storeAuditLogs;
   const [activeViewTab, setActiveViewTab] = useState<"redlines" | "audit">(
@@ -256,6 +257,18 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span
+              data-testid="inspector-active-stance-badge"
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                negotiationStance === "strict"
+                  ? "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-950/40 dark:text-rose-300"
+                  : negotiationStance === "commercial"
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  : "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300"
+              }`}
+            >
+              Stance: {negotiationStance}
+            </span>
             <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 font-semibold text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
               {criticalCount} Critical
             </span>

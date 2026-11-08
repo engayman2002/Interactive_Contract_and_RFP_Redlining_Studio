@@ -48,6 +48,20 @@ export type ClauseCommentDTO = z.infer<typeof ClauseCommentDTOSchema>;
 export const ExportModeSchema = z.enum(["track_changes", "clean"]);
 export type ExportMode = z.infer<typeof ExportModeSchema>;
 
+export const NegotiationStanceSchema = z.enum([
+  "strict",
+  "balanced",
+  "commercial",
+]);
+export type NegotiationStance = z.infer<typeof NegotiationStanceSchema>;
+
+export const AnalyzeDocumentRequestDTOSchema = z.object({
+  stance: NegotiationStanceSchema.default("balanced"),
+});
+export type AnalyzeDocumentRequestDTO = z.infer<
+  typeof AnalyzeDocumentRequestDTOSchema
+>;
+
 export const AuditActionSchema = z.enum([
   "DOCUMENT_INGESTED",
   "DOCUMENT_ANALYZED",
@@ -110,6 +124,7 @@ export const DocumentAnalysisSummaryDTOSchema = z.object({
   low_count: z.number().int(),
   compliant_count: z.number().int(),
   execution_time_ms: z.number(),
+  stance: NegotiationStanceSchema.default("balanced"),
 });
 export type DocumentAnalysisSummaryDTO = z.infer<
   typeof DocumentAnalysisSummaryDTOSchema
@@ -129,6 +144,7 @@ export const AuditProgressEventDTOSchema = z.object({
   matched_rule_id: z.string().nullable().optional(),
   proposed_text: z.string().optional(),
   rationale: z.string().optional(),
+  stance: NegotiationStanceSchema.optional(),
 });
 export type AuditProgressEventDTO = z.infer<typeof AuditProgressEventDTOSchema>;
 
