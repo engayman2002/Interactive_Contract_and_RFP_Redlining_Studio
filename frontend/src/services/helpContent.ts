@@ -513,6 +513,49 @@ export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
       },
     ],
   },
+  {
+    id: "counterparty-pushback-simulator",
+    number: 12,
+    title: "Counterparty Pushback Simulator & Round-2 Rebuttal Engine",
+    badge: "Adversarial Prep",
+    summary:
+      "Simulate opposing counsel pushback before sending redlines externally: view Acceptance Probability (0-100%), Pushback Severity (LOW to DEALBREAKER), expected objections, copy-ready Round-2 rebuttals, and one-click Fallback Compromise wording.",
+    keywords: [
+      "pushback",
+      "simulate",
+      "counterparty",
+      "opposing counsel",
+      "rebuttal",
+      "compromise",
+      "round 2",
+      "dealbreaker",
+      "acceptance probability",
+      "objection",
+    ],
+    steps: [
+      {
+        title: "Triggering the Opposing Counsel Simulation",
+        description:
+          "Click '🎯 Simulate Pushback' on any Redline Card before circulating your redline draft. The Adversarial Simulation Agent analyzes the delta between the counterparty's original clause, your proposed wording, Playbook rules, and active negotiation stance.",
+        tip: "Simulating under Strict stance reveals high-resistance battlegrounds; simulating under Commercial stance shows higher acceptance probabilities.",
+      },
+      {
+        title: "Acceptance Probability & Pushback Severity Forecast",
+        description:
+          "Review the simulated Acceptance Likelihood (0-100%) and Pushback Severity pill: LOW (>=75%, likely accepted cleanly), MODERATE (50-74%, routine commercial pushback), HIGH (25-49%, strong resistance expected), or DEALBREAKER (<25%, executive escalation likely).",
+      },
+      {
+        title: "Expected Objection & Round-2 Rebuttal Script",
+        description:
+          "Read the predicted opposing counsel objection along with a copy-ready Round-2 Rebuttal Script grounded in industry parity. Click 'Copy Rebuttal' to drop the argument directly into negotiation call notes or counterparty emails.",
+      },
+      {
+        title: "One-Click 'Use Compromise Wording'",
+        description:
+          "If opposing counsel pushes back on your Round-1 position, click 'Use Compromise Wording' inside the simulator panel. The card immediately loads the section-numbered Round-2 Fallback Compromise into Proposed Playbook Wording so you can hover to inspect the word-level diff or click Apply Redline.",
+      },
+    ],
+  },
 ];
 
 export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
@@ -858,6 +901,38 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
       "review needed",
       "re-verify",
       "critic guard",
+    ],
+  },
+  {
+    id: "faq-pushback-simulator",
+    question:
+      "How does the Counterparty Pushback Simulator predict opposing counsel objections?",
+    answer:
+      "When you click '🎯 Simulate Pushback', the adversarial simulation engine evaluates the legal and commercial delta between the counterparty's original text, your proposed redline, your Playbook fallback rules, and your selected negotiation stance. It computes an Acceptance Probability (0-100%), classifies Pushback Severity (LOW, MODERATE, HIGH, or DEALBREAKER), identifies the counterparty persona, predicts their strongest objection, and generates a persuasive Round-2 rebuttal script.",
+    category: "workflow",
+    keywords: [
+      "pushback",
+      "simulator",
+      "opposing counsel",
+      "objection",
+      "acceptance probability",
+      "rebuttal",
+      "dealbreaker",
+    ],
+  },
+  {
+    id: "faq-pushback-compromise",
+    question:
+      "What happens when I click 'Use Compromise Wording' inside the Pushback Simulator?",
+    answer:
+      "Clicking 'Use Compromise Wording' immediately adopts the pre-drafted Round-2 Fallback Compromise wording (preserving original legal section numbering like 1.1 or 2.1) into the card's Proposed Playbook Wording box. You can immediately hover over Apply Redline to inspect the updated word-level diff in the live editor or accept the compromise with one click.",
+    category: "workflow",
+    keywords: [
+      "compromise",
+      "round-2",
+      "fallback",
+      "pushback simulator",
+      "use compromise wording",
     ],
   },
 ];

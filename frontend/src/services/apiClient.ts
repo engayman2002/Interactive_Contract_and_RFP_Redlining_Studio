@@ -32,6 +32,7 @@ import {
   PlaybookRuleDTO,
   PlaybookRuleDTOSchema,
   ProviderCatalogItemDTO,
+  PushbackSeverity,
   RedlineSuggestionDTO,
   RefineSuggestionRequestDTO,
   RefineSuggestionRequestDTOSchema,
@@ -41,6 +42,10 @@ import {
   ResolveSuggestionRequestDTOSchema,
   ResolveSuggestionResponseDTO,
   ResolveSuggestionResponseDTOSchema,
+  SimulatePushbackRequestDTO,
+  SimulatePushbackRequestDTOSchema,
+  SimulatePushbackResponseDTO,
+  SimulatePushbackResponseDTOSchema,
   TestAIConnectionRequestDTO,
   TestAIConnectionResponseDTO,
   TestAIConnectionResponseDTOSchema,
@@ -1279,6 +1284,233 @@ export async function verifyRedlineSuggestion(
     auto_corrected: autoCorrected,
     critic_notes: criticNotes,
     latency_ms: 42.5,
+  };
+}
+
+export async function simulateCounterpartyPushback(
+  suggestionId: string,
+  payload: SimulatePushbackRequestDTO = { stance: "balanced" },
+  token?: string,
+  fallbackContext?: {
+    suggestion?: RedlineSuggestionDTO;
+    clause?: ClauseDTO;
+  }
+): Promise<SimulatePushbackResponseDTO> {
+  const validatedPayload = SimulatePushbackRequestDTOSchema.parse(payload);
+
+  if (token) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/suggestions/${encodeURIComponent(suggestionId)}/simulate-pushback`,
+        {
+          method: "POST",
+          headers: buildHeaders(token, true),
+          body: JSON.stringify(validatedPayload),
+        }
+      );
+
+      if (response.ok) {
+        const raw = await response.json();
+        return SimulatePushbackResponseDTOSchema.parse(raw);
+      }
+      if (response.status === 403 || response.status === 404) {
+        throw new Error(`Failed to simulate pushback (${response.status})`);
+      }
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        err.message.startsWith("Failed to simulate pushback")
+      ) {
+        throw err;
+      }
+      // Fallback to offline simulation below
+    }
+  }
+
+  // Offline / Demo Simulation
+  let matchedSuggestion: RedlineSuggestionDTO | null =
+    fallbackContext?.suggestion ?? null;
+  let matchedClause: ClauseDTO | null = fallbackContext?.clause ?? null;
+  let targetWs: DocumentWorkspaceDTO | null = null;
+
+  if (!matchedSuggestion && typeof window !== "undefined") {
+    try {
+      const docList = getLocalDocuments();
+      for (const d of docList) {
+        const ws = getLocalDocumentWorkspace(d.id);
+        if (ws) {
+          const found = ws.redlines.find((r) => r.id === suggestionId);
+          if (found) {
+            matchedSuggestion = found;
+            matchedClause =
+              ws.clauses.find((c) => c.id === found.clause_id) ?? null;
+            targetWs = ws;
+            break;
+          }
+        }
+      }
+    } catch {
+      // ignore local storage errors in test environments
+    }
+  }
+
+  if (!matchedSuggestion) {
+    matchedSuggestion =
+      DEMO_WORKSPACE_DATA.redlines.find((r) => r.id === suggestionId) ??
+      DEMO_WORKSPACE_DATA.redlines[0];
+  }
+
+  if (!matchedClause) {
+    matchedClause =
+      DEMO_WORKSPACE_DATA.clauses.find(
+        (c) => c.id === matchedSuggestion?.clause_id
+      ) ?? DEMO_WORKSPACE_DATA.clauses[0];
+  }
+
+  const stance = validatedPayload.stance;
+  const risk = matchedSuggestion.risk;
+  const propLower = matchedSuggestion.proposed_text.toLowerCase();
+  const topicText =
+    `${matchedClause?.heading ?? ""} ${matchedClause?.original_text ?? ""} ${matchedSuggestion.proposed_text}`.toLowerCase();
+
+  const alreadyCompromise =
+    propLower.includes("2x") ||
+    propLower.includes("two times") ||
+    propLower.includes("99.9%") ||
+    propLower.includes("24 months");
+
+  let acceptanceProbability = 58;
+  if (stance === "commercial" || alreadyCompromise) {
+    acceptanceProbability = stance === "commercial" ? 82 : 76;
+  } else if (stance === "strict") {
+    acceptanceProbability =
+      risk === "CRITICAL" || risk === "HIGH" ? 36 : 48;
+  } else {
+    acceptanceProbability =
+      risk === "CRITICAL" ? 44 : risk === "HIGH" ? 58 : risk === "MEDIUM" ? 68 : 84;
+  }
+
+  const pushbackSeverity: PushbackSeverity =
+    acceptanceProbability >= 75
+      ? "LOW"
+      : acceptanceProbability >= 50
+        ? "MODERATE"
+        : acceptanceProbability >= 25
+          ? "HIGH"
+          : "DEALBREAKER";
+
+  let counterpartyPersona = "Counterparty Senior Commercial Counsel";
+  let expectedObjection =
+    "Opposing counsel will argue that the proposed redline alters their standard commercial allocation.";
+  let rebuttalTalkingPoint =
+    "Our redline replaces one-sided exposure with mutual, market-standard terms.";
+  let fallbackBody =
+    "Each party shall perform its obligations in a commercially reasonable, reciprocal manner subject to a 30-day cure period.";
+
+  if (
+    topicText.includes("liability") ||
+    topicText.includes("cap") ||
+    topicText.includes("consequential")
+  ) {
+    counterpartyPersona = "Enterprise Vendor Commercial & Legal Counsel";
+    expectedObjection =
+      "Counterparty counsel will argue that lifting the liability cap from $500 to 12 months of fees creates disproportionate financial exposure relative to annual recurring revenue.";
+    rebuttalTalkingPoint =
+      "An asymmetric $500 liability cap transfers catastrophic SaaS vendor downtime risk directly onto Customer and fails audit committee standards. A 12-month fee cap with mutual consequential damages exclusion is enterprise market parity.";
+    fallbackBody =
+      "Each party's aggregate cumulative liability under this Agreement shall not exceed two times (2x) the annual fees paid for data breach or IP indemnity, and twelve (12) months of fees for general direct damages.";
+  } else if (
+    topicText.includes("indemnif") ||
+    topicText.includes("negligence")
+  ) {
+    counterpartyPersona = "Vendor Risk & Intellectual Property Counsel";
+    expectedObjection =
+      "Opposing counsel will resist broad IP/fault indemnity exposure and insist on a fault-proportioned cap and sole control of defense procedures.";
+    rebuttalTalkingPoint =
+      "Customer cannot indemnify Vendor for Vendor's own gross negligence or third-party claims arising from proprietary vendor software. Mutual fault-based and third-party IP indemnity protects both parties fairly.";
+    fallbackBody =
+      "Each party shall defend and indemnify the other for third-party IP infringement and gross negligence claims, subject to a mutual super-cap equal to two times (2x) annual contract fees and prompt written notice.";
+  } else if (
+    topicText.includes("sla") ||
+    topicText.includes("uptime") ||
+    topicText.includes("service credit")
+  ) {
+    counterpartyPersona = "Vendor Cloud Operations & Revenue Counsel";
+    expectedObjection =
+      "Counterparty will claim strict 99.95%+ SLA penalties and chronic termination rights create revenue deferral concerns during cloud subprocessor maintenance.";
+    rebuttalTalkingPoint =
+      "Enterprise production deployments require binding availability commitments. Tiered service credits capped at monthly fees and chronic-failure exit rights give Vendor bounded downside.";
+    fallbackBody =
+      "Vendor guarantees 99.9% monthly service availability with tiered service credits up to 15% of monthly fees, and Customer may terminate for cause upon four (4) consecutive months below 99.5% uptime.";
+  } else if (
+    topicText.includes("ai") ||
+    topicText.includes("train") ||
+    topicText.includes("foundation model") ||
+    topicText.includes("gdpr")
+  ) {
+    counterpartyPersona = "Vendor AI Product & Data Privacy Officer (DPO)";
+    expectedObjection =
+      "Counterparty counsel may argue they require automated telemetry ingestion to maintain anomaly detection, abuse filtering, and reliability.";
+    rebuttalTalkingPoint =
+      "Aggregated, irreversibly de-identified operational metrics for security monitoring remain permitted, whereas training shared foundation AI models on Customer Confidential Data is strictly prohibited.";
+    fallbackBody =
+      "Vendor shall not use Customer Confidential Data to train public or third-party AI models, provided Vendor may analyze strictly aggregated, irreversibly de-identified telemetry solely for platform security and reliability.";
+  } else if (
+    topicText.includes("payment") ||
+    topicText.includes("invoice") ||
+    topicText.includes("net ")
+  ) {
+    counterpartyPersona = "Counterparty Treasury & Finance Director";
+    expectedObjection =
+      "Counterparty finance will object that Net 45/60 extends Days Sales Outstanding (DSO) past quarterly SaaS collections targets.";
+    rebuttalTalkingPoint =
+      "Our treasury cycle processes undisputed invoices on standard Net 45 automated ACH schedules, while ensuring prompt pro-rata refunds strictly for uncured breach.";
+    fallbackBody =
+      "Undisputed invoices shall be payable within thirty (30) days of receipt via ACH, with a 15-day notice and dispute cure window.";
+  }
+
+  const origPrefixMatch = matchedClause?.original_text.match(
+    /^\s*((?:Section\s+|Article\s+|Clause\s+)?\d+(?:\.\d+)*\.?\s+)/i
+  );
+  const fallbackCompromiseText =
+    origPrefixMatch &&
+    !fallbackBody
+      .toLowerCase()
+      .startsWith(origPrefixMatch[1].trim().toLowerCase())
+      ? `${origPrefixMatch[1]}${fallbackBody}`
+      : fallbackBody;
+
+  if (targetWs) {
+    const auditEntry: AuditLogEntryDTO = {
+      id: `audit-${Date.now()}`,
+      org_id: targetWs.org_id,
+      document_id: targetWs.document_id,
+      clause_id: matchedSuggestion.clause_id,
+      actor_user_id: DEMO_USER_ID,
+      actor_role: "ADMIN",
+      action: "PUSHBACK_SIMULATED",
+      details: {
+        suggestion_id: suggestionId,
+        acceptance_probability: acceptanceProbability,
+        pushback_severity: pushbackSeverity,
+        stance,
+      },
+      created_at: new Date().toISOString(),
+    };
+    targetWs.audit_logs = [...(targetWs.audit_logs ?? []), auditEntry];
+    saveLocalDocumentWorkspace(targetWs);
+  }
+
+  return {
+    suggestion_id: matchedSuggestion.id,
+    clause_id: matchedSuggestion.clause_id,
+    acceptance_probability: acceptanceProbability,
+    pushback_severity: pushbackSeverity,
+    counterparty_persona: counterpartyPersona,
+    expected_objection: expectedObjection,
+    rebuttal_talking_point: rebuttalTalkingPoint,
+    fallback_compromise_text: fallbackCompromiseText,
+    latency_ms: 48.0,
   };
 }
 

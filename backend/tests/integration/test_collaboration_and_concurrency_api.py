@@ -628,3 +628,105 @@ async def test_verify_redline_suggestion_critic_rbac_and_audit_trail(
     assert cross_verify.status_code == 404
     assert cross_verify.json()["error"]["code"] == "SUGGESTION_NOT_FOUND"
 
+
+async def test_simulate_counterparty_pushback_rbac_tenant_and_audit_trail(
+    client: AsyncClient,
+) -> None:
+    """Verify POST /suggestions/{id}/simulate-pushback, RBAC, isolation & audit logging."""
+    token, admin_user_id, doc_id, _clauses, redlines = (
+        await _setup_org_and_analyzed_document(
+            client=client,
+            org_name="Adversarial Prep Legal LLP",
+            admin_email="admin@adversarial-prep.io",
+        )
+    )
+    suggestion_id = redlines[0]["id"]
+
+    # 1. Admin runs Counterparty Pushback Simulation with STRICT stance
+    sim_resp = await client.post(
+        f"/api/v1/suggestions/{suggestion_id}/simulate-pushback",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"stance": "strict"},
+    )
+    assert sim_resp.status_code == 200
+    sim_data = sim_resp.json()
+    assert sim_data["suggestion_id"] == suggestion_id
+    assert sim_data["clause_id"] == redlines[0]["clause_id"]
+    assert 0 <= sim_data["acceptance_probability"] <= 100
+    assert sim_data["pushback_severity"] in ("LOW", "MODERATE", "HIGH", "DEALBREAKER")
+    assert len(sim_data["counterparty_persona"]) > 3
+    assert len(sim_data["expected_objection"]) > 10
+    assert len(sim_data["rebuttal_talking_point"]) > 10
+    assert len(sim_data["fallback_compromise_text"]) > 10
+    assert sim_data["latency_ms"] >= 0
+
+    # Also test optional empty body invocation defaults cleanly
+    sim_default_resp = await client.post(
+        f"/api/v1/suggestions/{suggestion_id}/simulate-pushback",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert sim_default_resp.status_code == 200
+
+    # 2. Verify audit trail records PUSHBACK_SIMULATED
+    audit_resp = await client.get(
+        f"/api/v1/documents/{doc_id}/audit-trail",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert audit_resp.status_code == 200
+    pushback_entries = [
+        log for log in audit_resp.json() if log["action"] == "PUSHBACK_SIMULATED"
+    ]
+    assert len(pushback_entries) >= 2
+    assert pushback_entries[-1]["actor_user_id"] == admin_user_id
+    assert pushback_entries[-1]["details"]["suggestion_id"] == suggestion_id
+
+    # 3. RBAC: VIEWER receives 403 Forbidden
+    viewer_create = await client.post(
+        "/api/v1/users",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "email": "viewer@adversarial-prep.io",
+            "password": "ViewerPushbackPass!2026",
+            "role": UserRole.VIEWER.value,
+        },
+    )
+    assert viewer_create.status_code == 201
+    viewer_login = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "viewer@adversarial-prep.io",
+            "password": "ViewerPushbackPass!2026",
+        },
+    )
+    assert viewer_login.status_code == 200
+    viewer_token: str = viewer_login.json()["access_token"]
+
+    viewer_sim = await client.post(
+        f"/api/v1/suggestions/{suggestion_id}/simulate-pushback",
+        headers={"Authorization": f"Bearer {viewer_token}"},
+        json={"stance": "balanced"},
+    )
+    assert viewer_sim.status_code == 403
+    assert viewer_sim.json()["error"]["code"] == "FORBIDDEN_ROLE"
+
+    # 4. Multi-Tenant Isolation: Tenant Beta receives 404 Not Found
+    beta_reg = await client.post(
+        "/api/v1/auth/register-org",
+        json={
+            "organization_name": "Tenant Beta Pushback",
+            "admin_email": "admin@beta-pushback.io",
+            "admin_password": "BetaPushbackPass!2026",
+        },
+    )
+    assert beta_reg.status_code == 201
+    token_beta: str = beta_reg.json()["access_token"]
+
+    cross_sim = await client.post(
+        f"/api/v1/suggestions/{suggestion_id}/simulate-pushback",
+        headers={"Authorization": f"Bearer {token_beta}"},
+        json={"stance": "balanced"},
+    )
+    assert cross_sim.status_code == 404
+    assert cross_sim.json()["error"]["code"] == "SUGGESTION_NOT_FOUND"
+
+

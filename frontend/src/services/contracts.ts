@@ -18,6 +18,14 @@ export const VerificationStatusSchema = z.enum([
 ]);
 export type VerificationStatus = z.infer<typeof VerificationStatusSchema>;
 
+export const PushbackSeveritySchema = z.enum([
+  "LOW",
+  "MODERATE",
+  "HIGH",
+  "DEALBREAKER",
+]);
+export type PushbackSeverity = z.infer<typeof PushbackSeveritySchema>;
+
 export const ClauseDTOSchema = z.object({
   id: z.string(),
   document_id: z.string(),
@@ -83,6 +91,7 @@ export const AuditActionSchema = z.enum([
   "SUGGESTION_REJECTED",
   "SUGGESTION_REFINED",
   "SUGGESTION_VERIFIED",
+  "PUSHBACK_SIMULATED",
   "COMMENT_CREATED",
   "DOCUMENT_EXPORTED",
   "CROSS_CLAUSE_CHECKED",
@@ -154,6 +163,28 @@ export const VerifySuggestionResponseDTOSchema = z.object({
 });
 export type VerifySuggestionResponseDTO = z.infer<
   typeof VerifySuggestionResponseDTOSchema
+>;
+
+export const SimulatePushbackRequestDTOSchema = z.object({
+  stance: NegotiationStanceSchema.default("balanced"),
+});
+export type SimulatePushbackRequestDTO = z.infer<
+  typeof SimulatePushbackRequestDTOSchema
+>;
+
+export const SimulatePushbackResponseDTOSchema = z.object({
+  suggestion_id: z.string(),
+  clause_id: z.string(),
+  acceptance_probability: z.number().int().min(0).max(100),
+  pushback_severity: PushbackSeveritySchema,
+  counterparty_persona: z.string(),
+  expected_objection: z.string(),
+  rebuttal_talking_point: z.string(),
+  fallback_compromise_text: z.string(),
+  latency_ms: z.number(),
+});
+export type SimulatePushbackResponseDTO = z.infer<
+  typeof SimulatePushbackResponseDTOSchema
 >;
 
 export const AuditLogEntryDTOSchema = z.object({

@@ -8,12 +8,18 @@ import pytest
 from langchain_core.runnables import RunnableLambda
 from src.domain.entities import (
     ClauseAuditInput,
+    CounterpartyPushbackInput,
     DocumentClause,
     MatchedPlaybookRule,
     PlaybookRule,
     PlaybookSearchQuery,
 )
-from src.domain.enums import NegotiationStance, RiskLevel, VerificationStatus
+from src.domain.enums import (
+    NegotiationStance,
+    PushbackSeverity,
+    RiskLevel,
+    VerificationStatus,
+)
 from src.domain.exceptions import StructuredOutputValidationError
 from src.infrastructure.ai import (
     BatchDocumentAuditWorker,
@@ -540,5 +546,75 @@ async def test_critic_agent_repairs_placeholders_missing_numbering_and_scores_co
     assert review_report.verification_status == VerificationStatus.NEEDS_HUMAN_REVIEW
     assert 60 <= review_report.confidence_score <= 74
     assert review_report.policy_alignment_passed is False
+
+
+async def test_simulate_counterparty_pushback_deterministic_and_commercial_comparison() -> None:
+    """Verify opposing counsel simulation calculates probability, objection, rebuttal & fallback."""
+    org_id = uuid4()
+    doc_id = uuid4()
+    lol_rule = PlaybookRule(
+        org_id=org_id,
+        category="Limitation of Liability",
+        standard_position=(
+            "Each party's aggregate cumulative liability shall not exceed twelve (12) months "
+            "of fees paid."
+        ),
+        fallback_position="Mutual liability capped at two times (2x) annual contract fees.",
+        unacceptable_triggers="uncapped liability, exceed $500",
+    )
+    matched = [
+        MatchedPlaybookRule(
+            rule=lol_rule,
+            combined_score=0.94,
+            vector_score=0.95,
+            keyword_score=0.92,
+        )
+    ]
+    auditor = LangChainClauseAuditor()
+
+    # 1. Strict posture on CRITICAL liability shift -> High pushback resistance
+    strict_input = CounterpartyPushbackInput(
+        org_id=org_id,
+        document_id=doc_id,
+        clause_id=uuid4(),
+        suggestion_id=uuid4(),
+        clause_index=0,
+        heading="1. Limitation of Liability",
+        original_clause_text="1.1 Vendor liability shall not exceed $500.",
+        proposed_text=(
+            "1.1 Each party's aggregate cumulative liability shall not exceed twelve (12) months "
+            "of fees paid."
+        ),
+        risk=RiskLevel.CRITICAL,
+        stance=NegotiationStance.STRICT,
+    )
+    strict_sim = await auditor.simulate_counterparty_pushback(strict_input, matched)
+    assert 0 <= strict_sim.acceptance_probability <= 100
+    assert strict_sim.acceptance_probability < 50
+    assert strict_sim.pushback_severity == PushbackSeverity.HIGH
+    assert len(strict_sim.counterparty_persona) > 5
+    assert len(strict_sim.expected_objection) > 15
+    assert len(strict_sim.rebuttal_talking_point) > 15
+    assert strict_sim.fallback_compromise_text.startswith("1.1 ")
+    assert "2x" in strict_sim.fallback_compromise_text
+
+    # 2. Commercial posture with pre-adopted compromise -> Higher acceptance & LOW severity
+    comm_input = CounterpartyPushbackInput(
+        org_id=org_id,
+        document_id=doc_id,
+        clause_id=uuid4(),
+        suggestion_id=uuid4(),
+        clause_index=0,
+        heading="1. Limitation of Liability",
+        original_clause_text="1.1 Vendor liability shall not exceed $500.",
+        proposed_text="1.1 Mutual liability capped at two times (2x) annual contract fees.",
+        risk=RiskLevel.HIGH,
+        stance=NegotiationStance.COMMERCIAL,
+    )
+    comm_sim = await auditor.simulate_counterparty_pushback(comm_input, matched)
+    assert comm_sim.acceptance_probability >= 75
+    assert comm_sim.pushback_severity == PushbackSeverity.LOW
+    assert comm_sim.fallback_compromise_text.startswith("1.1 ")
+
 
 

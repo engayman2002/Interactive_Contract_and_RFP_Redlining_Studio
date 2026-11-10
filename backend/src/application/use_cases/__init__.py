@@ -280,6 +280,7 @@ from src.application.use_cases.collaboration import (  # noqa: E402
     ListClauseCommentsUseCase,
     RefineRedlineSuggestionUseCase,
     ResolveRedlineSuggestionUseCase,
+    SimulateCounterpartyPushbackUseCase,
     VerifyRedlineSuggestionUseCase,
 )
 from src.application.use_cases.export_and_audit import (  # noqa: E402
@@ -326,6 +327,7 @@ __all__ = [
     "ResolveRedlineSuggestionUseCase",
     "RunCrossClauseCheckUseCase",
     "SearchPlaybookRulesUseCase",
+    "SimulateCounterpartyPushbackUseCase",
     "StreamDocumentAnalysisUseCase",
     "UpdateDocumentFoundationUseCase",
     "UpdatePlaybookRuleUseCase",

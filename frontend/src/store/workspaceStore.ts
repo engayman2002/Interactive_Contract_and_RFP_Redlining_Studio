@@ -10,7 +10,10 @@ import {
   refineRedlineSuggestion,
   resolveSuggestion,
   runCrossClauseCheck,
+  simulateCounterpartyPushback,
   verifyRedlineSuggestion,
+  getLocalDocumentWorkspace,
+  saveLocalDocumentWorkspace,
 } from "@/services/apiClient";
 import type {
   AuditAction,
@@ -22,6 +25,7 @@ import type {
   ExportMode,
   NegotiationStance,
   RedlineSuggestionDTO,
+  SimulatePushbackResponseDTO,
   VerifySuggestionResponseDTO,
 } from "@/services/contracts";
 
@@ -63,6 +67,7 @@ export interface WorkspaceStoreState {
   negotiationStance: NegotiationStance;
   crossClauseReport: CrossClauseAnalysisReportDTO | null;
   isRunningCrossClauseCheck: boolean;
+  pushbackSimulations: Record<string, SimulatePushbackResponseDTO>;
   runDocumentCrossClauseCheck: (
     documentId?: string,
     token?: string
@@ -98,6 +103,11 @@ export interface WorkspaceStoreState {
     suggestionId: string,
     token?: string
   ) => Promise<VerifySuggestionResponseDTO | null>;
+  simulateSuggestionPushback: (
+    suggestionId: string,
+    token?: string
+  ) => Promise<SimulatePushbackResponseDTO | null>;
+  applyPushbackCompromise: (suggestionId: string) => Promise<void>;
   addClauseComment: (
     clauseId: string,
     body: string,
@@ -174,6 +184,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   negotiationStance: "balanced",
   crossClauseReport: null,
   isRunningCrossClauseCheck: false,
+  pushbackSimulations: {},
 
   setNegotiationStance: (stance) => set({ negotiationStance: stance }),
 
@@ -227,6 +238,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       auditLogs: workspace.audit_logs ?? [],
       documentVersion: workspace.version,
       conflictError: null,
+      pushbackSimulations: {},
     }),
 
   dismissConflictError: () =>
@@ -599,6 +611,81 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
     return res;
   },
 
+  simulateSuggestionPushback: async (suggestionId, token) => {
+    const state = get();
+    const suggestion = state.redlines.find((r) => r.id === suggestionId);
+    if (!suggestion) {
+      return null;
+    }
+    const clause = state.clauses.find((c) => c.id === suggestion.clause_id);
+    const res = await simulateCounterpartyPushback(
+      suggestionId,
+      { stance: state.negotiationStance },
+      token,
+      { suggestion, clause }
+    );
+
+    const auditEntry = buildOptimisticAuditEntry(
+      "PUSHBACK_SIMULATED",
+      res.clause_id,
+      {
+        suggestion_id: suggestionId,
+        acceptance_probability: res.acceptance_probability,
+        pushback_severity: res.pushback_severity,
+        stance: state.negotiationStance,
+      },
+      clause?.document_id ?? DEMO_DOCUMENT_ID
+    );
+
+    set((s) => ({
+      pushbackSimulations: {
+        ...s.pushbackSimulations,
+        [suggestionId]: res,
+      },
+      auditLogs: [...s.auditLogs, auditEntry],
+    }));
+
+    return res;
+  },
+
+  applyPushbackCompromise: async (suggestionId) => {
+    const state = get();
+    const sim = state.pushbackSimulations[suggestionId];
+    const suggestion = state.redlines.find((r) => r.id === suggestionId);
+    if (!sim || !suggestion) {
+      return;
+    }
+    const clause = state.clauses.find((c) => c.id === suggestion.clause_id);
+    const updatedSuggestion: RedlineSuggestionDTO = {
+      ...suggestion,
+      proposed_text: sim.fallback_compromise_text,
+      rationale: `[Round-2 Compromise Applied] Adopted balanced commercial fallback position. | Talking Point: ${sim.rebuttal_talking_point}`,
+      status: "PENDING",
+      verification_status: "VERIFIED",
+      confidence_score: Math.max(85, sim.acceptance_probability),
+    };
+
+    if (typeof window !== "undefined" && clause?.document_id) {
+      try {
+        const localWs = getLocalDocumentWorkspace(clause.document_id);
+        if (localWs) {
+          localWs.redlines = localWs.redlines.map((r) =>
+            r.id === suggestionId ? updatedSuggestion : r
+          );
+          saveLocalDocumentWorkspace(localWs);
+        }
+      } catch {
+        // Ignore storage errors
+      }
+    }
+
+    set((s) => ({
+      redlines: s.redlines.map((r) =>
+        r.id === suggestionId ? updatedSuggestion : r
+      ),
+    }));
+  },
+
   addClauseComment: async (clauseId, body, token, authorId) => {
     const cleanedBody = body.trim();
     if (!cleanedBody) {
@@ -712,5 +799,6 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       negotiationStance: "balanced",
       crossClauseReport: null,
       isRunningCrossClauseCheck: false,
+      pushbackSimulations: {},
     }),
 }));

@@ -12,6 +12,8 @@ from src.application.dtos import (
     RefineSuggestionResponseDTO,
     ResolveSuggestionCommand,
     ResolveSuggestionResponseDTO,
+    SimulatePushbackCommand,
+    SimulatePushbackResponseDTO,
     TokenPayloadDTO,
     VerifySuggestionResponseDTO,
 )
@@ -20,6 +22,7 @@ from src.domain.entities import (
     AuditLogEntry,
     ClauseComment,
     ClauseCopilotRefineInput,
+    CounterpartyPushbackInput,
     PlaybookSearchQuery,
 )
 from src.domain.enums import AuditAction, NegotiationStance, SuggestionStatus
@@ -483,11 +486,117 @@ class VerifyRedlineSuggestionUseCase:
         )
 
 
+class SimulateCounterpartyPushbackUseCase:
+    """Simulate opposing counsel reaction and generate Round-2 fallback strategy."""
+
+    def __init__(
+        self,
+        uow: UnitOfWorkPort,
+        rbac_guard: RbacGuardService,
+        clause_auditor: ClauseAuditorPort,
+        retriever: PlaybookRetrieverPort,
+        top_k: int = 3,
+    ) -> None:
+        self._uow = uow
+        self._rbac_guard = rbac_guard
+        self._clause_auditor = clause_auditor
+        self._retriever = retriever
+        self._top_k = max(1, top_k)
+
+    async def execute(
+        self,
+        actor: TokenPayloadDTO,
+        command: SimulatePushbackCommand,
+    ) -> SimulatePushbackResponseDTO:
+        """Enforce RBAC & tenant isolation, simulate counterparty objection, and log audit."""
+        self._rbac_guard.ensure_can_mutate(actor.role)
+        self._rbac_guard.authorize_action(actor.role, RBACAction.RESOLVE_SUGGESTION)
+        self._rbac_guard.enforce_tenant_isolation(
+            actor_org_id=actor.org_id,
+            target_org_id=command.org_id,
+        )
+
+        suggestion = await self._uow.redlines.get_by_id(
+            org_id=actor.org_id,
+            suggestion_id=command.suggestion_id,
+        )
+        if suggestion is None:
+            raise SuggestionNotFoundError(
+                f"Redline suggestion '{command.suggestion_id}' was not found in your organization."
+            )
+
+        clause = await self._uow.documents.get_clause_by_id(
+            org_id=actor.org_id,
+            clause_id=suggestion.clause_id,
+        )
+        if clause is None:
+            raise ClauseNotFoundError(
+                f"Document clause '{suggestion.clause_id}' was not found in your organization."
+            )
+
+        query = PlaybookSearchQuery(
+            org_id=actor.org_id,
+            query_text=clause.current_text,
+            category=None,
+            top_k=self._top_k,
+        )
+        matched_rules = await self._retriever.retrieve_top_rules(query)
+
+        pushback_input = CounterpartyPushbackInput(
+            org_id=actor.org_id,
+            document_id=clause.document_id,
+            clause_id=clause.id,
+            suggestion_id=suggestion.id,
+            clause_index=clause.clause_index,
+            heading=clause.heading,
+            original_clause_text=clause.original_text,
+            proposed_text=suggestion.proposed_text,
+            risk=suggestion.risk,
+            stance=command.stance,
+        )
+        result = await self._clause_auditor.simulate_counterparty_pushback(
+            pushback_input=pushback_input,
+            matched_rules=matched_rules,
+        )
+
+        await self._uow.audit_logs.append(
+            org_id=actor.org_id,
+            entry=AuditLogEntry(
+                org_id=actor.org_id,
+                document_id=clause.document_id,
+                clause_id=clause.id,
+                actor_user_id=actor.sub,
+                actor_role=actor.role,
+                action=AuditAction.PUSHBACK_SIMULATED,
+                details={
+                    "suggestion_id": str(suggestion.id),
+                    "acceptance_probability": result.acceptance_probability,
+                    "pushback_severity": result.pushback_severity.value,
+                    "stance": command.stance.value,
+                },
+            ),
+        )
+        await self._uow.commit()
+
+        return SimulatePushbackResponseDTO(
+            suggestion_id=result.suggestion_id,
+            clause_id=result.clause_id,
+            acceptance_probability=result.acceptance_probability,
+            pushback_severity=result.pushback_severity,
+            counterparty_persona=result.counterparty_persona,
+            expected_objection=result.expected_objection,
+            rebuttal_talking_point=result.rebuttal_talking_point,
+            fallback_compromise_text=result.fallback_compromise_text,
+            latency_ms=result.latency_ms,
+        )
+
+
 __all__ = [
     "CreateClauseCommentUseCase",
     "ListClauseCommentsUseCase",
     "RefineRedlineSuggestionUseCase",
     "ResolveRedlineSuggestionUseCase",
+    "SimulateCounterpartyPushbackUseCase",
     "VerifyRedlineSuggestionUseCase",
 ]
 

@@ -7,6 +7,7 @@ from uuid import UUID
 from src.domain.enums import (
     CrossClauseIssueType,
     NegotiationStance,
+    PushbackSeverity,
     RiskLevel,
     VerificationStatus,
 )
@@ -226,6 +227,63 @@ class CrossClauseAnalysisReport:
             raise DomainValidationError("execution_time_ms must be non-negative.")
 
 
+@dataclass(frozen=True, slots=True)
+class CounterpartyPushbackInput:
+    """Immutable input payload for simulating opposing counsel pushback on a redline."""
+
+    org_id: UUID
+    document_id: UUID
+    clause_id: UUID
+    suggestion_id: UUID
+    clause_index: int
+    heading: str | None
+    original_clause_text: str
+    proposed_text: str
+    risk: RiskLevel
+    stance: NegotiationStance = NegotiationStance.BALANCED
+
+    def __post_init__(self) -> None:
+        if self.clause_index < 0:
+            raise DomainValidationError("clause_index must be non-negative.")
+        cleaned_orig = self.original_clause_text.strip()
+        cleaned_prop = self.proposed_text.strip()
+        if not cleaned_orig:
+            raise DomainValidationError("original_clause_text cannot be empty.")
+        if not cleaned_prop:
+            raise DomainValidationError("proposed_text cannot be empty.")
+        object.__setattr__(self, "original_clause_text", cleaned_orig)
+        object.__setattr__(self, "proposed_text", cleaned_prop)
+
+
+@dataclass(frozen=True, slots=True)
+class CounterpartyPushbackSimulation:
+    """Immutable adversarial pushback forecast and Round-2 rebuttal strategy."""
+
+    suggestion_id: UUID
+    clause_id: UUID
+    acceptance_probability: int
+    pushback_severity: PushbackSeverity
+    counterparty_persona: str
+    expected_objection: str
+    rebuttal_talking_point: str
+    fallback_compromise_text: str
+    latency_ms: float
+
+    def __post_init__(self) -> None:
+        if not (0 <= self.acceptance_probability <= 100):
+            raise DomainValidationError("acceptance_probability must be between 0 and 100.")
+        if not self.counterparty_persona.strip():
+            raise DomainValidationError("counterparty_persona cannot be empty.")
+        if not self.expected_objection.strip():
+            raise DomainValidationError("expected_objection cannot be empty.")
+        if not self.rebuttal_talking_point.strip():
+            raise DomainValidationError("rebuttal_talking_point cannot be empty.")
+        if not self.fallback_compromise_text.strip():
+            raise DomainValidationError("fallback_compromise_text cannot be empty.")
+        if self.latency_ms < 0:
+            raise DomainValidationError("latency_ms must be non-negative.")
+
+
 __all__ = [
     "AuditEventType",
     "AuditProgressEvent",
@@ -233,6 +291,8 @@ __all__ = [
     "ClauseAuditResult",
     "ClauseCopilotRefineInput",
     "ClauseCopilotRefineResult",
+    "CounterpartyPushbackInput",
+    "CounterpartyPushbackSimulation",
     "CriticVerificationReport",
     "CrossClauseAnalysisReport",
     "CrossClauseFinding",

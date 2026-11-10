@@ -45,6 +45,15 @@ class VerificationStatus(StrEnum):
     NEEDS_HUMAN_REVIEW = "NEEDS_HUMAN_REVIEW"
 
 
+class PushbackSeverity(StrEnum):
+    """Predicted adversarial counterparty resistance severity levels."""
+
+    LOW = "LOW"
+    MODERATE = "MODERATE"
+    HIGH = "HIGH"
+    DEALBREAKER = "DEALBREAKER"
+
+
 class SuggestionStatus(StrEnum):
     """Lifecycle states of an AI-generated redline suggestion."""
 
@@ -80,6 +89,7 @@ class AuditAction(StrEnum):
     SUGGESTION_REJECTED = "SUGGESTION_REJECTED"
     SUGGESTION_REFINED = "SUGGESTION_REFINED"
     SUGGESTION_VERIFIED = "SUGGESTION_VERIFIED"
+    PUSHBACK_SIMULATED = "PUSHBACK_SIMULATED"
     COMMENT_CREATED = "COMMENT_CREATED"
     DOCUMENT_EXPORTED = "DOCUMENT_EXPORTED"
     CROSS_CLAUSE_CHECKED = "CROSS_CLAUSE_CHECKED"
@@ -91,6 +101,7 @@ __all__ = [
     "DocumentStatus",
     "ExportMode",
     "NegotiationStance",
+    "PushbackSeverity",
     "RiskLevel",
     "SuggestionStatus",
     "UserRole",

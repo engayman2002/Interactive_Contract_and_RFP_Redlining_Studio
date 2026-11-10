@@ -17,10 +17,17 @@ from src.domain.entities import (
     ClauseAuditResult,
     ClauseCopilotRefineInput,
     ClauseCopilotRefineResult,
+    CounterpartyPushbackInput,
+    CounterpartyPushbackSimulation,
     CriticVerificationReport,
     MatchedPlaybookRule,
 )
-from src.domain.enums import NegotiationStance, RiskLevel, VerificationStatus
+from src.domain.enums import (
+    NegotiationStance,
+    PushbackSeverity,
+    RiskLevel,
+    VerificationStatus,
+)
 from src.domain.exceptions import ClauseAnalysisError, StructuredOutputValidationError
 from src.domain.ports import ClauseAuditorPort
 from src.infrastructure.vector.embedding_service import (
@@ -44,6 +51,40 @@ class RedlineOutput(BaseModel):
     negotiation_talking_point: str = Field(
         description="Short justification to send to counterparty"
     )
+
+
+class PushbackSimulationOutput(BaseModel):
+    """Structured opposing counsel pushback simulation schema."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    acceptance_probability: int = Field(ge=0, le=100)
+    pushback_severity: PushbackSeverity
+    counterparty_persona: str = Field(min_length=3)
+    expected_objection: str = Field(min_length=5)
+    rebuttal_talking_point: str = Field(min_length=5)
+    fallback_compromise_text: str = Field(min_length=5)
+
+
+PUSHBACK_SIMULATION_SYSTEM_PROMPT: Final[str] = (
+    "You are a veteran Opposing Legal Counsel & Commercial Deal Strategist simulating "
+    "counterparty pushback before contract redlines are sent externally. Given the original "
+    "clause, our proposed redline, our Playbook rules, and the active negotiation stance, "
+    "predict the counterparty's exact commercial objection, estimate acceptance_probability "
+    "(0-100), craft a persuasive Round-2 rebuttal talking point, and draft a balanced Round-2 "
+    "fallback compromise clause preserving the original section number prefix. "
+    "Return valid JSON matching PushbackSimulationOutput."
+)
+
+
+def _classify_pushback_severity(acceptance_probability: int) -> PushbackSeverity:
+    if acceptance_probability >= 75:
+        return PushbackSeverity.LOW
+    if acceptance_probability >= 50:
+        return PushbackSeverity.MODERATE
+    if acceptance_probability >= 25:
+        return PushbackSeverity.HIGH
+    return PushbackSeverity.DEALBREAKER
 
 
 SYSTEM_PROMPT: Final[str] = """You are a Principal Legal and Technical Contract Auditor.
@@ -688,6 +729,183 @@ class PolicyAwareDeterministicChatModel(Runnable[Any, str]):
             negotiation_talking_point=talking_point,
         )
 
+    def evaluate_counterparty_pushback(
+        self,
+        original_clause_text: str,
+        proposed_text: str,
+        risk: RiskLevel,
+        matched_rules: Sequence[MatchedPlaybookRule],
+        heading: str | None = None,
+        stance: NegotiationStance = NegotiationStance.BALANCED,
+    ) -> PushbackSimulationOutput:
+        """Deterministically simulate opposing counsel pushback and Round-2 rebuttal."""
+        top_rule = matched_rules[0].rule if matched_rules else None
+        topic_text = f"{heading or ''} {original_clause_text} {proposed_text}".lower()
+        prop_lower = proposed_text.lower()
+
+        already_compromise = any(
+            kw in prop_lower
+            for kw in ("two times", "2x", "24 months", "99.9%", "fallback", "net 30", "tiered")
+        )
+
+        # Determine acceptance probability based on stance, risk shift, and compromise status
+        if stance == NegotiationStance.COMMERCIAL or already_compromise:
+            prob = 82 if stance == NegotiationStance.COMMERCIAL else 76
+        elif stance == NegotiationStance.STRICT:
+            if "unconditional" in prop_lower or (
+                risk == RiskLevel.CRITICAL and "without limitation" in prop_lower
+            ):
+                prob = 22
+            elif risk in (RiskLevel.CRITICAL, RiskLevel.HIGH):
+                prob = 36
+            else:
+                prob = 48
+        else:  # BALANCED
+            if risk == RiskLevel.CRITICAL:
+                prob = 44
+            elif risk == RiskLevel.HIGH:
+                prob = 58
+            elif risk == RiskLevel.MEDIUM:
+                prob = 68
+            else:
+                prob = 84
+
+        severity = _classify_pushback_severity(prob)
+
+        if any(kw in topic_text for kw in ("liability", "cap", "consequential", "damages")):
+            persona = "Enterprise Vendor Commercial & Legal Counsel"
+            objection = (
+                "Counterparty counsel will argue that resetting liability from the nominal $500 "
+                "or existing cap to a 12-month fee cap exposes them to disproportionate margin "
+                "erosion relative to annual subscription revenue."
+            )
+            rebuttal = (
+                "An asymmetric or sub-market $500 cap shifts catastrophic vendor platform risk "
+                "onto Customer and fails board audit controls. A 12-month fee cap with mutual "
+                "exclusion of consequential damages reflects Fortune 500 SaaS market parity."
+            )
+            fallback_body = (
+                top_rule.fallback_position
+                if top_rule is not None
+                else (
+                    "Each party's aggregate cumulative liability under this Agreement shall not "
+                    "exceed two times (2x) the annual fees paid for data breach or IP indemnity, "
+                    "and twelve (12) months of fees for general direct damages."
+                )
+            )
+        elif any(kw in topic_text for kw in ("indemnif", "hold harmless", "negligence", "ip")):
+            persona = "Vendor Risk & Intellectual Property Counsel"
+            objection = (
+                "Opposing counsel will resist uncapped vendor IP/fault indemnity obligations "
+                "and push for a fault-proportioned cap or procedural control-of-defense carve-outs."
+            )
+            rebuttal = (
+                "No customer can indemnify a SaaS vendor for the vendor's own gross negligence "
+                "or third-party infringement claims inside proprietary code Customer cannot "
+                "inspect. Fault-based mutual indemnity is the non-negotiable baseline."
+            )
+            fallback_body = (
+                top_rule.fallback_position
+                if top_rule is not None
+                else (
+                    "Each party shall defend and indemnify the other for third-party IP "
+                    "infringement and bodily injury/gross negligence claims, subject to a mutual "
+                    "super-cap equal to two times (2x) annual contract fees and prompt written "
+                    "notice with sole control of defense."
+                )
+            )
+        elif any(kw in topic_text for kw in ("sla", "uptime", "service credit", "best-efforts")):
+            persona = "Vendor Cloud Operations & Revenue Counsel"
+            objection = (
+                "Counterparty will claim that binding 99.95%+ SLAs and termination rights create "
+                "revenue recognition risk for transient multi-tenant infrastructure incidents."
+            )
+            rebuttal = (
+                "Production enterprise workloads require enforceable availability commitments. "
+                "Tiered SLA credits capped at monthly fees and chronic-failure exit rights give "
+                "Vendor predictable remedies while protecting operational continuity."
+            )
+            fallback_body = (
+                top_rule.fallback_position
+                if top_rule is not None
+                else (
+                    "Vendor guarantees 99.9% monthly service availability with tiered service "
+                    "credits up to 15% of monthly fees, and Customer may terminate for cause upon "
+                    "four (4) consecutive months below 99.5% uptime."
+                )
+            )
+        elif any(kw in topic_text for kw in ("ai", "train", "foundation model", "gdpr", "privacy")):
+            persona = "Vendor AI Product & Data Privacy Officer (DPO)"
+            objection = (
+                "Opposing counsel may contend they need telemetry ingestion rights to operate "
+                "automated anomaly detection, spam filtering, and platform tuning."
+            )
+            rebuttal = (
+                "Operational security telemetry and anonymized service health diagnostics remain "
+                "permitted, whereas training shared generative or foundation models on Customer "
+                "Confidential Data violates enterprise confidentiality and GDPR purpose limits."
+            )
+            fallback_body = (
+                top_rule.fallback_position
+                if top_rule is not None
+                else (
+                    "Vendor shall not use Customer Confidential Data to train public or "
+                    "third-party AI models, provided Vendor may analyze strictly aggregated, "
+                    "irreversibly de-identified operational metrics solely to maintain platform "
+                    "security and reliability."
+                )
+            )
+        elif any(kw in topic_text for kw in ("payment", "invoice", "net ", "fee", "refund")):
+            persona = "Counterparty Treasury & Finance Director"
+            objection = (
+                "Counterparty finance will object that Net 45/60 extends Days Sales Outstanding "
+                "(DSO) beyond standard quarterly SaaS billing terms."
+            )
+            rebuttal = (
+                "Our global accounts payable cycle mandates Net 45 settlement for enterprise "
+                "vendors; undisputed invoices clear reliably under automated ACH scheduling with "
+                "pro-rata refunds only for uncured Vendor breach."
+            )
+            fallback_body = (
+                top_rule.fallback_position
+                if top_rule is not None
+                else (
+                    "Undisputed invoices shall be payable within thirty (30) days of receipt via "
+                    "ACH, with a 15-day notice and dispute cure window and pro-rata refund of "
+                    "prepaid unused fees upon Customer termination for cause."
+                )
+            )
+        else:
+            persona = "Counterparty Senior Commercial Counsel"
+            objection = (
+                "Opposing counsel will push back that the proposed redline alters the standard "
+                "commercial risk allocation compared to their template paper."
+            )
+            rebuttal = (
+                "Our redline replaces unilateral obligations with balanced bilateral terms "
+                "that protect both parties equally without delaying project onboarding."
+            )
+            fallback_body = (
+                top_rule.fallback_position
+                if top_rule is not None
+                else (
+                    "Each party shall perform its obligations in a commercially reasonable, "
+                    "reciprocal manner, subject to thirty (30) days prior written notice and "
+                    "opportunity to cure."
+                )
+            )
+
+        compromise_text = _preserve_clause_numbering(original_clause_text, fallback_body)
+
+        return PushbackSimulationOutput(
+            acceptance_probability=prob,
+            pushback_severity=severity,
+            counterparty_persona=persona,
+            expected_objection=objection,
+            rebuttal_talking_point=rebuttal,
+            fallback_compromise_text=compromise_text,
+        )
+
     def invoke(
         self,
         input: Any,  # noqa: A002
@@ -714,19 +932,12 @@ class PolicyAwareDeterministicChatModel(Runnable[Any, str]):
         return self.invoke(input, config=config, **kwargs)
 
 
-def parse_and_validate_redline_output(raw_output: Any) -> RedlineOutput:
-    """Parse and validate LLM output into `RedlineOutput`, repairing common JSON wrappers."""
-    if isinstance(raw_output, RedlineOutput):
-        return raw_output
-
-    if isinstance(raw_output, dict):
-        return RedlineOutput.model_validate(raw_output)
-
+def _extract_json_dict(raw_output: Any) -> dict[str, Any]:
+    """Extract and repair JSON object from raw LLM string/message responses."""
     content_str = str(getattr(raw_output, "content", raw_output)).strip()
     if not content_str:
         raise ValueError("LLM returned an empty response string.")
 
-    # Strip Markdown code fences if present
     fenced_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content_str, re.DOTALL)
     if fenced_match:
         content_str = fenced_match.group(1).strip()
@@ -736,10 +947,29 @@ def parse_and_validate_redline_output(raw_output: Any) -> RedlineOutput:
         if brace_start != -1 and brace_end > brace_start:
             content_str = content_str[brace_start : brace_end + 1]
 
-    # Repair trailing commas before closing brace/bracket
     repaired_str = re.sub(r",\s*([}\]])", r"\1", content_str)
-    parsed_dict = json.loads(repaired_str)
-    return RedlineOutput.model_validate(parsed_dict)
+    parsed = json.loads(repaired_str)
+    if not isinstance(parsed, dict):
+        raise ValueError("Parsed JSON payload must be an object.")
+    return parsed
+
+
+def parse_and_validate_redline_output(raw_output: Any) -> RedlineOutput:
+    """Parse and validate LLM output into `RedlineOutput`, repairing common JSON wrappers."""
+    if isinstance(raw_output, RedlineOutput):
+        return raw_output
+    if isinstance(raw_output, dict):
+        return RedlineOutput.model_validate(raw_output)
+    return RedlineOutput.model_validate(_extract_json_dict(raw_output))
+
+
+def parse_and_validate_pushback_output(raw_output: Any) -> PushbackSimulationOutput:
+    """Parse and validate LLM output into `PushbackSimulationOutput`."""
+    if isinstance(raw_output, PushbackSimulationOutput):
+        return raw_output
+    if isinstance(raw_output, dict):
+        return PushbackSimulationOutput.model_validate(raw_output)
+    return PushbackSimulationOutput.model_validate(_extract_json_dict(raw_output))
 
 
 def build_redline_chain(
@@ -874,6 +1104,74 @@ def build_copilot_refine_chain(
         }
 
     return RunnableLambda(_prepare_copilot_inputs) | prompt | active_llm | parser_runnable
+
+
+def build_pushback_simulation_chain(
+    llm: Runnable[Any, Any] | None = None,
+) -> Runnable[dict[str, Any], PushbackSimulationOutput]:
+    """Construct an LCEL chain for adversarial counterparty pushback simulation."""
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", "{system_prompt}\n\n{stance_instruction}"),
+            (
+                "human",
+                "Company Playbook Context:\n{playbook_context}\n\n"
+                "Clause Heading: {heading}\n"
+                "Original Contract Clause:\n{original_clause_text}\n\n"
+                "Our Proposed Redline:\n{proposed_text}\n\n"
+                "Simulate opposing counsel pushback and craft Round-2 fallback strategy.",
+            ),
+        ]
+    )
+    active_llm: Runnable[Any, Any] = (
+        llm if llm is not None else PolicyAwareDeterministicChatModel(temperature=0.0)
+    )
+    parser_runnable: Runnable[Any, PushbackSimulationOutput] = RunnableLambda(
+        parse_and_validate_pushback_output
+    )
+
+    if isinstance(active_llm, PolicyAwareDeterministicChatModel):
+        def _invoke_pushback_policy_aware(payload: dict[str, Any]) -> str:
+            raw_stance = payload.get("stance", NegotiationStance.BALANCED)
+            stance = (
+                raw_stance
+                if isinstance(raw_stance, NegotiationStance)
+                else NegotiationStance(str(raw_stance).lower())
+            )
+            raw_risk = payload.get("risk", RiskLevel.HIGH)
+            risk = raw_risk if isinstance(raw_risk, RiskLevel) else RiskLevel(str(raw_risk))
+            output = active_llm.evaluate_counterparty_pushback(
+                original_clause_text=str(payload.get("original_clause_text", "")),
+                proposed_text=str(payload.get("proposed_text", "")),
+                risk=risk,
+                matched_rules=payload.get("matched_rules", []),
+                heading=payload.get("heading"),
+                stance=stance,
+            )
+            return output.model_dump_json()
+
+        return RunnableLambda(_invoke_pushback_policy_aware) | parser_runnable
+
+    def _prepare_pushback_inputs(payload: dict[str, Any]) -> dict[str, Any]:
+        raw_stance = payload.get("stance", NegotiationStance.BALANCED)
+        stance = (
+            raw_stance
+            if isinstance(raw_stance, NegotiationStance)
+            else NegotiationStance(str(raw_stance).lower())
+        )
+        stance_instruction = STANCE_INSTRUCTIONS.get(
+            stance, STANCE_INSTRUCTIONS[NegotiationStance.BALANCED]
+        )
+        return {
+            "system_prompt": PUSHBACK_SIMULATION_SYSTEM_PROMPT,
+            "stance_instruction": stance_instruction,
+            "playbook_context": payload.get("playbook_context", ""),
+            "heading": payload.get("heading") or "Section",
+            "original_clause_text": payload.get("original_clause_text", ""),
+            "proposed_text": payload.get("proposed_text", ""),
+        }
+
+    return RunnableLambda(_prepare_pushback_inputs) | prompt | active_llm | parser_runnable
 
 
 _PLACEHOLDER_ARTIFACT_RE: Final[re.Pattern[str]] = re.compile(
@@ -1365,17 +1663,86 @@ class LangChainClauseAuditor(ClauseAuditorPort):
             is_compliant=(candidate_risk == RiskLevel.LOW),
         )
 
+    async def simulate_counterparty_pushback(
+        self,
+        pushback_input: CounterpartyPushbackInput,
+        matched_rules: Sequence[MatchedPlaybookRule],
+    ) -> CounterpartyPushbackSimulation:
+        """Simulate opposing counsel reaction and generate Round-2 rebuttal & fallback wording."""
+        started_at = time.perf_counter()
+        playbook_context = format_playbook_rules_context(matched_rules)
+        chain_input: dict[str, Any] = {
+            "playbook_context": playbook_context,
+            "original_clause_text": pushback_input.original_clause_text,
+            "proposed_text": pushback_input.proposed_text,
+            "heading": pushback_input.heading,
+            "risk": pushback_input.risk,
+            "matched_rules": list(matched_rules),
+            "stance": pushback_input.stance,
+        }
+        pushback_chain = build_pushback_simulation_chain(self._llm_runnable)
+        validated_output: PushbackSimulationOutput | None = None
+        total_attempts = 1 + self._max_retries
+
+        for attempt in range(1, total_attempts + 1):
+            try:
+                validated_output = await pushback_chain.ainvoke(chain_input)
+                break
+            except Exception as exc:
+                logger.warning(
+                    "Pushback simulation failed on attempt %d/%d for suggestion %s: %s",
+                    attempt,
+                    total_attempts,
+                    pushback_input.suggestion_id,
+                    exc,
+                )
+
+        if validated_output is None:
+            validated_output = self._deterministic_fallback.evaluate_counterparty_pushback(
+                original_clause_text=pushback_input.original_clause_text,
+                proposed_text=pushback_input.proposed_text,
+                risk=pushback_input.risk,
+                matched_rules=matched_rules,
+                heading=pushback_input.heading,
+                stance=pushback_input.stance,
+            )
+
+        preserved_fallback = _preserve_clause_numbering(
+            pushback_input.original_clause_text,
+            validated_output.fallback_compromise_text,
+        )
+        computed_severity = _classify_pushback_severity(
+            validated_output.acceptance_probability
+        )
+        latency_ms = round((time.perf_counter() - started_at) * 1000.0, 3)
+
+        return CounterpartyPushbackSimulation(
+            suggestion_id=pushback_input.suggestion_id,
+            clause_id=pushback_input.clause_id,
+            acceptance_probability=validated_output.acceptance_probability,
+            pushback_severity=computed_severity,
+            counterparty_persona=validated_output.counterparty_persona.strip(),
+            expected_objection=validated_output.expected_objection.strip(),
+            rebuttal_talking_point=validated_output.rebuttal_talking_point.strip(),
+            fallback_compromise_text=preserved_fallback,
+            latency_ms=latency_ms,
+        )
+
 
 __all__ = [
     "COPILOT_SYSTEM_PROMPT",
     "CriticVerificationAgent",
     "LangChainClauseAuditor",
+    "PUSHBACK_SIMULATION_SYSTEM_PROMPT",
     "PolicyAwareDeterministicChatModel",
+    "PushbackSimulationOutput",
     "RedlineOutput",
     "STANCE_INSTRUCTIONS",
     "SYSTEM_PROMPT",
     "build_copilot_refine_chain",
+    "build_pushback_simulation_chain",
     "build_redline_chain",
     "format_playbook_rules_context",
+    "parse_and_validate_pushback_output",
     "parse_and_validate_redline_output",
 ]

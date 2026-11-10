@@ -9,7 +9,12 @@ from pydantic import Field, field_validator
 from src.application.dtos import ImmutableDTO
 from src.application.dtos.redline_dtos import RedlineSuggestionResponseDTO
 from src.domain.entities import ClauseComment
-from src.domain.enums import NegotiationStance, UserRole, VerificationStatus
+from src.domain.enums import (
+    NegotiationStance,
+    PushbackSeverity,
+    UserRole,
+    VerificationStatus,
+)
 
 ResolutionAction = Literal["ACCEPT", "REJECT", "MODIFY"]
 
@@ -147,6 +152,36 @@ class VerifySuggestionResponseDTO(ImmutableDTO):
     latency_ms: float
 
 
+class SimulatePushbackRequestDTO(ImmutableDTO):
+    """REST request body DTO for `POST /api/v1/suggestions/{suggestion_id}/simulate-pushback`."""
+
+    stance: NegotiationStance = NegotiationStance.BALANCED
+
+
+class SimulatePushbackCommand(ImmutableDTO):
+    """Application command DTO for simulating opposing counsel pushback."""
+
+    org_id: UUID
+    suggestion_id: UUID
+    actor_user_id: UUID
+    actor_role: UserRole
+    stance: NegotiationStance = NegotiationStance.BALANCED
+
+
+class SimulatePushbackResponseDTO(ImmutableDTO):
+    """Output DTO returned by `POST /api/v1/suggestions/{suggestion_id}/simulate-pushback`."""
+
+    suggestion_id: UUID
+    clause_id: UUID
+    acceptance_probability: int
+    pushback_severity: PushbackSeverity
+    counterparty_persona: str
+    expected_objection: str
+    rebuttal_talking_point: str
+    fallback_compromise_text: str
+    latency_ms: float
+
+
 __all__ = [
     "ClauseCommentResponseDTO",
     "ClauseResolutionStateDTO",
@@ -159,5 +194,8 @@ __all__ = [
     "ResolveSuggestionCommand",
     "ResolveSuggestionRequestDTO",
     "ResolveSuggestionResponseDTO",
+    "SimulatePushbackCommand",
+    "SimulatePushbackRequestDTO",
+    "SimulatePushbackResponseDTO",
     "VerifySuggestionResponseDTO",
 ]

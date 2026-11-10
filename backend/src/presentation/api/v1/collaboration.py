@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Body, Depends, status
 
 from src.application.dtos import (
     ClauseCommentResponseDTO,
@@ -15,6 +15,9 @@ from src.application.dtos import (
     ResolveSuggestionCommand,
     ResolveSuggestionRequestDTO,
     ResolveSuggestionResponseDTO,
+    SimulatePushbackCommand,
+    SimulatePushbackRequestDTO,
+    SimulatePushbackResponseDTO,
     TokenPayloadDTO,
     VerifySuggestionResponseDTO,
 )
@@ -24,6 +27,7 @@ from src.application.use_cases import (
     ListClauseCommentsUseCase,
     RefineRedlineSuggestionUseCase,
     ResolveRedlineSuggestionUseCase,
+    SimulateCounterpartyPushbackUseCase,
     VerifyRedlineSuggestionUseCase,
 )
 from src.domain.enums import NegotiationStance, UserRole
@@ -166,6 +170,47 @@ async def verify_redline_suggestion(
         suggestion_id=suggestion_id,
         stance=stance,
     )
+
+
+@suggestions_router.post(
+    "/{suggestion_id}/simulate-pushback",
+    response_model=SimulatePushbackResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def simulate_counterparty_pushback(
+    suggestion_id: UUID,
+    current_user: Annotated[
+        TokenPayloadDTO,
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.LEGAL_COUNSEL,
+                UserRole.TECHNICAL_LEAD,
+            )
+        ),
+    ],
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
+    retriever: Annotated[PlaybookRetrieverPort, Depends(get_playbook_retriever)],
+    auditor: Annotated[ClauseAuditorPort, Depends(get_clause_auditor)],
+    payload: Annotated[SimulatePushbackRequestDTO | None, Body()] = None,
+) -> SimulatePushbackResponseDTO:
+    """Simulate opposing counsel reaction and produce Round-2 rebuttal & fallback compromise."""
+    stance = payload.stance if payload is not None else NegotiationStance.BALANCED
+    use_case = SimulateCounterpartyPushbackUseCase(
+        uow=uow,
+        rbac_guard=rbac_guard,
+        clause_auditor=auditor,
+        retriever=retriever,
+    )
+    command = SimulatePushbackCommand(
+        org_id=current_user.org_id,
+        suggestion_id=suggestion_id,
+        actor_user_id=current_user.sub,
+        actor_role=current_user.role,
+        stance=stance,
+    )
+    return await use_case.execute(actor=current_user, command=command)
 
 
 @clauses_router.post(

@@ -9,6 +9,8 @@ from src.domain.entities import (
     ClauseAuditResult,
     ClauseCopilotRefineInput,
     ClauseCopilotRefineResult,
+    CounterpartyPushbackInput,
+    CounterpartyPushbackSimulation,
     CriticVerificationReport,
     CrossClauseAnalysisReport,
     DocumentClause,
@@ -48,6 +50,14 @@ class ClauseAuditorPort(Protocol):
         stance: NegotiationStance = NegotiationStance.BALANCED,
     ) -> CriticVerificationReport:
         """Audit candidate redline against Playbook grounding, hallucinations, and numbering."""
+        ...
+
+    async def simulate_counterparty_pushback(
+        self,
+        pushback_input: CounterpartyPushbackInput,
+        matched_rules: Sequence[MatchedPlaybookRule],
+    ) -> CounterpartyPushbackSimulation:
+        """Simulate opposing counsel reaction and generate Round-2 rebuttal & fallback wording."""
         ...
 
 

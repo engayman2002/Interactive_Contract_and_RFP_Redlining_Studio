@@ -212,6 +212,9 @@ from src.application.dtos.collaboration_dtos import (  # noqa: E402
     ResolveSuggestionCommand,
     ResolveSuggestionRequestDTO,
     ResolveSuggestionResponseDTO,
+    SimulatePushbackCommand,
+    SimulatePushbackRequestDTO,
+    SimulatePushbackResponseDTO,
     VerifySuggestionResponseDTO,
 )
 from src.application.dtos.export_and_audit_dtos import (  # noqa: E402
@@ -284,6 +287,9 @@ __all__ = [
     "ResolveSuggestionCommand",
     "ResolveSuggestionRequestDTO",
     "ResolveSuggestionResponseDTO",
+    "SimulatePushbackCommand",
+    "SimulatePushbackRequestDTO",
+    "SimulatePushbackResponseDTO",
     "TestAIConnectionRequestDTO",
     "TestAIConnectionResponseDTO",
     "TokenPayloadDTO",
