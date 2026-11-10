@@ -3,11 +3,13 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 
 from src.application.dtos import (
     CreatePlaybookRuleCommand,
     CreatePlaybookRuleRequestDTO,
+    ExtractPlaybookFromTextRequestDTO,
+    ExtractPlaybookResponseDTO,
     PlaybookRuleResponseDTO,
     PlaybookSearchRequestDTO,
     PlaybookSearchResponseDTO,
@@ -19,6 +21,7 @@ from src.application.services import RbacGuardService
 from src.application.use_cases import (
     CreatePlaybookRuleUseCase,
     DeletePlaybookRuleUseCase,
+    ExtractPlaybookRulesUseCase,
     GetPlaybookRuleUseCase,
     ListPlaybookRulesUseCase,
     SearchPlaybookRulesUseCase,
@@ -26,13 +29,20 @@ from src.application.use_cases import (
 )
 from src.domain.enums import UserRole
 from src.domain.ports import (
+    ClauseSegmenterPort,
+    DocumentParserPort,
     EmbeddingGeneratorPort,
+    PlaybookExtractorPort,
     PlaybookRetrieverPort,
     UnitOfWorkPort,
 )
+from src.infrastructure.config import get_settings
 from src.presentation.dependencies import (
+    get_clause_segmenter,
     get_current_user,
+    get_document_parser,
     get_embedding_generator,
+    get_playbook_extractor,
     get_playbook_retriever,
     get_rbac_guard,
     get_uow,
@@ -180,6 +190,86 @@ async def search_playbook_rules(
         retriever=retriever,
     )
     return await use_case.execute(actor=current_user, request=payload)
+
+
+@playbooks_router.post(
+    "/extract-from-text",
+    response_model=ExtractPlaybookResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def extract_playbook_from_text(
+    payload: ExtractPlaybookFromTextRequestDTO,
+    current_user: Annotated[
+        TokenPayloadDTO,
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.LEGAL_COUNSEL,
+                UserRole.TECHNICAL_LEAD,
+            )
+        ),
+    ],
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
+    extractor: Annotated[PlaybookExtractorPort, Depends(get_playbook_extractor)],
+    embedding_generator: Annotated[EmbeddingGeneratorPort, Depends(get_embedding_generator)],
+) -> ExtractPlaybookResponseDTO:
+    """Auto-extract corporate Playbook rules from pasted golden contract clauses."""
+    use_case = ExtractPlaybookRulesUseCase(
+        uow=uow,
+        rbac_guard=rbac_guard,
+        extractor=extractor,
+        embedding_generator=embedding_generator,
+    )
+    return await use_case.execute_from_text(actor=current_user, request=payload)
+
+
+@playbooks_router.post(
+    "/extract-from-file",
+    response_model=ExtractPlaybookResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def extract_playbook_from_file(
+    file: Annotated[UploadFile, File(description="Golden contract file (.docx or .pdf)")],
+    current_user: Annotated[
+        TokenPayloadDTO,
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.LEGAL_COUNSEL,
+                UserRole.TECHNICAL_LEAD,
+            )
+        ),
+    ],
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
+    extractor: Annotated[PlaybookExtractorPort, Depends(get_playbook_extractor)],
+    embedding_generator: Annotated[EmbeddingGeneratorPort, Depends(get_embedding_generator)],
+    parser: Annotated[DocumentParserPort, Depends(get_document_parser)],
+    segmenter: Annotated[ClauseSegmenterPort, Depends(get_clause_segmenter)],
+    auto_save: Annotated[bool, Form()] = True,
+    max_rules: Annotated[int, Form()] = 6,
+) -> ExtractPlaybookResponseDTO:
+    """Upload a `.docx`/`.pdf` golden contract and auto-extract corporate Playbook rules."""
+    settings = get_settings()
+    file_bytes = await file.read()
+    use_case = ExtractPlaybookRulesUseCase(
+        uow=uow,
+        rbac_guard=rbac_guard,
+        extractor=extractor,
+        embedding_generator=embedding_generator,
+        parser=parser,
+        segmenter=segmenter,
+        max_upload_bytes=settings.max_upload_size_bytes,
+    )
+    return await use_case.execute_from_file(
+        actor=current_user,
+        filename=file.filename or "golden_contract.docx",
+        file_bytes=file_bytes,
+        content_type=file.content_type,
+        max_rules=max_rules,
+        auto_save=auto_save,
+    )
 
 
 __all__ = ["playbooks_router"]

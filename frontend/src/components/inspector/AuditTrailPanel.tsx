@@ -24,6 +24,8 @@ const ACTION_BADGE_STYLES: Record<AuditAction, string> = {
     "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300",
   PUSHBACK_SIMULATED:
     "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-300",
+  PLAYBOOK_AUTO_EXTRACTED:
+    "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300",
   COMMENT_CREATED:
     "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300",
   DOCUMENT_EXPORTED:

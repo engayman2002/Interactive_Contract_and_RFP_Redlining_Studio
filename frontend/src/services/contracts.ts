@@ -92,6 +92,7 @@ export const AuditActionSchema = z.enum([
   "SUGGESTION_REFINED",
   "SUGGESTION_VERIFIED",
   "PUSHBACK_SIMULATED",
+  "PLAYBOOK_AUTO_EXTRACTED",
   "COMMENT_CREATED",
   "DOCUMENT_EXPORTED",
   "CROSS_CLAUSE_CHECKED",
@@ -315,6 +316,39 @@ export const CreatePlaybookRuleRequestDTOSchema = z.object({
 });
 export type CreatePlaybookRuleRequestDTO = z.infer<
   typeof CreatePlaybookRuleRequestDTOSchema
+>;
+
+export const ExtractedPlaybookRuleCandidateDTOSchema = z.object({
+  category: z.string(),
+  standard_position: z.string(),
+  fallback_position: z.string(),
+  unacceptable_triggers: z.array(z.string()),
+  source_clause_excerpt: z.string(),
+  confidence_score: z.number().int().min(0).max(100),
+});
+export type ExtractedPlaybookRuleCandidateDTO = z.infer<
+  typeof ExtractedPlaybookRuleCandidateDTOSchema
+>;
+
+export const ExtractPlaybookFromTextRequestDTOSchema = z.object({
+  reference_text: z.string().min(20),
+  max_rules: z.number().int().min(1).max(20).default(6),
+  auto_save: z.boolean().default(true),
+});
+export type ExtractPlaybookFromTextRequestDTO = z.infer<
+  typeof ExtractPlaybookFromTextRequestDTOSchema
+>;
+
+export const ExtractPlaybookResponseDTOSchema = z.object({
+  extracted_count: z.number().int().min(0),
+  auto_saved: z.boolean(),
+  audit_action: AuditActionSchema.default("PLAYBOOK_AUTO_EXTRACTED"),
+  candidates: z.array(ExtractedPlaybookRuleCandidateDTOSchema),
+  saved_rules: z.array(PlaybookRuleDTOSchema),
+  latency_ms: z.number().nonnegative(),
+});
+export type ExtractPlaybookResponseDTO = z.infer<
+  typeof ExtractPlaybookResponseDTOSchema
 >;
 
 export const DocumentListItemDTOSchema = z.object({

@@ -5,8 +5,12 @@ from uuid import UUID
 from pydantic import Field, field_validator
 
 from src.application.dtos import ImmutableDTO
-from src.domain.entities import MatchedPlaybookRule, PlaybookRule
-from src.domain.enums import UserRole
+from src.domain.entities import (
+    ExtractedPlaybookRuleCandidate,
+    MatchedPlaybookRule,
+    PlaybookRule,
+)
+from src.domain.enums import AuditAction, UserRole
 
 
 def _validate_non_empty_text(value: str, field_label: str) -> str:
@@ -158,9 +162,65 @@ class PlaybookSearchResponseDTO(ImmutableDTO):
     execution_time_ms: float
 
 
+class ExtractedPlaybookRuleCandidateDTO(ImmutableDTO):
+    """Output DTO representing a single AI-extracted Playbook rule candidate."""
+
+    category: str
+    standard_position: str
+    fallback_position: str
+    unacceptable_triggers: list[str]
+    source_clause_excerpt: str
+    confidence_score: int = Field(ge=0, le=100)
+
+    @classmethod
+    def from_domain(
+        cls,
+        candidate: ExtractedPlaybookRuleCandidate,
+    ) -> "ExtractedPlaybookRuleCandidateDTO":
+        """Construct an extracted rule candidate DTO from its domain entity."""
+        return cls(
+            category=candidate.category,
+            standard_position=candidate.standard_position,
+            fallback_position=candidate.fallback_position,
+            unacceptable_triggers=list(candidate.unacceptable_triggers),
+            source_clause_excerpt=candidate.source_clause_excerpt,
+            confidence_score=candidate.confidence_score,
+        )
+
+
+class ExtractPlaybookFromTextRequestDTO(ImmutableDTO):
+    """Input DTO for extracting Playbook rules from pasted golden contract text."""
+
+    reference_text: str = Field(min_length=20, max_length=200000)
+    max_rules: int = Field(default=6, ge=1, le=20)
+    auto_save: bool = Field(default=True)
+
+    @field_validator("reference_text")
+    @classmethod
+    def validate_reference_text(cls, value: str) -> str:
+        cleaned = _validate_non_empty_text(value, "Reference golden contract text")
+        if len(cleaned) < 20:
+            raise ValueError("Reference golden contract text must be at least 20 characters.")
+        return cleaned
+
+
+class ExtractPlaybookResponseDTO(ImmutableDTO):
+    """Output DTO for `POST /api/v1/playbooks/extract-from-text` and `/extract-from-file`."""
+
+    extracted_count: int = Field(ge=0)
+    auto_saved: bool
+    audit_action: AuditAction = AuditAction.PLAYBOOK_AUTO_EXTRACTED
+    candidates: list[ExtractedPlaybookRuleCandidateDTO]
+    saved_rules: list[PlaybookRuleResponseDTO]
+    latency_ms: float = Field(ge=0.0)
+
+
 __all__ = [
     "CreatePlaybookRuleCommand",
     "CreatePlaybookRuleRequestDTO",
+    "ExtractPlaybookFromTextRequestDTO",
+    "ExtractPlaybookResponseDTO",
+    "ExtractedPlaybookRuleCandidateDTO",
     "MatchedPlaybookRuleResponseDTO",
     "PlaybookRuleResponseDTO",
     "PlaybookSearchRequestDTO",

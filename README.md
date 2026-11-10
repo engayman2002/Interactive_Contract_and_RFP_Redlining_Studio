@@ -30,6 +30,7 @@ The **Interactive Contract & RFP Redlining Studio** is an enterprise-grade, mult
 - **Cross-Clause Contradiction, Broken Reference & Undefined Terms Radar:** Evaluates the full multi-clause contract graph to detect document-wide structural integrity defects that escape paragraph-level analysis: pairwise logical contradictions (such as liability caps vs uncapped indemnity, conflicting Net 30 vs Net 15 payment terms, or conflicting notice/cure vs immediate termination timelines), broken section citations (e.g., citing non-existent "Section 99.4"), and undefined capitalized legal terms. Computes a dynamic 0-100% Document Integrity Score with weighted severity deductions and provides bilateral one-click clause navigation between conflicting provisions.
 - **Critic-Refiner Multi-Agent Verification Loop & Hallucination Guard:** Passes every generated, Copilot-refined, or on-demand redline through a 2-agent pipeline (**Agent 1: Clause Auditor & Drafter** &rarr; **Agent 2: Critic & Hallucination Guard**). Agent 2 audits every candidate wording across 3 strict gates (**Policy Grounding & Trigger Scrubbing**, **Hallucination & Placeholder Guard**, and **Section Numbering & Obligation Preservation**), auto-repairs defects (`AUTO_REFINED`) when detected, assigns a calibrated `0–100%` confidence score, and supports on-demand re-verification via `POST /api/v1/suggestions/{id}/verify` with immutable `SUGGESTION_VERIFIED` audit trail logging.
 - **Counterparty Pushback Simulator & Round-2 Rebuttal Engine:** Simulates opposing counsel pushback before sending redlines externally (`POST /api/v1/suggestions/{id}/simulate-pushback`), calculating an adversarial **Acceptance Probability (`0–100%`)**, classifying **Pushback Severity (`LOW | MODERATE | HIGH | DEALBREAKER`)**, articulating the opposing persona's strongest legal/commercial objection, generating a copy-ready Round-2 rebuttal script, and synthesizing a pre-numbered **Round-2 Fallback Compromise** clause adoptable in one click (`PUSHBACK_SIMULATED`).
+- **AI Playbook Auto-Extractor & Golden Contract Rule Generator:** Automatically extracts structured Company Playbook rules (`category`, `standard_position`, `fallback_position`, `unacceptable_triggers`, `source_clause_excerpt`, `confidence_score`) from pasted signed Golden Contract text (`POST /api/v1/playbooks/extract-from-text`) or uploaded `.docx`/`.pdf` reference templates (`POST /api/v1/playbooks/extract-from-file`). Supports ADMIN bulk `auto_save` with automatic 1536-d vector embedding generation alongside Preview Mode (`auto_save=false`) for Legal Counsel and Technical Leads (`PLAYBOOK_AUTO_EXTRACTED`).
 - **Bidirectional Split-Screen Editor & Surgical Word Diffs:** Binds each PostgreSQL `document_clauses` row to a custom TipTap/ProseMirror [`ClauseNodeExtension`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/ClauseNodeExtension.ts#L23-L84) (`div[data-clause-id]`) paired with a visual [`RiskHeatmapGutter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/RiskHeatmapGutter.tsx#L44-L92) and hover-activated [`InlineDiffPreview`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/diff/InlineDiffPreview.tsx#L12-L72).
 - **Optimistic Concurrency & Multi-Tenant RBAC:** Enforces `org_id` isolation on every repository query, 4-tier RBAC (`ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD`, `VIEWER`), and `expected_clause_version` optimistic locking that automatically rejects stale concurrent edits with `409 Conflict` and rolls back client state.
 - **Native Microsoft Word OpenXML Track-Changes Export:** Reconstructs valid `.docx` archives embedding native `<w:del>` (`<w:delText>`) and `<w:ins>` (`<w:t>`) revision tags with `w:author` and ISO-8601 `w:date` attributes, `<w:commentRangeStart/>`/`<w:commentRangeEnd/>` anchors, AI rationales, and reviewer comments.
@@ -887,6 +888,8 @@ The OpenXML `.docx` reconstruction engine is located in [`backend/src/infrastruc
 | 31 | `POST /api/v1/ai-settings/discover-models` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` | Dynamically fetch live LLM & Embedding models from provider `/models` or `/api/tags` |
 | 32 | `POST /api/v1/ai-settings/export-vault` | `ADMIN` | `200 OK` (`403` non-admin) | Encrypt active/typed AI settings & API keys into an AES-256-GCM `.rsvault.json` envelope |
 | 33 | `POST /api/v1/ai-settings/import-vault` | `ADMIN` | `200 OK` (`400` bad passphrase) | Decrypt, validate (SSRF & registry), and activate an AES-256-GCM `.rsvault.json` vault |
+| 34 | `POST /api/v1/playbooks/extract-from-text` | `ADMIN` (`auto_save=true`), `LEGAL_COUNSEL`/`TECHNICAL_LEAD` (`auto_save=false`) | `200 OK` (`403` insufficient role) | Extract structured Playbook rules from pasted golden contract text & optionally generate 1536-d embeddings + save (`PLAYBOOK_AUTO_EXTRACTED`) |
+| 35 | `POST /api/v1/playbooks/extract-from-file` | `ADMIN` (`auto_save=true`), `LEGAL_COUNSEL`/`TECHNICAL_LEAD` (`auto_save=false`) | `200 OK` (`403` insufficient role) | Parse uploaded `.docx`/`.pdf` golden contract and auto-extract corporate Playbook rules (`PLAYBOOK_AUTO_EXTRACTED`) |
 
 ---
 
@@ -1071,6 +1074,18 @@ curl -sS -L -H "Authorization: Bearer ${ADMIN_TOKEN}" \
   -o /tmp/reviewed_contract_clean.docx
 
 ls -lh /tmp/reviewed_contract_*.docx
+
+# -----------------------------------------------------------------------------
+# 16. Auto-Extract Playbook Rules from a Golden Contract (Text or .docx/.pdf)
+# -----------------------------------------------------------------------------
+curl -sS -X POST "${API_URL}/playbooks/extract-from-text" \
+  -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reference_text": "1. Limitation of Liability. Neither party aggregate liability shall exceed 12 months fees paid. 2. Data Privacy & AI. Vendor shall never train public foundation models using Customer Data.",
+    "max_rules": 6,
+    "auto_save": true
+  }' | python3 -m json.tool
 ```
 
 ---

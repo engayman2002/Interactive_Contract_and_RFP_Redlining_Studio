@@ -1,5 +1,8 @@
 """Integration tests for Phase 3 Playbook CRUD, RBAC, Multi-Tenancy, and Hybrid Search."""
 
+import io
+
+from docx import Document as CreateDocxDocument
 from httpx import AsyncClient
 from src.domain.enums import UserRole
 
@@ -357,3 +360,200 @@ async def test_playbook_multi_tenant_isolation(client: AsyncClient) -> None:
     assert a_search.status_code == 200
     assert len(a_search.json()["results"]) == 1
     assert a_search.json()["results"][0]["rule"]["id"] == rule_a_id
+
+
+def _build_golden_contract_docx_bytes() -> bytes:
+    """Create a valid in-memory `.docx` golden contract containing corporate policy clauses."""
+    doc = CreateDocxDocument()
+    doc.add_heading("ENTERPRISE GOLDEN MASTER SERVICES AGREEMENT", level=1)
+    doc.add_paragraph(
+        "1. Limitation of Liability. Neither party's aggregate cumulative liability shall exceed "
+        "fees paid in the preceding 12 months, and indirect or consequential damages are excluded."
+    )
+    doc.add_paragraph(
+        "2. Data Privacy & AI Safeguards. Vendor shall adhere to GDPR/CCPA safeguards, never train "
+        "public foundation models on Customer Data, and provide 24-hour confirmed breach notice."
+    )
+    doc.add_paragraph(
+        "3. Service Level Agreement. Vendor guarantees 99.95% monthly production uptime "
+        "availability backed by tiered monthly service credits."
+    )
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+
+async def test_ai_playbook_auto_extractor_text_and_file_e2e(client: AsyncClient) -> None:
+    """Verify text & DOCX auto-extraction with auto_save=True, 1536-d indexing, and search."""
+    reg_resp = await client.post(
+        "/api/v1/auth/register-org",
+        json={
+            "organization_name": "Golden Standards Legal",
+            "admin_email": "admin@golden-legal.io",
+            "admin_password": "GoldenLegalPassword!2026",
+        },
+    )
+    assert reg_resp.status_code == 201
+    admin_headers = {"Authorization": f"Bearer {reg_resp.json()['access_token']}"}
+
+    golden_text = (
+        "1. Limitation of Liability. Aggregate liability shall not exceed twelve (12) months "
+        "of fees paid, with mutual exclusion of consequential damages.\n\n"
+        "2. Data Privacy & AI Governance. Vendor shall never use Customer Data to train public "
+        "AI foundation models and shall notify Customer within 24 hours of a security breach.\n\n"
+        "3. Payment Terms. Customer shall pay undisputed invoices Net 45 from receipt and may "
+        "withhold good-faith disputed amounts.\n\n"
+        "4. Termination Notice. Termination for cause requires 30 days written notice and cure."
+    )
+
+    text_resp = await client.post(
+        "/api/v1/playbooks/extract-from-text",
+        headers=admin_headers,
+        json={
+            "reference_text": golden_text,
+            "max_rules": 6,
+            "auto_save": True,
+        },
+    )
+    assert text_resp.status_code == 200
+    text_body = text_resp.json()
+    assert text_body["extracted_count"] == 4
+    assert text_body["auto_saved"] is True
+    assert text_body["audit_action"] == "PLAYBOOK_AUTO_EXTRACTED"
+    assert len(text_body["candidates"]) == 4
+    assert len(text_body["saved_rules"]) == 4
+
+    extracted_categories = {c["category"] for c in text_body["candidates"]}
+    assert "Liability" in extracted_categories
+    assert "Data Privacy & AI" in extracted_categories
+    assert "Payment Terms" in extracted_categories
+    assert "Termination" in extracted_categories
+
+    for cand in text_body["candidates"]:
+        assert 50 <= cand["confidence_score"] <= 100
+        assert len(cand["unacceptable_triggers"]) >= 1
+        assert len(cand["source_clause_excerpt"]) >= 10
+
+    for saved in text_body["saved_rules"]:
+        assert saved["embedding_dim"] == 1536
+
+    # Confirm persisted rules appear in GET /rules and are searchable via hybrid search
+    list_resp = await client.get("/api/v1/playbooks/rules", headers=admin_headers)
+    assert list_resp.status_code == 200
+    assert len(list_resp.json()) == 4
+
+    search_resp = await client.post(
+        "/api/v1/playbooks/search",
+        headers=admin_headers,
+        json={"query_text": "train public foundation models on customer data", "top_k": 2},
+    )
+    assert search_resp.status_code == 200
+    assert len(search_resp.json()["results"]) >= 1
+    assert search_resp.json()["results"][0]["rule"]["category"] == "Data Privacy & AI"
+
+    # Upload golden DOCX in preview mode vs auto_save=True
+    docx_bytes = _build_golden_contract_docx_bytes()
+    file_resp = await client.post(
+        "/api/v1/playbooks/extract-from-file",
+        headers=admin_headers,
+        files={
+            "file": (
+                "golden_msa.docx",
+                docx_bytes,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+        data={"auto_save": "true", "max_rules": "4"},
+    )
+    assert file_resp.status_code == 200
+    file_body = file_resp.json()
+    assert file_body["extracted_count"] == 3
+    assert file_body["auto_saved"] is True
+    assert {c["category"] for c in file_body["candidates"]} >= {
+        "Liability",
+        "Data Privacy & AI",
+        "SLA & Uptime",
+    }
+    assert len(file_body["saved_rules"]) == 3
+
+
+async def test_ai_playbook_extractor_rbac_preview_vs_autosave(client: AsyncClient) -> None:
+    """Verify LEGAL_COUNSEL/TECH_LEAD can preview (auto_save=False) while VIEWER is 403."""
+    reg_resp = await client.post(
+        "/api/v1/auth/register-org",
+        json={
+            "organization_name": "RBAC Extractor Org",
+            "admin_email": "admin@rbac-extract.io",
+            "admin_password": "RbacExtractPassword!2026",
+        },
+    )
+    assert reg_resp.status_code == 201
+    admin_headers = {"Authorization": f"Bearer {reg_resp.json()['access_token']}"}
+
+    role_headers: dict[UserRole, dict[str, str]] = {}
+    for role in (UserRole.LEGAL_COUNSEL, UserRole.TECHNICAL_LEAD, UserRole.VIEWER):
+        email = f"{role.value.lower()}@rbac-extract.io"
+        create_user = await client.post(
+            "/api/v1/users",
+            headers=admin_headers,
+            json={
+                "email": email,
+                "password": "RolePassword!2026",
+                "role": role.value,
+            },
+        )
+        assert create_user.status_code == 201
+        login = await client.post(
+            "/api/v1/auth/login",
+            json={"email": email, "password": "RolePassword!2026"},
+        )
+        assert login.status_code == 200
+        role_headers[role] = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    sample_text = (
+        "1. SLA & Uptime. Vendor commits to 99.9% monthly production uptime availability "
+        "with tiered monthly service credits."
+    )
+
+    # LEGAL_COUNSEL and TECHNICAL_LEAD can extract in preview mode (auto_save=False)
+    for role in (UserRole.LEGAL_COUNSEL, UserRole.TECHNICAL_LEAD):
+        preview_resp = await client.post(
+            "/api/v1/playbooks/extract-from-text",
+            headers=role_headers[role],
+            json={"reference_text": sample_text, "max_rules": 4, "auto_save": False},
+        )
+        assert preview_resp.status_code == 200
+        preview_body = preview_resp.json()
+        assert preview_body["auto_saved"] is False
+        assert preview_body["saved_rules"] == []
+        assert preview_body["extracted_count"] == 1
+
+        # auto_save=True is strictly gated to ADMIN
+        forbidden_save = await client.post(
+            "/api/v1/playbooks/extract-from-text",
+            headers=role_headers[role],
+            json={"reference_text": sample_text, "max_rules": 4, "auto_save": True},
+        )
+        assert forbidden_save.status_code == 403
+
+    # VIEWER is 403 Forbidden for both preview text extraction and file extraction
+    viewer_text = await client.post(
+        "/api/v1/playbooks/extract-from-text",
+        headers=role_headers[UserRole.VIEWER],
+        json={"reference_text": sample_text, "max_rules": 4, "auto_save": False},
+    )
+    assert viewer_text.status_code == 403
+
+    docx_bytes = _build_golden_contract_docx_bytes()
+    viewer_file = await client.post(
+        "/api/v1/playbooks/extract-from-file",
+        headers=role_headers[UserRole.VIEWER],
+        files={"file": ("golden.docx", docx_bytes, "application/octet-stream")},
+        data={"auto_save": "false"},
+    )
+    assert viewer_file.status_code == 403
+
+    # Confirm preview calls did not persist any rules in organization knowledge base
+    list_after = await client.get("/api/v1/playbooks/rules", headers=admin_headers)
+    assert list_after.status_code == 200
+    assert list_after.json() == []

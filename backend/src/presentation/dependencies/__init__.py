@@ -20,10 +20,16 @@ from src.domain.ports import (
     DocxExporterPort,
     EmbeddingGeneratorPort,
     FileStoragePort,
+    PlaybookExtractorPort,
     PlaybookRetrieverPort,
     UnitOfWorkPort,
 )
-from src.infrastructure.ai import LangChainCrossClauseAnalyzer, RuntimeAISettingsManager
+from src.infrastructure.ai import (
+    LangChainCrossClauseAnalyzer,
+    LangChainPlaybookExtractor,
+    RuntimeAISettingsManager,
+    create_llm_runnable,
+)
 from src.infrastructure.config import get_settings
 from src.infrastructure.db.repositories import SqlAlchemyUnitOfWork
 from src.infrastructure.db.session import get_async_db_session
@@ -94,6 +100,20 @@ def get_clause_auditor() -> ClauseAuditorPort:
 def get_cross_clause_analyzer() -> CrossClauseAnalyzerPort:
     """Provide singleton LangChainCrossClauseAnalyzer for multi-clause integrity checks."""
     return LangChainCrossClauseAnalyzer()
+
+
+def get_playbook_extractor() -> PlaybookExtractorPort:
+    """Provide PlaybookExtractorPort configured with the active runtime LLM settings."""
+    effective = RuntimeAISettingsManager.get_effective_settings()
+    llm_runnable: Any | None = None
+    try:
+        llm_runnable = create_llm_runnable(effective)
+    except Exception:
+        llm_runnable = None
+    return LangChainPlaybookExtractor(
+        llm_runnable=llm_runnable,
+        max_retries=1,
+    )
 
 
 @lru_cache(maxsize=1)
@@ -170,6 +190,7 @@ __all__ = [
     "get_file_storage",
     "get_jwt_service",
     "get_password_service",
+    "get_playbook_extractor",
     "get_playbook_retriever",
     "get_rbac_guard",
     "get_uow",

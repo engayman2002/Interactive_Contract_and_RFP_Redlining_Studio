@@ -270,6 +270,7 @@ from src.domain.entities.parsed_clause import (  # noqa: E402
     RawDocumentBlock,
 )
 from src.domain.entities.playbook_search import (  # noqa: E402
+    ExtractedPlaybookRuleCandidate,
     MatchedPlaybookRule,
     PlaybookSearchQuery,
 )
@@ -307,6 +308,7 @@ __all__ = [
     "DocumentClause",
     "DocumentWithClauses",
     "ExportedDocumentArtifact",
+    "ExtractedPlaybookRuleCandidate",
     "MatchedPlaybookRule",
     "Organization",
     "ParsedClauseCandidate",

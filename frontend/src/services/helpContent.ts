@@ -556,6 +556,44 @@ export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
       },
     ],
   },
+  {
+    id: "ai-playbook-extractor",
+    number: 13,
+    title: "AI Playbook Auto-Extractor (From Golden Contracts)",
+    badge: "Playbook Onboarding",
+    summary:
+      "Bootstrap your corporate Playbook in seconds by pasting signed Golden Contract clauses or uploading an approved .docx/.pdf template. Extracts standard positions, fallbacks, triggers, and 1536-d vector embeddings automatically.",
+    keywords: [
+      "playbook",
+      "auto-extractor",
+      "golden contract",
+      "extract rules",
+      "docx",
+      "pdf",
+      "onboarding",
+      "embeddings",
+      "preview mode",
+    ],
+    steps: [
+      {
+        title: "Paste Signed Clauses or Upload a Golden Contract",
+        description:
+          "Navigate to /playbooks and open the AI Playbook Auto-Extractor panel. Use 'Paste Clauses' (or click 'Load Sample Golden MSA' to test immediately) to invoke POST /api/v1/playbooks/extract-from-text, or switch to 'Upload DOCX/PDF' for POST /api/v1/playbooks/extract-from-file.",
+        tip: "Multi-clause MSAs covering Liability, Data Privacy & AI, SLA, Payment Terms, IP Ownership, and Termination yield the richest rule sets.",
+      },
+      {
+        title: "Choose Auto-Save (ADMIN) or Safe Preview Mode",
+        description:
+          "Leave 'Auto-save & generate 1536-d vector embeddings' checked (ADMIN role) to persist extracted rules and index hybrid search vectors immediately, or uncheck it to run in Preview Mode (ADMIN, LEGAL_COUNSEL, TECHNICAL_LEAD).",
+        tip: "VIEWER users are strictly blocked with 403 Forbidden from both Preview and Auto-Save extraction.",
+      },
+      {
+        title: "Inspect Extracted Candidates & Selectively Save",
+        description:
+          "Each extracted candidate displays its Category, Confidence Score (0-100%), Standard Position, Fallback Position, Unacceptable Triggers, and verbatim Source Clause Excerpt. In Preview Mode, click 'Save Rule' on individual cards to add them to your organization's knowledge base.",
+      },
+    ],
+  },
 ];
 
 export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
@@ -933,6 +971,38 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
       "fallback",
       "pushback simulator",
       "use compromise wording",
+    ],
+  },
+  {
+    id: "faq-playbook-auto-extractor",
+    question:
+      "How do I automatically build Playbook Rules from an existing signed Golden Contract?",
+    answer:
+      "Open the Company Playbook Rules Manager (/playbooks) and locate the AI Playbook Auto-Extractor panel. Either paste approved clauses into the text box (or click 'Load Sample Golden MSA') or switch to 'Upload DOCX/PDF' to upload a signed agreement. The extractor identifies domains like Liability, Data Privacy & AI, SLA, Payment Terms, and Termination, synthesizes Standard and Fallback positions alongside red-flag triggers, and generates 1536-d hybrid search vectors automatically.",
+    category: "playbook",
+    keywords: [
+      "auto-extractor",
+      "golden contract",
+      "extract",
+      "playbook",
+      "docx",
+      "pdf",
+    ],
+  },
+  {
+    id: "faq-playbook-extractor-rbac",
+    question:
+      "Who is permitted to run Playbook Auto-Extraction with Auto-Save enabled vs. Preview Mode?",
+    answer:
+      "ADMIN, LEGAL_COUNSEL, and TECHNICAL_LEAD users can run extraction in Preview Mode (auto_save=false) to inspect candidate rules without mutating the tenant knowledge base. Bulk saving & vector indexing directly inside extraction (auto_save=true) is restricted to ADMIN users, while VIEWER users always receive 403 Forbidden.",
+    category: "playbook",
+    keywords: [
+      "rbac",
+      "auto_save",
+      "preview mode",
+      "admin",
+      "playbook extractor",
+      "403",
     ],
   },
 ];

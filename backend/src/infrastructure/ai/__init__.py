@@ -17,6 +17,11 @@ from src.infrastructure.ai.model_discovery import (
     DiscoverySource,
     discover_provider_models,
 )
+from src.infrastructure.ai.playbook_extractor import (
+    PLAYBOOK_EXTRACTION_SYSTEM_PROMPT,
+    LangChainPlaybookExtractor,
+    segment_reference_text,
+)
 from src.infrastructure.ai.provider_registry import (
     AnthropicMessagesChatRunnable,
     GeminiGenerateContentChatRunnable,
@@ -64,8 +69,10 @@ __all__ = [
     "LLMProviderRegistry",
     "LangChainClauseAuditor",
     "LangChainCrossClauseAnalyzer",
+    "LangChainPlaybookExtractor",
     "OllamaChatRunnable",
     "OpenAICompatibleChatRunnable",
+    "PLAYBOOK_EXTRACTION_SYSTEM_PROMPT",
     "PUSHBACK_SIMULATION_SYSTEM_PROMPT",
     "PolicyAwareDeterministicChatModel",
     "PushbackSimulationOutput",
@@ -88,4 +95,5 @@ __all__ = [
     "parse_and_validate_redline_output",
     "register_llm_provider",
     "sanitize_secret_from_text",
+    "segment_reference_text",
 ]

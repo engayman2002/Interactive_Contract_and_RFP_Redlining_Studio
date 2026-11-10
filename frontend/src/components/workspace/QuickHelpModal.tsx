@@ -22,7 +22,8 @@ type QuickHelpTab =
   | "pushback"
   | "stance"
   | "heatmap"
-  | "export";
+  | "export"
+  | "extractor";
 
 export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
   isOpen,
@@ -170,6 +171,18 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
             }`}
           >
             8. Export (.docx)
+          </button>
+          <button
+            type="button"
+            data-testid="quick-help-tab-extractor"
+            onClick={() => setActiveTab("extractor")}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              activeTab === "extractor"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            9. ✨ Golden Extractor
           </button>
         </div>
 
@@ -553,6 +566,50 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeTab === "extractor" && (
+            <div data-testid="quick-help-content-extractor" className="space-y-3">
+              <div className="rounded-xl border border-indigo-200/90 bg-indigo-50/60 p-4 dark:border-indigo-500/30 dark:bg-indigo-950/25">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-indigo-800 dark:text-indigo-300">
+                    Golden Contract to Playbook Rules (AI Feature #6)
+                  </span>
+                  <span className="rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-800 dark:border-indigo-500/40 dark:bg-indigo-900/50 dark:text-indigo-200">
+                    /playbooks
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                  Open{" "}
+                  <Link href="/playbooks" className="font-semibold underline">
+                    Playbooks Manager
+                  </Link>{" "}
+                  to paste signed Golden Contract clauses (or click{" "}
+                  <strong>Load Sample Golden MSA</strong>) or upload a{" "}
+                  <code className="font-mono text-[11px]">.docx</code>/
+                  <code className="font-mono text-[11px]">.pdf</code> template.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-3.5 text-xs dark:border-emerald-500/20 dark:bg-emerald-950/20">
+                  <div className="font-semibold text-emerald-800 dark:text-emerald-300">
+                    Auto-Save &amp; 1536-d Indexing (ADMIN)
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Keep <strong>Auto-save &amp; generate vectors</strong> checked to immediately persist extracted Standard/Fallback positions and Triggers into your hybrid search Playbook.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-3.5 text-xs dark:border-amber-500/20 dark:bg-amber-950/20">
+                  <div className="font-semibold text-amber-800 dark:text-amber-300">
+                    Safe Preview Mode (Legal / Tech Lead)
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Uncheck auto-save to preview extracted candidates with confidence scores and source excerpts first, then selectively click <strong>Save Rule</strong>.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>

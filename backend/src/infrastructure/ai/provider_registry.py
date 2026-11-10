@@ -66,7 +66,13 @@ def extract_system_and_user_messages(prompt_input: Any) -> tuple[str, str]:
         user_parts.append(str(prompt_input))
 
     system_text = "\n\n".join(p for p in system_parts if p).strip() or SYSTEM_PROMPT
-    if "is_compliant" not in system_text:
+    lowered_system = system_text.lower()
+    if (
+        "is_compliant" not in system_text
+        and "respond only with" not in lowered_system
+        and "return valid json" not in lowered_system
+        and "return a valid json" not in lowered_system
+    ):
         system_text = f"{system_text}{JSON_SCHEMA_INSTRUCTION}"
 
     user_text = "\n\n".join(p for p in user_parts if p).strip()

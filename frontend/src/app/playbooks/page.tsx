@@ -9,6 +9,7 @@ import {
   deletePlaybookRule,
   listPlaybookRules,
 } from "@/services/apiClient";
+import { AIPlaybookExtractorPanel } from "@/components/playbooks/AIPlaybookExtractorPanel";
 import { useAuthSession } from "@/services/authSession";
 import type { PlaybookRuleDTO } from "@/services/contracts";
 
@@ -146,6 +147,19 @@ export default function PlaybooksPage() {
             )}
           </button>
         </div>
+
+        {/* AI Playbook Auto-Extractor (Feature #6) */}
+        <AIPlaybookExtractorPanel
+          onRulesSaved={(savedRules) =>
+            setRules((prev) => {
+              const savedIds = new Set(savedRules.map((r) => r.id));
+              return [
+                ...savedRules,
+                ...prev.filter((r) => !savedIds.has(r.id)),
+              ];
+            })
+          }
+        />
 
         {/* Add Rule Form Card */}
         {isAdding ? (

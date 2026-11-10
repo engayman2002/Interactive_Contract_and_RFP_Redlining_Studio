@@ -296,6 +296,7 @@ from src.application.use_cases.ingest_document import (  # noqa: E402
 from src.application.use_cases.manage_playbook import (  # noqa: E402
     CreatePlaybookRuleUseCase,
     DeletePlaybookRuleUseCase,
+    ExtractPlaybookRulesUseCase,
     GetPlaybookRuleUseCase,
     ListPlaybookRulesUseCase,
     SearchPlaybookRulesUseCase,
@@ -313,6 +314,7 @@ __all__ = [
     "DOCX_MIME_TYPE",
     "DeletePlaybookRuleUseCase",
     "ExportDocumentUseCase",
+    "ExtractPlaybookRulesUseCase",
     "GetDocumentFoundationUseCase",
     "GetDocumentWorkspaceUseCase",
     "GetOrganizationUserByIdUseCase",

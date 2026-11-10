@@ -24,6 +24,7 @@ from src.domain.ports.ingestion_ports import (
 )
 from src.domain.ports.playbook_ports import (
     EmbeddingGeneratorPort,
+    PlaybookExtractorPort,
     PlaybookRepositoryPort,
     PlaybookRetrieverPort,
 )
@@ -173,6 +174,7 @@ __all__ = [
     "EmbeddingGeneratorPort",
     "FileStoragePort",
     "OrganizationRepositoryPort",
+    "PlaybookExtractorPort",
     "PlaybookRepositoryPort",
     "PlaybookRetrieverPort",
     "RedlineRepositoryPort",

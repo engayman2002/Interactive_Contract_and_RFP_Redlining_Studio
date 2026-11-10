@@ -4,7 +4,11 @@ from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from src.domain.entities import PlaybookRule
-from src.domain.entities.playbook_search import MatchedPlaybookRule, PlaybookSearchQuery
+from src.domain.entities.playbook_search import (
+    ExtractedPlaybookRuleCandidate,
+    MatchedPlaybookRule,
+    PlaybookSearchQuery,
+)
 
 
 @runtime_checkable
@@ -73,8 +77,22 @@ class PlaybookRetrieverPort(Protocol):
         ...
 
 
+@runtime_checkable
+class PlaybookExtractorPort(Protocol):
+    """Port interface for AI extraction of structured Playbook rules from golden clauses."""
+
+    async def extract_rules_from_clauses(
+        self,
+        clauses_text: list[str],
+        max_rules: int = 8,
+    ) -> list[ExtractedPlaybookRuleCandidate]:
+        """Distill corporate standards, fallbacks, and deal-breakers from golden clauses."""
+        ...
+
+
 __all__ = [
     "EmbeddingGeneratorPort",
+    "PlaybookExtractorPort",
     "PlaybookRepositoryPort",
     "PlaybookRetrieverPort",
 ]

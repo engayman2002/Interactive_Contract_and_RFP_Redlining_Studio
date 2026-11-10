@@ -38,7 +38,49 @@ class MatchedPlaybookRule:
     keyword_score: float
 
 
+@dataclass(frozen=True, slots=True)
+class ExtractedPlaybookRuleCandidate:
+    """AI-extracted Playbook rule candidate derived from a golden reference contract clause."""
+
+    category: str
+    standard_position: str
+    fallback_position: str
+    unacceptable_triggers: list[str]
+    source_clause_excerpt: str
+    confidence_score: int = 85
+
+    def __post_init__(self) -> None:
+        cleaned_cat = self.category.strip()
+        cleaned_std = self.standard_position.strip()
+        cleaned_fb = self.fallback_position.strip()
+        cleaned_excerpt = self.source_clause_excerpt.strip()
+        if not cleaned_cat:
+            raise InvalidPlaybookRuleError("Extracted rule category cannot be empty.")
+        if not cleaned_std:
+            raise InvalidPlaybookRuleError("Extracted rule standard_position cannot be empty.")
+        if not cleaned_fb:
+            raise InvalidPlaybookRuleError("Extracted rule fallback_position cannot be empty.")
+        if not cleaned_excerpt:
+            raise InvalidPlaybookRuleError(
+                "Extracted rule source_clause_excerpt cannot be empty."
+            )
+
+        cleaned_triggers = [t.strip() for t in self.unacceptable_triggers if t.strip()]
+        if not cleaned_triggers:
+            cleaned_triggers = ["uncapped risk exposure", "unilateral counterparty override"]
+
+        clamped_conf = max(0, min(100, int(self.confidence_score)))
+
+        object.__setattr__(self, "category", cleaned_cat)
+        object.__setattr__(self, "standard_position", cleaned_std)
+        object.__setattr__(self, "fallback_position", cleaned_fb)
+        object.__setattr__(self, "unacceptable_triggers", cleaned_triggers)
+        object.__setattr__(self, "source_clause_excerpt", cleaned_excerpt)
+        object.__setattr__(self, "confidence_score", clamped_conf)
+
+
 __all__ = [
+    "ExtractedPlaybookRuleCandidate",
     "MatchedPlaybookRule",
     "PlaybookSearchQuery",
 ]
