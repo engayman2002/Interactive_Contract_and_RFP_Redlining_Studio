@@ -100,6 +100,12 @@ def _build_redline_suggestions(results: list[ClauseAuditResult]) -> list[Redline
                     proposed_text=res.proposed_text,
                     rationale=combined_rationale,
                     status=SuggestionStatus.PENDING,
+                    confidence_score=res.confidence_score,
+                    verification_status=res.verification_status,
+                    critic_notes=res.critic_notes,
+                    policy_alignment_passed=res.policy_alignment_passed,
+                    hallucination_free_passed=res.hallucination_free_passed,
+                    obligation_preservation_passed=res.obligation_preservation_passed,
                 )
             )
     return suggestions
@@ -324,6 +330,12 @@ class StreamDocumentAnalysisUseCase:
                 "proposed_text": res.proposed_text,
                 "rationale": res.rationale,
                 "stance": res.stance.value if res.stance else stance.value,
+                "confidence_score": res.confidence_score,
+                "verification_status": res.verification_status.value,
+                "critic_notes": res.critic_notes,
+                "policy_alignment_passed": res.policy_alignment_passed,
+                "hallucination_free_passed": res.hallucination_free_passed,
+                "obligation_preservation_passed": res.obligation_preservation_passed,
             }
             yield format_sse_event("clause_audited", payload)
 

@@ -535,3 +535,96 @@ async def test_refine_redline_suggestion_copilot_and_audit_trail(
     )
     assert cross_refine.status_code == 404
     assert cross_refine.json()["error"]["code"] == "SUGGESTION_NOT_FOUND"
+
+
+async def test_verify_redline_suggestion_critic_rbac_and_audit_trail(
+    client: AsyncClient,
+) -> None:
+    """Verify POST /suggestions/{id}/verify Critic Guard, RBAC, tenant isolation, & audit log."""
+    token, admin_user_id, doc_id, _clauses, redlines = (
+        await _setup_org_and_analyzed_document(
+            client=client,
+            org_name="Critic Guard Legal LLP",
+            admin_email="admin@critic-guard.io",
+        )
+    )
+    suggestion_id = redlines[0]["id"]
+    assert redlines[0]["confidence_score"] >= 70
+    assert redlines[0]["verification_status"] in ("VERIFIED", "AUTO_REFINED", "NEEDS_HUMAN_REVIEW")
+
+    # 1. Admin runs on-demand Critic Verification Guard
+    verify_resp = await client.post(
+        f"/api/v1/suggestions/{suggestion_id}/verify",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert verify_resp.status_code == 200
+    verify_data = verify_resp.json()
+    assert verify_data["suggestion"]["id"] == suggestion_id
+    assert verify_data["confidence_score"] >= 70
+    assert verify_data["verification_status"] in ("VERIFIED", "AUTO_REFINED")
+    assert verify_data["policy_alignment_passed"] is True
+    assert verify_data["hallucination_free_passed"] is True
+    assert verify_data["obligation_preservation_passed"] is True
+    assert "Critic" in verify_data["critic_notes"]
+    assert verify_data["latency_ms"] >= 0
+
+    # 2. Verify audit log records SUGGESTION_VERIFIED
+    audit_resp = await client.get(
+        f"/api/v1/documents/{doc_id}/audit-trail",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert audit_resp.status_code == 200
+    verified_entries = [
+        log for log in audit_resp.json() if log["action"] == "SUGGESTION_VERIFIED"
+    ]
+    assert len(verified_entries) >= 1
+    assert verified_entries[-1]["actor_user_id"] == admin_user_id
+    assert verified_entries[-1]["details"]["suggestion_id"] == suggestion_id
+
+    # 3. RBAC: VIEWER cannot invoke Critic verify (403 Forbidden)
+    viewer_create = await client.post(
+        "/api/v1/users",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "email": "viewer@critic-guard.io",
+            "password": "ViewerCriticPass!2026",
+            "role": UserRole.VIEWER.value,
+        },
+    )
+    assert viewer_create.status_code == 201
+    viewer_login = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "viewer@critic-guard.io",
+            "password": "ViewerCriticPass!2026",
+        },
+    )
+    assert viewer_login.status_code == 200
+    viewer_token: str = viewer_login.json()["access_token"]
+
+    viewer_verify = await client.post(
+        f"/api/v1/suggestions/{suggestion_id}/verify",
+        headers={"Authorization": f"Bearer {viewer_token}"},
+    )
+    assert viewer_verify.status_code == 403
+    assert viewer_verify.json()["error"]["code"] == "FORBIDDEN_ROLE"
+
+    # 4. Multi-Tenant Isolation: Tenant Beta receives 404 Not Found
+    beta_reg = await client.post(
+        "/api/v1/auth/register-org",
+        json={
+            "organization_name": "Tenant Beta Critic",
+            "admin_email": "admin@beta-critic.io",
+            "admin_password": "BetaCriticPass!2026",
+        },
+    )
+    assert beta_reg.status_code == 201
+    token_beta: str = beta_reg.json()["access_token"]
+
+    cross_verify = await client.post(
+        f"/api/v1/suggestions/{suggestion_id}/verify",
+        headers={"Authorization": f"Bearer {token_beta}"},
+    )
+    assert cross_verify.status_code == 404
+    assert cross_verify.json()["error"]["code"] == "SUGGESTION_NOT_FOUND"
+

@@ -16,6 +16,7 @@ from src.application.dtos import (
     ResolveSuggestionRequestDTO,
     ResolveSuggestionResponseDTO,
     TokenPayloadDTO,
+    VerifySuggestionResponseDTO,
 )
 from src.application.services import RbacGuardService
 from src.application.use_cases import (
@@ -23,8 +24,9 @@ from src.application.use_cases import (
     ListClauseCommentsUseCase,
     RefineRedlineSuggestionUseCase,
     ResolveRedlineSuggestionUseCase,
+    VerifyRedlineSuggestionUseCase,
 )
-from src.domain.enums import UserRole
+from src.domain.enums import NegotiationStance, UserRole
 from src.domain.ports import (
     ClauseAuditorPort,
     PlaybookRetrieverPort,
@@ -127,6 +129,43 @@ async def refine_redline_suggestion(
         stance=payload.stance,
     )
     return await use_case.execute(actor=current_user, command=command)
+
+
+@suggestions_router.post(
+    "/{suggestion_id}/verify",
+    response_model=VerifySuggestionResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def verify_redline_suggestion(
+    suggestion_id: UUID,
+    current_user: Annotated[
+        TokenPayloadDTO,
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.LEGAL_COUNSEL,
+                UserRole.TECHNICAL_LEAD,
+            )
+        ),
+    ],
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
+    retriever: Annotated[PlaybookRetrieverPort, Depends(get_playbook_retriever)],
+    auditor: Annotated[ClauseAuditorPort, Depends(get_clause_auditor)],
+    stance: NegotiationStance = NegotiationStance.BALANCED,
+) -> VerifySuggestionResponseDTO:
+    """Verify an existing suggestion via Agent 2 Critic & Hallucination Guard."""
+    use_case = VerifyRedlineSuggestionUseCase(
+        uow=uow,
+        rbac_guard=rbac_guard,
+        clause_auditor=auditor,
+        retriever=retriever,
+    )
+    return await use_case.execute(
+        actor=current_user,
+        suggestion_id=suggestion_id,
+        stance=stance,
+    )
 
 
 @clauses_router.post(

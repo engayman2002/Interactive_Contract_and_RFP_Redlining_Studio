@@ -37,6 +37,14 @@ class CrossClauseIssueType(StrEnum):
     UNDEFINED_TERM = "UNDEFINED_TERM"
 
 
+class VerificationStatus(StrEnum):
+    """Verification outcomes produced by the Critic-Refiner Multi-Agent Guard."""
+
+    VERIFIED = "VERIFIED"
+    AUTO_REFINED = "AUTO_REFINED"
+    NEEDS_HUMAN_REVIEW = "NEEDS_HUMAN_REVIEW"
+
+
 class SuggestionStatus(StrEnum):
     """Lifecycle states of an AI-generated redline suggestion."""
 
@@ -71,6 +79,7 @@ class AuditAction(StrEnum):
     SUGGESTION_MODIFIED = "SUGGESTION_MODIFIED"
     SUGGESTION_REJECTED = "SUGGESTION_REJECTED"
     SUGGESTION_REFINED = "SUGGESTION_REFINED"
+    SUGGESTION_VERIFIED = "SUGGESTION_VERIFIED"
     COMMENT_CREATED = "COMMENT_CREATED"
     DOCUMENT_EXPORTED = "DOCUMENT_EXPORTED"
     CROSS_CLAUSE_CHECKED = "CROSS_CLAUSE_CHECKED"
@@ -85,5 +94,6 @@ __all__ = [
     "RiskLevel",
     "SuggestionStatus",
     "UserRole",
+    "VerificationStatus",
 ]
 

@@ -1,5 +1,6 @@
 """Application use cases for Phase 6 Collaboration, Threaded Comments, and One-Click Resolution."""
 
+import time
 from uuid import UUID
 
 from src.application.dtos import (
@@ -12,6 +13,7 @@ from src.application.dtos import (
     ResolveSuggestionCommand,
     ResolveSuggestionResponseDTO,
     TokenPayloadDTO,
+    VerifySuggestionResponseDTO,
 )
 from src.application.services import RBACAction, RbacGuardService
 from src.domain.entities import (
@@ -20,7 +22,7 @@ from src.domain.entities import (
     ClauseCopilotRefineInput,
     PlaybookSearchQuery,
 )
-from src.domain.enums import AuditAction, SuggestionStatus
+from src.domain.enums import AuditAction, NegotiationStance, SuggestionStatus
 from src.domain.exceptions import (
     ClauseNotFoundError,
     ConcurrencyConflictError,
@@ -331,6 +333,12 @@ class RefineRedlineSuggestionUseCase:
         suggestion.update_refinement(
             proposed_text=refine_result.proposed_text,
             rationale=combined_rationale,
+            confidence_score=refine_result.confidence_score,
+            verification_status=refine_result.verification_status,
+            critic_notes=refine_result.critic_notes,
+            policy_alignment_passed=refine_result.policy_alignment_passed,
+            hallucination_free_passed=refine_result.hallucination_free_passed,
+            obligation_preservation_passed=refine_result.obligation_preservation_passed,
         )
         saved_suggestion = await self._uow.redlines.update_suggestion_content(
             org_id=actor.org_id,
@@ -363,10 +371,123 @@ class RefineRedlineSuggestionUseCase:
         )
 
 
+class VerifyRedlineSuggestionUseCase:
+    """Run Agent 2 Critic & Hallucination Guard verification on an existing suggestion."""
+
+    def __init__(
+        self,
+        uow: UnitOfWorkPort,
+        rbac_guard: RbacGuardService,
+        clause_auditor: ClauseAuditorPort,
+        retriever: PlaybookRetrieverPort,
+        top_k: int = 3,
+    ) -> None:
+        self._uow = uow
+        self._rbac_guard = rbac_guard
+        self._clause_auditor = clause_auditor
+        self._retriever = retriever
+        self._top_k = max(1, top_k)
+
+    async def execute(
+        self,
+        actor: TokenPayloadDTO,
+        suggestion_id: UUID,
+        stance: NegotiationStance = NegotiationStance.BALANCED,
+    ) -> VerifySuggestionResponseDTO:
+        """Verify suggestion against Policy, Hallucination, and Numbering gates within `org_id`."""
+        # 1. Enforce RBAC (VIEWER raises ForbiddenRoleError -> 403)
+        self._rbac_guard.ensure_can_mutate(actor.role)
+        self._rbac_guard.authorize_action(actor.role, RBACAction.RESOLVE_SUGGESTION)
+
+        started_at = time.perf_counter()
+
+        # 2. Fetch suggestion & clause scoped strictly to actor.org_id
+        suggestion = await self._uow.redlines.get_by_id(
+            org_id=actor.org_id,
+            suggestion_id=suggestion_id,
+        )
+        if suggestion is None:
+            raise SuggestionNotFoundError(
+                f"Redline suggestion '{suggestion_id}' was not found in your organization."
+            )
+
+        clause = await self._uow.documents.get_clause_by_id(
+            org_id=actor.org_id,
+            clause_id=suggestion.clause_id,
+        )
+        if clause is None:
+            raise ClauseNotFoundError(
+                f"Document clause '{suggestion.clause_id}' was not found in your organization."
+            )
+
+        # 3. Retrieve governing Playbook rules for grounding check
+        query = PlaybookSearchQuery(
+            org_id=actor.org_id,
+            query_text=clause.current_text,
+            category=None,
+            top_k=self._top_k,
+        )
+        matched_rules = await self._retriever.retrieve_top_rules(query)
+
+        # 4. Invoke Agent 2 Critic-Refiner verification pipeline
+        report = await self._clause_auditor.verify_and_critique_suggestion(
+            original_clause_text=clause.original_text,
+            heading=clause.heading,
+            candidate_proposed_text=suggestion.proposed_text,
+            candidate_risk=suggestion.risk,
+            matched_rules=matched_rules,
+            stance=stance,
+        )
+
+        # 5. Apply Critic results and persist auto-refined wording if repaired
+        suggestion.apply_critic_verification(report)
+        if report.auto_corrected:
+            saved_suggestion = await self._uow.redlines.update_suggestion_content(
+                org_id=actor.org_id,
+                suggestion=suggestion,
+            )
+        else:
+            saved_suggestion = suggestion
+
+        # 6. Log immutable SUGGESTION_VERIFIED compliance event
+        await self._uow.audit_logs.append(
+            org_id=actor.org_id,
+            entry=AuditLogEntry(
+                org_id=actor.org_id,
+                document_id=clause.document_id,
+                clause_id=clause.id,
+                actor_user_id=actor.sub,
+                actor_role=actor.role,
+                action=AuditAction.SUGGESTION_VERIFIED,
+                details={
+                    "suggestion_id": str(suggestion.id),
+                    "verification_status": report.verification_status.value,
+                    "confidence_score": report.confidence_score,
+                    "auto_corrected": str(report.auto_corrected).lower(),
+                },
+            ),
+        )
+        await self._uow.commit()
+
+        latency_ms = round((time.perf_counter() - started_at) * 1000.0, 3)
+        return VerifySuggestionResponseDTO(
+            suggestion=RedlineSuggestionResponseDTO.from_domain(saved_suggestion),
+            verification_status=report.verification_status,
+            confidence_score=report.confidence_score,
+            policy_alignment_passed=report.policy_alignment_passed,
+            hallucination_free_passed=report.hallucination_free_passed,
+            obligation_preservation_passed=report.obligation_preservation_passed,
+            auto_corrected=report.auto_corrected,
+            critic_notes=report.critic_notes,
+            latency_ms=latency_ms,
+        )
+
+
 __all__ = [
     "CreateClauseCommentUseCase",
     "ListClauseCommentsUseCase",
     "RefineRedlineSuggestionUseCase",
     "ResolveRedlineSuggestionUseCase",
+    "VerifyRedlineSuggestionUseCase",
 ]
 

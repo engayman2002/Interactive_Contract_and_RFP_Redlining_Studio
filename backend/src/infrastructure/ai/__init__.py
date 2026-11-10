@@ -29,6 +29,7 @@ from src.infrastructure.ai.provider_registry import (
 )
 from src.infrastructure.ai.redline_chain import (
     SYSTEM_PROMPT,
+    CriticVerificationAgent,
     LangChainClauseAuditor,
     PolicyAwareDeterministicChatModel,
     RedlineOutput,
@@ -50,6 +51,7 @@ __all__ = [
     "BatchDocumentAuditWorker",
     "CURATED_PROVIDER_PRESETS",
     "CURATED_PROVIDER_PRESET_MAP",
+    "CriticVerificationAgent",
     "CuratedProviderPreset",
     "DiscoveredModelsResult",
     "DiscoverySource",

@@ -9,7 +9,7 @@ from pydantic import Field, field_validator
 from src.application.dtos import ImmutableDTO
 from src.application.dtos.redline_dtos import RedlineSuggestionResponseDTO
 from src.domain.entities import ClauseComment
-from src.domain.enums import NegotiationStance, UserRole
+from src.domain.enums import NegotiationStance, UserRole, VerificationStatus
 
 ResolutionAction = Literal["ACCEPT", "REJECT", "MODIFY"]
 
@@ -133,6 +133,20 @@ class RefineSuggestionResponseDTO(ImmutableDTO):
     latency_ms: float
 
 
+class VerifySuggestionResponseDTO(ImmutableDTO):
+    """Output DTO returned by `POST /api/v1/suggestions/{suggestion_id}/verify`."""
+
+    suggestion: RedlineSuggestionResponseDTO
+    verification_status: VerificationStatus
+    confidence_score: int
+    policy_alignment_passed: bool
+    hallucination_free_passed: bool
+    obligation_preservation_passed: bool
+    auto_corrected: bool
+    critic_notes: str
+    latency_ms: float
+
+
 __all__ = [
     "ClauseCommentResponseDTO",
     "ClauseResolutionStateDTO",
@@ -145,4 +159,5 @@ __all__ = [
     "ResolveSuggestionCommand",
     "ResolveSuggestionRequestDTO",
     "ResolveSuggestionResponseDTO",
+    "VerifySuggestionResponseDTO",
 ]

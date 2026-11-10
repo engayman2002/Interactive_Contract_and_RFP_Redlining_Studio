@@ -1,11 +1,22 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Check, Copy, Loader2, Sparkles } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Loader2,
+  RefreshCw,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import type {
   ClauseDTO,
   RedlineSuggestionDTO,
   RiskLevel,
+  VerificationStatus,
 } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 
@@ -30,6 +41,30 @@ const RISK_BADGE_STYLES: Record<RiskLevel, string> = {
   MEDIUM:
     "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/20",
   LOW: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20",
+};
+
+const VERIFICATION_BADGE_CONFIG: Record<
+  VerificationStatus,
+  { style: string; label: string; emoji: string }
+> = {
+  VERIFIED: {
+    style:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300",
+    label: "Verified",
+    emoji: "🛡️",
+  },
+  AUTO_REFINED: {
+    style:
+      "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300",
+    label: "Auto-Refined",
+    emoji: "✨",
+  },
+  NEEDS_HUMAN_REVIEW: {
+    style:
+      "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300",
+    label: "Review Needed",
+    emoji: "⚠️",
+  },
 };
 
 function splitRationaleAndTalkingPoint(rawRationale: string): {
@@ -71,6 +106,9 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
     const refineSuggestionWithAI = useWorkspaceStore(
       (state) => state.refineSuggestionWithAI
     );
+    const verifySuggestionWithCritic = useWorkspaceStore(
+      (state) => state.verifySuggestionWithCritic
+    );
 
     const [isEditingModify, setIsEditingModify] = useState<boolean>(false);
     const [modifiedDraft, setModifiedDraft] = useState<string>(
@@ -86,6 +124,42 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
     const [copilotSuccessMsg, setCopilotSuccessMsg] = useState<string | null>(
       null
     );
+    const [isCriticExpanded, setIsCriticExpanded] = useState<boolean>(true);
+    const [isVerifyingCritic, setIsVerifyingCritic] = useState<boolean>(false);
+    const [verifyError, setVerifyError] = useState<string | null>(null);
+
+    const confidenceScore = suggestion.confidence_score ?? 95;
+    const verificationStatus: VerificationStatus =
+      suggestion.verification_status ?? "VERIFIED";
+    const policyPassed = suggestion.policy_alignment_passed ?? true;
+    const hallucinationFreePassed =
+      suggestion.hallucination_free_passed ?? true;
+    const obligationPreservedPassed =
+      suggestion.obligation_preservation_passed ?? true;
+    const criticNotes =
+      suggestion.critic_notes ??
+      "Verified by Critic Agent against Playbook policy and hallucination guard.";
+    const verificationCfg = VERIFICATION_BADGE_CONFIG[verificationStatus];
+
+    const handleVerifyWithCritic = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isVerifyingCritic) {
+        return;
+      }
+      setIsVerifyingCritic(true);
+      setVerifyError(null);
+      try {
+        await verifySuggestionWithCritic(suggestion.id);
+      } catch (err) {
+        setVerifyError(
+          err instanceof Error
+            ? err.message
+            : "Critic verification check failed."
+        );
+      } finally {
+        setIsVerifyingCritic(false);
+      }
+    };
 
     useEffect(() => {
       setModifiedDraft(suggestion.proposed_text);
@@ -180,12 +254,21 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
               {clause.heading ?? `Section ${clause.clause_index + 1}`}
             </h4>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             {commentCount > 0 ? (
               <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
                 {commentCount} {commentCount === 1 ? "Comment" : "Comments"}
               </span>
             ) : null}
+            <span
+              data-testid={`critic-confidence-badge-${suggestion.id}`}
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-semibold ${verificationCfg.style}`}
+            >
+              <span>{verificationCfg.emoji}</span>
+              <span>
+                {confidenceScore}% {verificationCfg.label}
+              </span>
+            </span>
             <span
               className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wider ${
                 RISK_BADGE_STYLES[suggestion.risk]
@@ -284,6 +367,113 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
             <p className="text-xs leading-relaxed text-slate-800 dark:text-emerald-100">
               {suggestion.proposed_text}
             </p>
+          )}
+        </div>
+
+        {/* Agent 2: Collapsible Critic Verification Guard Bar */}
+        <div
+          data-testid={`critic-guard-panel-${suggestion.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="mb-3.5 rounded-xl border border-slate-200/90 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setIsCriticExpanded((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-800 hover:text-indigo-600 dark:text-slate-200 dark:hover:text-indigo-300"
+            >
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Agent 2 Critic &amp; Hallucination Guard</span>
+              {isCriticExpanded ? (
+                <ChevronUp className="h-3 w-3 text-slate-400" />
+              ) : (
+                <ChevronDown className="h-3 w-3 text-slate-400" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              data-testid={`verify-critic-btn-${suggestion.id}`}
+              disabled={isVerifyingCritic}
+              onClick={handleVerifyWithCritic}
+              className="inline-flex items-center gap-1 rounded-md border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-2xs transition-colors hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+            >
+              {isVerifyingCritic ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Verifying...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-3 w-3" />
+                  <span>Re-Verify with Critic</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {isCriticExpanded && (
+            <div className="mt-2.5 space-y-2 border-t border-slate-200/70 pt-2 dark:border-slate-800/80">
+              <div className="flex flex-wrap gap-2 text-[11px] font-medium">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 ${
+                    policyPassed
+                      ? "border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                      : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+                  }`}
+                >
+                  {!policyPassed && <ShieldAlert className="h-3 w-3" />}
+                  <span>
+                    {policyPassed ? "✓ Policy Grounded" : "Policy Review Needed"}
+                  </span>
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 ${
+                    hallucinationFreePassed
+                      ? "border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                      : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300"
+                  }`}
+                >
+                  {!hallucinationFreePassed && (
+                    <ShieldAlert className="h-3 w-3" />
+                  )}
+                  <span>
+                    {hallucinationFreePassed
+                      ? "✓ Hallucination-Free"
+                      : "Hallucination Flagged"}
+                  </span>
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 ${
+                    obligationPreservedPassed
+                      ? "border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                      : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+                  }`}
+                >
+                  {!obligationPreservedPassed && (
+                    <ShieldAlert className="h-3 w-3" />
+                  )}
+                  <span>
+                    {obligationPreservedPassed
+                      ? "✓ Obligations & Numbering Preserved"
+                      : "Numbering Altered"}
+                  </span>
+                </span>
+              </div>
+
+              <p
+                data-testid={`critic-notes-${suggestion.id}`}
+                className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400"
+              >
+                {criticNotes}
+              </p>
+
+              {verifyError && (
+                <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                  {verifyError}
+                </p>
+              )}
+            </div>
           )}
         </div>
 

@@ -280,6 +280,7 @@ from src.application.use_cases.collaboration import (  # noqa: E402
     ListClauseCommentsUseCase,
     RefineRedlineSuggestionUseCase,
     ResolveRedlineSuggestionUseCase,
+    VerifyRedlineSuggestionUseCase,
 )
 from src.application.use_cases.export_and_audit import (  # noqa: E402
     DOCX_MIME_TYPE,
@@ -329,6 +330,7 @@ __all__ = [
     "UpdateDocumentFoundationUseCase",
     "UpdatePlaybookRuleUseCase",
     "UploadAndIngestDocumentUseCase",
+    "VerifyRedlineSuggestionUseCase",
     "compose_playbook_embedding_text",
     "format_sse_event",
 ]

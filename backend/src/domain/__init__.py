@@ -9,6 +9,7 @@ from src.domain.enums import (
     RiskLevel,
     SuggestionStatus,
     UserRole,
+    VerificationStatus,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "RiskLevel",
     "SuggestionStatus",
     "UserRole",
+    "VerificationStatus",
 ]

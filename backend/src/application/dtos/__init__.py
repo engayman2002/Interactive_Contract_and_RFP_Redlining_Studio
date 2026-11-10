@@ -212,6 +212,7 @@ from src.application.dtos.collaboration_dtos import (  # noqa: E402
     ResolveSuggestionCommand,
     ResolveSuggestionRequestDTO,
     ResolveSuggestionResponseDTO,
+    VerifySuggestionResponseDTO,
 )
 from src.application.dtos.export_and_audit_dtos import (  # noqa: E402
     AuditLogEntryResponseDTO,
@@ -292,4 +293,5 @@ __all__ = [
     "UpdatePlaybookRuleCommand",
     "UpdatePlaybookRuleRequestDTO",
     "UserResponseDTO",
+    "VerifySuggestionResponseDTO",
 ]

@@ -11,6 +11,13 @@ export const SuggestionStatusSchema = z.enum([
 ]);
 export type SuggestionStatus = z.infer<typeof SuggestionStatusSchema>;
 
+export const VerificationStatusSchema = z.enum([
+  "VERIFIED",
+  "AUTO_REFINED",
+  "NEEDS_HUMAN_REVIEW",
+]);
+export type VerificationStatus = z.infer<typeof VerificationStatusSchema>;
+
 export const ClauseDTOSchema = z.object({
   id: z.string(),
   document_id: z.string(),
@@ -33,6 +40,12 @@ export const RedlineSuggestionDTOSchema = z.object({
   resolved_by: z.string().nullable().optional(),
   resolved_at: z.string().nullable().optional(),
   created_at: z.string(),
+  confidence_score: z.number().int().min(0).max(100).optional(),
+  verification_status: VerificationStatusSchema.optional(),
+  critic_notes: z.string().optional(),
+  policy_alignment_passed: z.boolean().optional(),
+  hallucination_free_passed: z.boolean().optional(),
+  obligation_preservation_passed: z.boolean().optional(),
 });
 export type RedlineSuggestionDTO = z.infer<typeof RedlineSuggestionDTOSchema>;
 
@@ -69,6 +82,7 @@ export const AuditActionSchema = z.enum([
   "SUGGESTION_MODIFIED",
   "SUGGESTION_REJECTED",
   "SUGGESTION_REFINED",
+  "SUGGESTION_VERIFIED",
   "COMMENT_CREATED",
   "DOCUMENT_EXPORTED",
   "CROSS_CLAUSE_CHECKED",
@@ -125,6 +139,21 @@ export const RefineSuggestionResponseDTOSchema = z.object({
 });
 export type RefineSuggestionResponseDTO = z.infer<
   typeof RefineSuggestionResponseDTOSchema
+>;
+
+export const VerifySuggestionResponseDTOSchema = z.object({
+  suggestion: RedlineSuggestionDTOSchema,
+  verification_status: VerificationStatusSchema,
+  confidence_score: z.number().int().min(0).max(100),
+  policy_alignment_passed: z.boolean(),
+  hallucination_free_passed: z.boolean(),
+  obligation_preservation_passed: z.boolean(),
+  auto_corrected: z.boolean(),
+  critic_notes: z.string(),
+  latency_ms: z.number(),
+});
+export type VerifySuggestionResponseDTO = z.infer<
+  typeof VerifySuggestionResponseDTOSchema
 >;
 
 export const AuditLogEntryDTOSchema = z.object({
@@ -199,6 +228,12 @@ export const AuditProgressEventDTOSchema = z.object({
   proposed_text: z.string().optional(),
   rationale: z.string().optional(),
   stance: NegotiationStanceSchema.optional(),
+  confidence_score: z.number().int().min(0).max(100).optional(),
+  verification_status: VerificationStatusSchema.optional(),
+  critic_notes: z.string().optional(),
+  policy_alignment_passed: z.boolean().optional(),
+  hallucination_free_passed: z.boolean().optional(),
+  obligation_preservation_passed: z.boolean().optional(),
 });
 export type AuditProgressEventDTO = z.infer<typeof AuditProgressEventDTOSchema>;
 

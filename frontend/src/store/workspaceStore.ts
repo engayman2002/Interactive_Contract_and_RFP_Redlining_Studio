@@ -10,6 +10,7 @@ import {
   refineRedlineSuggestion,
   resolveSuggestion,
   runCrossClauseCheck,
+  verifyRedlineSuggestion,
 } from "@/services/apiClient";
 import type {
   AuditAction,
@@ -21,6 +22,7 @@ import type {
   ExportMode,
   NegotiationStance,
   RedlineSuggestionDTO,
+  VerifySuggestionResponseDTO,
 } from "@/services/contracts";
 
 export type RiskFilterMode =
@@ -92,6 +94,10 @@ export interface WorkspaceStoreState {
     instruction: string,
     token?: string
   ) => Promise<{ talkingPoint: string }>;
+  verifySuggestionWithCritic: (
+    suggestionId: string,
+    token?: string
+  ) => Promise<VerifySuggestionResponseDTO | null>;
   addClauseComment: (
     clauseId: string,
     body: string,
@@ -555,6 +561,42 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
     }));
 
     return { talkingPoint: res.negotiation_talking_point };
+  },
+
+  verifySuggestionWithCritic: async (suggestionId, token) => {
+    const state = get();
+    const suggestion = state.redlines.find((r) => r.id === suggestionId);
+    if (!suggestion) {
+      return null;
+    }
+    const clause = state.clauses.find((c) => c.id === suggestion.clause_id);
+    const res = await verifyRedlineSuggestion(
+      suggestionId,
+      token,
+      state.negotiationStance,
+      { suggestion, clause }
+    );
+
+    const auditEntry = buildOptimisticAuditEntry(
+      "SUGGESTION_VERIFIED",
+      res.suggestion.clause_id,
+      {
+        suggestion_id: suggestionId,
+        verification_status: res.verification_status,
+        confidence_score: res.confidence_score,
+        auto_corrected: String(res.auto_corrected),
+      },
+      clause?.document_id ?? DEMO_DOCUMENT_ID
+    );
+
+    set((s) => ({
+      redlines: s.redlines.map((r) =>
+        r.id === suggestionId ? res.suggestion : r
+      ),
+      auditLogs: [...s.auditLogs, auditEntry],
+    }));
+
+    return res;
   },
 
   addClauseComment: async (clauseId, body, token, authorId) => {

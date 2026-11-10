@@ -9,11 +9,13 @@ from src.domain.entities import (
     ClauseAuditResult,
     ClauseCopilotRefineInput,
     ClauseCopilotRefineResult,
+    CriticVerificationReport,
     CrossClauseAnalysisReport,
     DocumentClause,
     MatchedPlaybookRule,
     RedlineSuggestion,
 )
+from src.domain.enums import NegotiationStance, RiskLevel
 
 
 @runtime_checkable
@@ -34,6 +36,18 @@ class ClauseAuditorPort(Protocol):
         matched_rules: Sequence[MatchedPlaybookRule],
     ) -> ClauseCopilotRefineResult:
         """Refine an existing redline suggestion using custom user prompt instruction."""
+        ...
+
+    async def verify_and_critique_suggestion(
+        self,
+        original_clause_text: str,
+        heading: str | None,
+        candidate_proposed_text: str,
+        candidate_risk: RiskLevel,
+        matched_rules: Sequence[MatchedPlaybookRule],
+        stance: NegotiationStance = NegotiationStance.BALANCED,
+    ) -> CriticVerificationReport:
+        """Audit candidate redline against Playbook grounding, hallucinations, and numbering."""
         ...
 
 

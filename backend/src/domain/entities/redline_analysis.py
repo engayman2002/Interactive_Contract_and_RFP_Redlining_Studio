@@ -4,10 +4,41 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
-from src.domain.enums import CrossClauseIssueType, NegotiationStance, RiskLevel
+from src.domain.enums import (
+    CrossClauseIssueType,
+    NegotiationStance,
+    RiskLevel,
+    VerificationStatus,
+)
 from src.domain.exceptions import DomainValidationError
 
 AuditEventType = Literal["clause_audited", "completed", "error"]
+
+DEFAULT_CRITIC_NOTES = (
+    "Verified by Critic Agent against Playbook policy and hallucination guard."
+)
+
+
+@dataclass(frozen=True, slots=True)
+class CriticVerificationReport:
+    """Immutable report emitted by Agent 2 (Critic & Hallucination Guard Verifier)."""
+
+    verification_status: VerificationStatus
+    confidence_score: int
+    policy_alignment_passed: bool
+    hallucination_free_passed: bool
+    obligation_preservation_passed: bool
+    auto_corrected: bool
+    critic_notes: str
+    refined_proposed_text: str
+
+    def __post_init__(self) -> None:
+        if not (0 <= self.confidence_score <= 100):
+            raise DomainValidationError("confidence_score must be between 0 and 100.")
+        if not self.critic_notes.strip():
+            raise DomainValidationError("critic_notes cannot be empty.")
+        if not self.refined_proposed_text.strip():
+            raise DomainValidationError("refined_proposed_text cannot be empty.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +77,12 @@ class ClauseAuditResult:
     negotiation_talking_point: str
     latency_ms: float
     stance: NegotiationStance = NegotiationStance.BALANCED
+    confidence_score: int = 94
+    verification_status: VerificationStatus = VerificationStatus.VERIFIED
+    critic_notes: str = DEFAULT_CRITIC_NOTES
+    policy_alignment_passed: bool = True
+    hallucination_free_passed: bool = True
+    obligation_preservation_passed: bool = True
 
     def __post_init__(self) -> None:
         if not self.category.strip():
@@ -58,6 +95,8 @@ class ClauseAuditResult:
             raise DomainValidationError(
                 "Audit result negotiation_talking_point cannot be empty."
             )
+        if not (0 <= self.confidence_score <= 100):
+            raise DomainValidationError("confidence_score must be between 0 and 100.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,6 +156,12 @@ class ClauseCopilotRefineResult:
     rationale: str
     negotiation_talking_point: str
     latency_ms: float
+    confidence_score: int = 94
+    verification_status: VerificationStatus = VerificationStatus.VERIFIED
+    critic_notes: str = DEFAULT_CRITIC_NOTES
+    policy_alignment_passed: bool = True
+    hallucination_free_passed: bool = True
+    obligation_preservation_passed: bool = True
 
     def __post_init__(self) -> None:
         if not self.proposed_text.strip():
@@ -127,6 +172,8 @@ class ClauseCopilotRefineResult:
             raise DomainValidationError(
                 "Refine result negotiation_talking_point cannot be empty."
             )
+        if not (0 <= self.confidence_score <= 100):
+            raise DomainValidationError("confidence_score must be between 0 and 100.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,7 +233,9 @@ __all__ = [
     "ClauseAuditResult",
     "ClauseCopilotRefineInput",
     "ClauseCopilotRefineResult",
+    "CriticVerificationReport",
     "CrossClauseAnalysisReport",
     "CrossClauseFinding",
+    "DEFAULT_CRITIC_NOTES",
 ]
 

@@ -18,6 +18,7 @@ type QuickHelpTab =
   | "workflow"
   | "copilot"
   | "radar"
+  | "critic"
   | "stance"
   | "heatmap"
   | "export";
@@ -111,6 +112,18 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
           </button>
           <button
             type="button"
+            data-testid="quick-help-tab-critic"
+            onClick={() => setActiveTab("critic")}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              activeTab === "critic"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            4. 🛡️ Critic Guard
+          </button>
+          <button
+            type="button"
             data-testid="quick-help-tab-stance"
             onClick={() => setActiveTab("stance")}
             className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
@@ -119,7 +132,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            4. AI Stances
+            5. AI Stances
           </button>
           <button
             type="button"
@@ -131,7 +144,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            5. Risk Heatmap
+            6. Risk Heatmap
           </button>
           <button
             type="button"
@@ -143,7 +156,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            6. Export (.docx)
+            7. Export (.docx)
           </button>
         </div>
 
@@ -292,6 +305,60 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 </span>
                 <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                   Starts at 100% and deducts weighted penalties for each unresolved issue. Click the interactive <span className="font-semibold text-indigo-600 dark:text-indigo-400">Source: Clause #X</span> and <span className="font-semibold text-rose-600 dark:text-rose-400">Conflicts with: Clause #Y</span> jump buttons to instantly highlight and scroll to either clause in the live editor.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "critic" && (
+            <div data-testid="quick-help-content-critic" className="space-y-3">
+              <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/50 p-4 dark:border-emerald-500/30 dark:bg-emerald-950/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
+                    Critic-Refiner Multi-Agent Loop &amp; Hallucination Guard
+                  </span>
+                  <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-900/50 dark:text-emerald-200">
+                    AGENT 2 GUARD
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                  Every redline runs through a 2-agent pipeline: <strong className="text-slate-900 dark:text-white">Agent 1</strong> drafts the proposed revision and <strong className="text-emerald-800 dark:text-emerald-300">Agent 2 (Critic Verifier)</strong> enforces 3 safety gates and auto-repairs defects before display.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
+                  <h4 className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                    ✓ Policy Grounded
+                  </h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Ensures zero banned Playbook triggers leak into the proposed text and aligns wording with standard/fallback rules.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
+                  <h4 className="text-xs font-semibold text-sky-700 dark:text-sky-300">
+                    ✓ Hallucination-Free
+                  </h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Scrubs LLM placeholder tokens (<code className="font-mono">[TBD]</code>, <code className="font-mono">[INSERT]</code>) and ungrounded concessions.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
+                  <h4 className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                    ✓ Numbering Preserved
+                  </h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Restores clause numbering prefixes (e.g., <code className="font-mono">1.1</code>) if omitted so Word Track Changes stays aligned.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">
+                  Verification Badges &amp; On-Demand Re-Verification
+                </span>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                  Badges classify outputs as <strong>🛡️ Verified</strong> (85–99%), <strong>✨ Auto-Refined</strong> (auto-repaired by Agent 2), or <strong>⚠️ Review Needed</strong> (&lt;75%). After custom edits or Copilot refinements, click <strong>Re-Verify with Critic</strong> to validate and log <code className="font-mono text-[11px]">SUGGESTION_VERIFIED</code>.
                 </p>
               </div>
             </div>

@@ -5,6 +5,7 @@ from uuid import UUID
 
 from src.application.dtos import ImmutableDTO
 from src.domain.entities import (
+    DEFAULT_CRITIC_NOTES,
     CrossClauseAnalysisReport,
     CrossClauseFinding,
     RedlineSuggestion,
@@ -14,6 +15,7 @@ from src.domain.enums import (
     NegotiationStance,
     RiskLevel,
     SuggestionStatus,
+    VerificationStatus,
 )
 
 
@@ -36,6 +38,12 @@ class RedlineSuggestionResponseDTO(ImmutableDTO):
     resolved_by: UUID | None = None
     resolved_at: datetime | None = None
     created_at: datetime
+    confidence_score: int = 95
+    verification_status: VerificationStatus = VerificationStatus.VERIFIED
+    critic_notes: str = DEFAULT_CRITIC_NOTES
+    policy_alignment_passed: bool = True
+    hallucination_free_passed: bool = True
+    obligation_preservation_passed: bool = True
 
     @classmethod
     def from_domain(cls, suggestion: RedlineSuggestion) -> "RedlineSuggestionResponseDTO":
@@ -51,6 +59,12 @@ class RedlineSuggestionResponseDTO(ImmutableDTO):
             resolved_by=suggestion.resolved_by,
             resolved_at=suggestion.resolved_at,
             created_at=suggestion.created_at,
+            confidence_score=suggestion.confidence_score,
+            verification_status=suggestion.verification_status,
+            critic_notes=suggestion.critic_notes,
+            policy_alignment_passed=suggestion.policy_alignment_passed,
+            hallucination_free_passed=suggestion.hallucination_free_passed,
+            obligation_preservation_passed=suggestion.obligation_preservation_passed,
         )
 
 

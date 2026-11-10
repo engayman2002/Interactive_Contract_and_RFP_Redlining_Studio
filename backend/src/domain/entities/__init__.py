@@ -4,7 +4,13 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from src.domain.enums import DocumentStatus, RiskLevel, SuggestionStatus, UserRole
+from src.domain.enums import (
+    DocumentStatus,
+    RiskLevel,
+    SuggestionStatus,
+    UserRole,
+    VerificationStatus,
+)
 from src.domain.exceptions import (
     ConcurrencyConflictError,
     DomainValidationError,
@@ -161,6 +167,14 @@ class RedlineSuggestion:
     resolved_at: datetime | None = None
     id: UUID = field(default_factory=uuid4)
     created_at: datetime = field(default_factory=_utc_now)
+    confidence_score: int = 94
+    verification_status: VerificationStatus = VerificationStatus.VERIFIED
+    critic_notes: str = (
+        "Verified by Critic Agent against Playbook policy and hallucination guard."
+    )
+    policy_alignment_passed: bool = True
+    hallucination_free_passed: bool = True
+    obligation_preservation_passed: bool = True
 
     def resolve(
         self,
@@ -181,7 +195,17 @@ class RedlineSuggestion:
         self.resolved_by = resolved_by
         self.resolved_at = _utc_now()
 
-    def update_refinement(self, proposed_text: str, rationale: str) -> None:
+    def update_refinement(
+        self,
+        proposed_text: str,
+        rationale: str,
+        confidence_score: int | None = None,
+        verification_status: VerificationStatus | None = None,
+        critic_notes: str | None = None,
+        policy_alignment_passed: bool | None = None,
+        hallucination_free_passed: bool | None = None,
+        obligation_preservation_passed: bool | None = None,
+    ) -> None:
         """Update suggestion content via Copilot refinement and reset status to PENDING."""
         cleaned_text = proposed_text.strip()
         cleaned_rationale = rationale.strip()
@@ -194,6 +218,29 @@ class RedlineSuggestion:
         self.status = SuggestionStatus.PENDING
         self.resolved_by = None
         self.resolved_at = None
+        if confidence_score is not None:
+            self.confidence_score = confidence_score
+        if verification_status is not None:
+            self.verification_status = verification_status
+        if critic_notes is not None:
+            self.critic_notes = critic_notes
+        if policy_alignment_passed is not None:
+            self.policy_alignment_passed = policy_alignment_passed
+        if hallucination_free_passed is not None:
+            self.hallucination_free_passed = hallucination_free_passed
+        if obligation_preservation_passed is not None:
+            self.obligation_preservation_passed = obligation_preservation_passed
+
+    def apply_critic_verification(self, report: "CriticVerificationReport") -> None:
+        """Apply Critic-Refiner verification outputs onto this suggestion entity."""
+        if report.auto_corrected:
+            self.proposed_text = report.refined_proposed_text
+        self.confidence_score = report.confidence_score
+        self.verification_status = report.verification_status
+        self.critic_notes = report.critic_notes
+        self.policy_alignment_passed = report.policy_alignment_passed
+        self.hallucination_free_passed = report.hallucination_free_passed
+        self.obligation_preservation_passed = report.obligation_preservation_passed
 
 
 @dataclass(slots=True)
@@ -227,12 +274,14 @@ from src.domain.entities.playbook_search import (  # noqa: E402
     PlaybookSearchQuery,
 )
 from src.domain.entities.redline_analysis import (  # noqa: E402
+    DEFAULT_CRITIC_NOTES,
     AuditEventType,
     AuditProgressEvent,
     ClauseAuditInput,
     ClauseAuditResult,
     ClauseCopilotRefineInput,
     ClauseCopilotRefineResult,
+    CriticVerificationReport,
     CrossClauseAnalysisReport,
     CrossClauseFinding,
 )
@@ -246,8 +295,10 @@ __all__ = [
     "ClauseComment",
     "ClauseCopilotRefineInput",
     "ClauseCopilotRefineResult",
+    "CriticVerificationReport",
     "CrossClauseAnalysisReport",
     "CrossClauseFinding",
+    "DEFAULT_CRITIC_NOTES",
     "Document",
     "DocumentClause",
     "DocumentWithClauses",

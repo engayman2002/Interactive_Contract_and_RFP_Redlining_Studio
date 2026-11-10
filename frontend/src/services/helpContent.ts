@@ -469,6 +469,50 @@ export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
       },
     ],
   },
+  {
+    id: "critic-verifier-guard",
+    number: 11,
+    title: "Critic-Refiner Multi-Agent Loop & Hallucination Guard",
+    badge: "Multi-Agent Verification",
+    summary:
+      "Every AI-generated or refined redline passes through a 2-agent pipeline: Agent 1 drafts the redline and Agent 2 (Critic & Hallucination Guard) audits Policy Grounding, Hallucination Artifacts, and Section Numbering Integrity, auto-repairing defects before display.",
+    keywords: [
+      "critic",
+      "refiner",
+      "multi-agent",
+      "hallucination",
+      "verification",
+      "confidence score",
+      "auto-refined",
+      "policy grounded",
+      "re-verify",
+      "tbd",
+      "placeholder",
+    ],
+    steps: [
+      {
+        title: "2-Agent Pipeline: Primary Drafter -> Critic Verifier",
+        description:
+          "During Document Audit, AI Copilot refinements, or on-demand verification, Agent 1 proposes initial redline wording while Agent 2 (Critic & Hallucination Guard) systematically audits the draft before surfacing it in your workspace.",
+        tip: "Multi-agent verification drastically reduces single-pass LLM mistakes like dropped section prefixes or leaked banned terms.",
+      },
+      {
+        title: "The 3 Mandatory Verification Gates",
+        description:
+          "Every suggestion displays live verification status across 3 security gates: 1) Policy Grounded: eliminates unacceptable Playbook triggers and enforces standard/fallback terms; 2) Hallucination-Free: strips leftover placeholder tokens ([TBD], [INSERT], TODO) and fabricated claims; 3) Obligations & Numbering Preserved: guarantees legal numbering prefixes (1.1, 2.1) stay intact for Word Track Changes alignment.",
+      },
+      {
+        title: "Confidence Badges: Verified vs. Auto-Refined vs. Review Needed",
+        description:
+          "Each card header features a Critic score pill (0-100%): '🛡️ Verified' (emerald, 85-99%) passed all 3 gates cleanly; '✨ Auto-Refined' (sky blue) indicates Agent 2 caught and automatically healed a trigger leak, placeholder, or numbering drop; '⚠️ Review Needed' (amber, <75%) flags low Playbook rule coverage for manual counsel review.",
+      },
+      {
+        title: "On-Demand 'Re-Verify with Critic' & Audit Logging",
+        description:
+          "After editing proposed wording manually via Modify or iterating with AI Copilot, click 'Re-Verify with Critic' inside the Critic Guard bar to run the 3 gates on demand and record an immutable SUGGESTION_VERIFIED event in the Compliance Audit Trail.",
+      },
+    ],
+  },
 ];
 
 export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
@@ -781,6 +825,39 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
       "cross-clause",
       "radar",
       "harmonization",
+    ],
+  },
+  {
+    id: "faq-critic-verifier-loop",
+    question:
+      "How does the Critic-Refiner Multi-Agent Verification Loop prevent AI hallucinations?",
+    answer:
+      "Every generated or Copilot-refined redline goes through a 2-agent verification pipeline. Agent 1 drafts the initial redline, then Agent 2 (the Critic & Hallucination Guard) independently inspects the draft against 3 strict gates: Playbook Policy Grounding, Hallucination & Placeholder Guard (scrubbing tokens like [TBD] or [INSERT]), and Section Numbering Preservation (e.g., retaining '1.1 '). If a defect is found, the Critic automatically repairs the text and marks it Auto-Refined.",
+    category: "workflow",
+    keywords: [
+      "critic",
+      "refiner",
+      "multi-agent",
+      "hallucination",
+      "tbd",
+      "auto-refined",
+      "verification",
+    ],
+  },
+  {
+    id: "faq-critic-verification-gates",
+    question:
+      "What do the Critic badges ('Verified', 'Auto-Refined', 'Review Needed') and Confidence Score mean?",
+    answer:
+      "Confidence scores (0-100%) reflect hybrid Playbook match certainty and Critic gate checks. 'Verified' (emerald) means the draft passed all 3 gates on first pass. 'Auto-Refined' (sky blue) indicates the Critic caught and automatically repaired a missing section prefix, leaked trigger, or placeholder token. 'Review Needed' (amber, typically 60-74%) signals weak Playbook coverage where Legal Counsel should review carefully or re-verify after editing via 'Re-Verify with Critic'.",
+    category: "workflow",
+    keywords: [
+      "confidence score",
+      "verified",
+      "auto-refined",
+      "review needed",
+      "re-verify",
+      "critic guard",
     ],
   },
 ];

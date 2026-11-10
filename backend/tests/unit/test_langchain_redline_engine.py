@@ -13,7 +13,7 @@ from src.domain.entities import (
     PlaybookRule,
     PlaybookSearchQuery,
 )
-from src.domain.enums import NegotiationStance, RiskLevel
+from src.domain.enums import NegotiationStance, RiskLevel, VerificationStatus
 from src.domain.exceptions import StructuredOutputValidationError
 from src.infrastructure.ai import (
     BatchDocumentAuditWorker,
@@ -464,4 +464,81 @@ async def test_negotiation_stances_strict_vs_commercial_differentiation() -> Non
     assert balanced_result.stance == NegotiationStance.BALANCED
     assert "[Balanced Mutual Stance]" in balanced_result.rationale
     assert "12 months of fees paid" in balanced_result.proposed_text
+
+
+async def test_critic_agent_repairs_placeholders_missing_numbering_and_scores_confidence() -> None:
+    """Verify Agent 2 Critic repairs [TBD] placeholders, 1.1 prefix, and confidence scores."""
+    org_id = uuid4()
+    lol_rule = PlaybookRule(
+        org_id=org_id,
+        category="Limitation of Liability",
+        standard_position=(
+            "Each party's aggregate cumulative liability shall not exceed twelve (12) months "
+            "of fees paid or payable."
+        ),
+        fallback_position="Mutual liability capped at 2x annual fees.",
+        unacceptable_triggers="uncapped liability, exceed $500",
+    )
+    matched = [
+        MatchedPlaybookRule(
+            rule=lol_rule,
+            combined_score=0.92,
+            vector_score=0.93,
+            keyword_score=0.90,
+        )
+    ]
+    auditor = LangChainClauseAuditor()
+
+    # 1. Defect case: dropped section prefix '1.1 ' and leaked placeholder '[TBD]'
+    auto_refined_report = await auditor.verify_and_critique_suggestion(
+        original_clause_text="1.1 Vendor aggregate liability shall not exceed $500.",
+        heading="1. Limitation of Liability",
+        candidate_proposed_text=(
+            "Each party's aggregate cumulative liability shall not exceed [TBD] "
+            "twelve (12) months of fees paid or payable."
+        ),
+        candidate_risk=RiskLevel.CRITICAL,
+        matched_rules=matched,
+        stance=NegotiationStance.BALANCED,
+    )
+    assert auto_refined_report.auto_corrected is True
+    assert auto_refined_report.verification_status == VerificationStatus.AUTO_REFINED
+    assert auto_refined_report.refined_proposed_text.startswith("1.1 ")
+    assert "[TBD]" not in auto_refined_report.refined_proposed_text
+    assert 0 <= auto_refined_report.confidence_score <= 100
+    assert auto_refined_report.policy_alignment_passed is True
+    assert auto_refined_report.hallucination_free_passed is True
+    assert auto_refined_report.obligation_preservation_passed is True
+
+    # 2. Clean first-pass verification
+    clean_report = await auditor.verify_and_critique_suggestion(
+        original_clause_text="1.1 Vendor aggregate liability shall not exceed $500.",
+        heading="1. Limitation of Liability",
+        candidate_proposed_text=(
+            "1.1 Each party's aggregate cumulative liability shall not exceed twelve (12) months "
+            "of fees paid or payable."
+        ),
+        candidate_risk=RiskLevel.CRITICAL,
+        matched_rules=matched,
+        stance=NegotiationStance.BALANCED,
+    )
+    assert clean_report.auto_corrected is False
+    assert clean_report.verification_status == VerificationStatus.VERIFIED
+    assert 85 <= clean_report.confidence_score <= 99
+
+    # 3. No matching Playbook rule on custom complex clause -> NEEDS_HUMAN_REVIEW
+    review_report = await auditor.verify_and_critique_suggestion(
+        original_clause_text=(
+            "9.1 Unusual bespoke aerospace indemnity allocation governed by orbital arbitration."
+        ),
+        heading="9. Special Provisions",
+        candidate_proposed_text="9.1 Custom mutual orbital risk allocation clause.",
+        candidate_risk=RiskLevel.HIGH,
+        matched_rules=[],
+        stance=NegotiationStance.BALANCED,
+    )
+    assert review_report.verification_status == VerificationStatus.NEEDS_HUMAN_REVIEW
+    assert 60 <= review_report.confidence_score <= 74
+    assert review_report.policy_alignment_passed is False
+
 
