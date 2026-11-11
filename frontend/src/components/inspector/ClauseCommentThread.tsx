@@ -91,7 +91,7 @@ export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
             {/* Chronological Comment List */}
             <div
               data-testid={`comment-list-${clause.id}`}
-              className="mb-3 max-h-36 space-y-2 overflow-y-auto pr-1"
+              className="mb-3 max-h-36 space-y-2 overflow-y-auto pe-1"
             >
               {comments.length === 0 ? (
                 <p className="text-xs italic text-slate-500 dark:text-slate-400">

@@ -138,7 +138,7 @@ export type CrossClauseAnalysisReportDTO = z.infer<
 export const RefineSuggestionRequestDTOSchema = z.object({
   instruction: z.string().min(3).max(1000),
   stance: NegotiationStanceSchema.default("balanced"),
-  language: z.enum(["en", "es", "fr"]).optional(),
+  language: z.enum(["en", "es", "fr", "ar"]).optional(),
 });
 export type RefineSuggestionRequestDTO = z.infer<
   typeof RefineSuggestionRequestDTOSchema
@@ -170,7 +170,7 @@ export type VerifySuggestionResponseDTO = z.infer<
 
 export const SimulatePushbackRequestDTOSchema = z.object({
   stance: NegotiationStanceSchema.default("balanced"),
-  language: z.enum(["en", "es", "fr"]).optional(),
+  language: z.enum(["en", "es", "fr", "ar"]).optional(),
 });
 export type SimulatePushbackRequestDTO = z.infer<
   typeof SimulatePushbackRequestDTOSchema

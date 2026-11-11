@@ -12,7 +12,9 @@ import { LOCALE_STORAGE_KEY, useLocaleStore } from "@/i18n/useI18n";
 import {
   DEMO_WORKSPACE_DATA,
   getLocalDocumentWorkspace,
+  refineRedlineSuggestion,
   saveLocalDocumentWorkspace,
+  simulateCounterpartyPushback,
   triggerDocumentAnalysis,
 } from "@/services/apiClient";
 import type { DocumentWorkspaceDTO } from "@/services/contracts";
@@ -396,5 +398,182 @@ describe("Multilingual Internationalization (EN / ES / FR)", () => {
     expect(screen.getByTestId("playbook-rules-grid").textContent).toContain(
       "Limitation de Responsabilité"
     );
+  });
+
+  it("supports full Arabic ('ar') & RTL layout across Dashboard, Studio, Playbooks, Help Center, Modals, BiDi inputs, and offline AI", async () => {
+    let unmountDashboard: () => void = () => {};
+    await act(async () => {
+      const rendered = render(<DashboardPage />);
+      unmountDashboard = rendered.unmount;
+    });
+
+    const arBtn = screen.getByTestId("lang-option-ar");
+    expect(arBtn).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(arBtn);
+    });
+
+    expect(arBtn).toHaveAttribute("aria-pressed", "true");
+    expect(useLocaleStore.getState().locale).toBe("ar");
+    expect(document.documentElement.lang).toBe("ar");
+    expect(document.documentElement.dir).toBe("rtl");
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("ar");
+
+    expect(
+      screen.getByText(
+        "مركز العمليات القانونية وتحليل العقود بالذكاء الاصطناعي"
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText("إعداد السياسات")).toBeInTheDocument();
+
+    unmountDashboard();
+
+    // Studio & RedlineCard & CrossClauseRadarPanel in Arabic RTL
+    let unmountStudio: () => void = () => {};
+    await act(async () => {
+      const rendered = render(
+        <RedliningStudioWorkspace initialWorkspace={DEMO_WORKSPACE_DATA} />
+      );
+      unmountStudio = rendered.unmount;
+    });
+
+    const firstClauseId = DEMO_WORKSPACE_DATA.clauses[0].id;
+    const firstSuggestionId = DEMO_WORKSPACE_DATA.redlines[0].id;
+    const firstCard = screen.getByTestId(`redline-card-${firstClauseId}`);
+    expect(firstCard.textContent).toContain("1. تحديد المسؤولية التعاقدية");
+    expect(firstCard.textContent).toContain("حرج");
+    expect(firstCard.textContent).toContain("نقطة التفاوض المقترحة");
+    expect(
+      screen.getByTestId(`suggestion-status-${firstClauseId}`).textContent
+    ).toBe("قيد المراجعة");
+    expect(
+      screen.getByTestId(`apply-redline-btn-${firstClauseId}`).textContent
+    ).toBe("تطبيق التعديل");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inspector-tab-cross-clause"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("run-cross-clause-check-btn"));
+    });
+    expect(
+      screen.getByTestId("cross-clause-radar-panel").textContent
+    ).toContain("تناقض تعاقدي");
+
+    unmountStudio();
+
+    // Playbooks in Arabic
+    let unmountPlaybooks: () => void = () => {};
+    await act(async () => {
+      const rendered = render(<PlaybooksPage />);
+      unmountPlaybooks = rendered.unmount;
+    });
+    expect(screen.getByTestId("playbook-rules-grid").textContent).toContain(
+      "تحديد المسؤولية التعاقدية"
+    );
+    unmountPlaybooks();
+
+    // Help Center (/help), 5-stage Tutorial Wizard, and FAQ in Arabic
+    let unmountHelp: () => void = () => {};
+    await act(async () => {
+      const rendered = render(<HelpCenterPage />);
+      unmountHelp = rendered.unmount;
+    });
+    expect(
+      screen.getByText("البداية السريعة: دورة مراجعة العقود في 4 خطوات")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("تعلّم سير العمل الكامل في دقيقتين")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "ما الفرق بين «متصل بالخادم» و«وضع العرض التجريبي (أوفلاين)»؟"
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText("حرج")).toBeInTheDocument();
+    unmountHelp();
+
+    // QuickHelpModal & AISettingsModal + BiDi isolation (dir="ltr" on technical fields)
+    let unmountQuickHelp: () => void = () => {};
+    await act(async () => {
+      const rendered = render(<QuickHelpModal isOpen={true} onClose={() => {}} />);
+      unmountQuickHelp = rendered.unmount;
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("quick-help-tab-copilot"));
+    });
+    expect(
+      screen.getByTestId("quick-help-content-copilot").textContent
+    ).toContain("المساعد الذكي لكل بند والتوجيه الحر");
+    unmountQuickHelp();
+
+    let unmountSettings: () => void = () => {};
+    await act(async () => {
+      const rendered = render(<AISettingsModal isOpen={true} onClose={() => {}} />);
+      unmountSettings = rendered.unmount;
+    });
+    expect(screen.getByTestId("ai-settings-modal").textContent).toContain(
+      "خزنة الإعدادات المشفرة"
+    );
+    expect(screen.getByTestId("ai-settings-modal").textContent).toContain(
+      "1. محرك الاستدلال اللغوي (LLM)"
+    );
+    expect(
+      screen.getByTestId("ai-settings-llm-model-input")
+    ).toHaveAttribute("dir", "ltr");
+    expect(
+      screen.getByTestId("ai-settings-api-key-input")
+    ).toHaveAttribute("dir", "ltr");
+    unmountSettings();
+
+    // Offline Arabic AI Analysis, Copilot Refinement & Counterparty Pushback Simulator
+    const arabicDoc: DocumentWorkspaceDTO = {
+      ...DEMO_WORKSPACE_DATA,
+      document_id: "i18n-ar-doc-1",
+      clauses: DEMO_WORKSPACE_DATA.clauses.map((c) => ({
+        ...c,
+        document_id: "i18n-ar-doc-1",
+      })),
+      redlines: [],
+    };
+    saveLocalDocumentWorkspace(arabicDoc);
+
+    await act(async () => {
+      await triggerDocumentAnalysis("i18n-ar-doc-1", undefined, "balanced");
+    });
+
+    const savedArabicWs = getLocalDocumentWorkspace("i18n-ar-doc-1");
+    expect(savedArabicWs).not.toBeNull();
+    expect(savedArabicWs!.redlines[0].rationale).toContain(
+      "[الاستراتيجية المتوازنة المتبادلة]"
+    );
+    expect(savedArabicWs!.redlines[0].rationale).toContain("نقطة التفاوض:");
+
+    const copilotRes = await refineRedlineSuggestion(firstSuggestionId, {
+      instruction: "اجعل الالتزام متبادلاً",
+      stance: "balanced",
+      language: "ar",
+    });
+    expect(copilotRes.negotiation_talking_point).toContain("متبادلة");
+    expect(copilotRes.suggestion.rationale).toContain("مُنقّح بالمساعد الذكي");
+
+    const pushbackRes = await simulateCounterpartyPushback(firstSuggestionId, {
+      stance: "balanced",
+      language: "ar",
+    });
+    expect(pushbackRes.expected_objection).toContain("مستشار الطرف الآخر");
+
+    // Switching back to English restores LTR immediately
+    await act(async () => {
+      render(<RedliningStudioWorkspace initialWorkspace={DEMO_WORKSPACE_DATA} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("lang-option-en"));
+    });
+
+    expect(document.documentElement.lang).toBe("en");
+    expect(document.documentElement.dir).toBe("ltr");
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("en");
   });
 });

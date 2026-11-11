@@ -102,7 +102,7 @@ const CompliantClauseCard = React.memo(
             {localizeRiskLabel("COMPLIANT", locale)}
           </span>
         </div>
-        <p className="mt-1.5 pl-6 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+        <p className="mt-1.5 ps-6 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
           {t.inspector.compliantSatisfies}
         </p>
       </div>

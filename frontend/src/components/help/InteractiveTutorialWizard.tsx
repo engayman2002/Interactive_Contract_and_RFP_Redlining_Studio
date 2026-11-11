@@ -186,7 +186,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
           onClick={() => setActiveStageIdx((prev) => Math.max(0, prev - 1))}
           className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
           <span>{t.help.prevBtn}</span>
         </button>
 
@@ -197,7 +197,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
         >
           <Play className="h-3.5 w-3.5" />
           <span>{currentStage.ctaLabel}</span>
-          <ArrowRight className="h-3.5 w-3.5" />
+          <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
         </Link>
 
         <button
@@ -210,7 +210,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
           className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span>{t.help.nextBtn}</span>
-          <ArrowRight className="h-3.5 w-3.5" />
+          <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
         </button>
       </div>
     </section>

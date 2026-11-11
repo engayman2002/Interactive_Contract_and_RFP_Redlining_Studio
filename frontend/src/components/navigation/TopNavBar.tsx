@@ -173,12 +173,12 @@ export const TopNavBar: React.FC = () => {
           <ThemeToggle />
 
           {/* Executive Role Badge */}
-          <div className="flex shrink-0 items-center border-l border-slate-200/80 pl-2 dark:border-slate-800">
+          <div className="flex shrink-0 items-center border-s border-slate-200/80 ps-2 dark:border-slate-800">
             <button
               type="button"
               data-testid="account-org-button"
               onClick={() => setIsLoginModalOpen(true)}
-              className="flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-left shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-800"
+              className="flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-start shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-800"
             >
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
                 <ShieldCheck className="h-3 w-3" aria-hidden="true" />
@@ -241,6 +241,7 @@ export const TopNavBar: React.FC = () => {
                 </label>
                 <input
                   type="email"
+                  dir="ltr"
                   required
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
@@ -254,6 +255,7 @@ export const TopNavBar: React.FC = () => {
                 </label>
                 <input
                   type="password"
+                  dir="ltr"
                   required
                   value={passInput}
                   onChange={(e) => setPassInput(e.target.value)}

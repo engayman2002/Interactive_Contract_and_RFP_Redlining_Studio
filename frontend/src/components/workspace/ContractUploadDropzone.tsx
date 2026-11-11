@@ -231,7 +231,7 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
 
           {/* Optional Document Title & Submit Button */}
           {selectedFile ? (
-            <div className="surface-card mt-6 w-full max-w-lg space-y-3.5 rounded-xl p-4 text-left">
+            <div className="surface-card mt-6 w-full max-w-lg space-y-3.5 rounded-xl p-4 text-start">
               <div>
                 <label
                   htmlFor="doc-title-input"
@@ -261,7 +261,7 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600"
                 >
                   <span>{t.upload.uploadSubmitBtn}</span>
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden="true" />
                 </button>
               </div>
             </div>

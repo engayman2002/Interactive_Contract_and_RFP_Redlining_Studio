@@ -301,7 +301,7 @@ export default function DashboardPage() {
                 className="flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-4 text-xs font-semibold text-white shadow-md ring-1 ring-inset ring-white/25 transition-all hover:from-indigo-400 hover:to-indigo-500"
               >
                 <span>{t.dashboard.launchSampleStudioBtn}</span>
-                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden="true" />
               </Link>
             </div>
           </div>
@@ -341,7 +341,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left">
+              <table className="w-full border-collapse text-start">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/70 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
                     <th className="px-6 py-3.5">{t.dashboard.colDocTitle}</th>
@@ -349,7 +349,7 @@ export default function DashboardPage() {
                     <th className="px-4 py-3.5">{t.dashboard.colClauses}</th>
                     <th className="px-4 py-3.5">{t.dashboard.colVersion}</th>
                     <th className="px-4 py-3.5">{t.dashboard.colDate}</th>
-                    <th className="px-6 py-3.5 text-right">{t.dashboard.colWorkspace}</th>
+                    <th className="px-6 py-3.5 text-end">{t.dashboard.colWorkspace}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200/70 text-xs dark:divide-slate-800/70">
@@ -407,14 +407,14 @@ export default function DashboardPage() {
                             }
                           )}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-end">
                           <Link
                             href={`/documents/${doc.id}`}
                             data-testid={`open-studio-btn-${doc.id}`}
                             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-3 text-xs font-semibold text-indigo-600 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50/70 dark:border-slate-700/80 dark:bg-slate-800 dark:text-indigo-300 dark:hover:border-indigo-500/40 dark:hover:bg-slate-700"
                           >
                             <span>{t.dashboard.openInStudioBtn}</span>
-                            <ArrowRight className="h-3.5 w-3.5" />
+                            <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
                           </Link>
                         </td>
                       </tr>

@@ -19,6 +19,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
       role="group"
       aria-label="Interface Language"
       data-testid="language-switcher"
+      dir="ltr"
       className={`inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-lg border border-slate-200/80 bg-slate-100/90 px-1 dark:border-slate-800 dark:bg-slate-900/90 ${
         compact ? "h-7" : "h-8"
       } ${className}`}

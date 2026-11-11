@@ -401,7 +401,7 @@ export function AIPlaybookExtractorPanel({
                       )}
                     </div>
 
-                    <p className="mt-2.5 border-l-2 border-indigo-200 pl-2.5 text-[11px] italic text-slate-500 dark:border-indigo-500/30 dark:text-slate-400">
+                    <p className="mt-2.5 border-s-2 border-indigo-200 ps-2.5 text-[11px] italic text-slate-500 dark:border-indigo-500/30 dark:text-slate-400">
                       &ldquo;{displayCandidate.source_clause_excerpt}&rdquo;
                     </p>
                   </div>

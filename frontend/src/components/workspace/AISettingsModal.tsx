@@ -808,7 +808,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                     data-testid={`provider-preset-${preset.provider_id}`}
                     onClick={() => handleSelectPresetCard(preset)}
                     title={meta.tagline}
-                    className={`flex flex-col justify-between rounded-xl border p-2.5 text-left transition-all ${
+                    className={`flex flex-col justify-between rounded-xl border p-2.5 text-start transition-all ${
                       isSelected
                         ? "border-indigo-500 bg-indigo-50/70 shadow-sm ring-2 ring-indigo-500/20 dark:border-indigo-500 dark:bg-indigo-950/35 dark:ring-indigo-500/30"
                         : "border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/80 dark:hover:border-slate-700 dark:hover:bg-slate-800/70"
@@ -953,12 +953,13 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 <input
                   id="ai-llm-model-input"
                   type="text"
+                  dir="ltr"
                   list="ai-llm-models-datalist"
                   data-testid="ai-settings-llm-model-input"
                   value={llmModelName}
                   onChange={(e) => setLlmModelName(e.target.value)}
                   placeholder={copy.modelInputPlaceholder}
-                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-left font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <datalist id="ai-llm-models-datalist">
                   {availableLlmModels.map((m) => (
@@ -1021,6 +1022,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   <input
                     id="ai-llm-base-url-input"
                     type="url"
+                    dir="ltr"
                     data-testid="ai-settings-base-url-input"
                     value={llmBaseUrl}
                     onChange={(e) => setLlmBaseUrl(e.target.value)}
@@ -1029,7 +1031,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                         ? "http://localhost:11434"
                         : "http://localhost:8000/v1"
                     }
-                    className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-left font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                   />
                 </div>
               ) : null}
@@ -1062,10 +1064,11 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   </span>
                 </div>
 
-                <div className="relative mt-1">
+                <div dir="ltr" className="relative mt-1">
                   <input
                     id="ai-llm-api-key-input"
                     type={showApiKey ? "text" : "password"}
+                    dir="ltr"
                     autoComplete="off"
                     data-testid="ai-settings-api-key-input"
                     value={llmApiKeyInput}
@@ -1239,12 +1242,13 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 <input
                   id="ai-embedding-model-input"
                   type="text"
+                  dir="ltr"
                   list="ai-embedding-models-datalist"
                   data-testid="ai-settings-embedding-model-input"
                   value={embeddingModelName}
                   onChange={(e) => setEmbeddingModelName(e.target.value)}
                   placeholder={copy.modelInputPlaceholder}
-                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-left font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <datalist id="ai-embedding-models-datalist">
                   {availableEmbeddingModels.map((m) => (
@@ -1308,6 +1312,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   <input
                     id="ai-embedding-base-url-input"
                     type="url"
+                    dir="ltr"
                     data-testid="ai-settings-embedding-base-url-input"
                     value={embeddingBaseUrl}
                     onChange={(e) => setEmbeddingBaseUrl(e.target.value)}
@@ -1316,7 +1321,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                         ? "http://localhost:11434"
                         : "http://localhost:8080/v1"
                     }
-                    className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-left font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                   />
                 </div>
               ) : null}
@@ -1343,6 +1348,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 <input
                   id="ai-embedding-api-key-input"
                   type={showApiKey ? "text" : "password"}
+                  dir="ltr"
                   autoComplete="off"
                   data-testid="ai-settings-embedding-api-key-input"
                   value={embeddingApiKeyInput}
@@ -1352,7 +1358,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                       ? copy.embKeyReusePlaceholder
                       : copy.embKeyOptionalPlaceholder
                   }
-                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-left font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -1419,10 +1425,11 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   </span>
                 </div>
 
-                <div className="relative mt-1">
+                <div dir="ltr" className="relative mt-1">
                   <input
                     id="ai-vault-passphrase-input"
                     type={showVaultPassphrase ? "text" : "password"}
+                    dir="ltr"
                     autoComplete="off"
                     minLength={8}
                     data-testid="ai-vault-passphrase-input"

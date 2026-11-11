@@ -51,6 +51,16 @@ const INLINE_DIFF_DEMO_COPY = {
     inserted2: "indirects, spéciaux ou",
     suffix: " consécutifs.",
   },
+  ar: {
+    heading: 'مثال حي لمعاينة الفروقات كلمة بكلمة (عند التمرير على «تطبيق التعديل»)',
+    clauseBadge: "البند #1 · تحديد المسؤولية التعاقدية",
+    prefix: "لا تتجاوز المسؤولية التراكمية الإجمالية ",
+    deleted: "خمسمائة دولار ($500)",
+    inserted1: "إجمالي الرسوم المدفوعة خلال الاثني عشر (12) شهراً السابقة مباشرة للمطالبة",
+    middle: "، ولا يتحمل أي طرف أي أضرار ",
+    inserted2: "غير مباشرة أو خاصة أو",
+    suffix: " تبعية.",
+  },
 } as const;
 
 export default function HelpCenterPage() {
@@ -191,7 +201,7 @@ export default function HelpCenterPage() {
                 className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-4 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600"
               >
                 <span>{t.help.ctaDashboard}</span>
-                <ArrowRight className="h-3.5 w-3.5" />
+                <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
               </Link>
               <Link
                 href="/playbooks"
@@ -215,7 +225,7 @@ export default function HelpCenterPage() {
           <div className="mt-6">
             <div className="relative">
               <Search
-                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                 aria-hidden="true"
               />
               <input
@@ -225,14 +235,14 @@ export default function HelpCenterPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t.help.searchPlaceholder}
                 aria-label="Search Help Center"
-                className="w-full rounded-xl border border-slate-300 bg-slate-50/60 py-3 pl-10 pr-20 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950/90 dark:text-slate-100 dark:placeholder-slate-500"
+                className="w-full rounded-xl border border-slate-300 bg-slate-50/60 py-3 ps-10 pe-20 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950/90 dark:text-slate-100 dark:placeholder-slate-500"
               />
               {searchQuery ? (
                 <button
                   type="button"
                   data-testid="clear-help-search-btn"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-white"
+                  className="absolute end-3 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-white"
                 >
                   {t.help.clearBtn}
                 </button>
@@ -272,7 +282,7 @@ export default function HelpCenterPage() {
                     setSelectedTrack(track.id);
                     setSelectedModuleId("ALL");
                   }}
-                  className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
+                  className={`flex flex-col items-start rounded-xl border p-3 text-start transition-all ${
                     isSelected
                       ? "border-indigo-600 bg-indigo-600 text-white shadow-sm"
                       : "border-slate-200/80 bg-slate-50/70 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300 dark:hover:border-indigo-500/40"
@@ -307,7 +317,7 @@ export default function HelpCenterPage() {
                   type="button"
                   data-testid="filter-module-ALL"
                   onClick={() => setSelectedModuleId("ALL")}
-                  className={`flex items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium transition-colors ${
+                  className={`flex items-center justify-between rounded-xl px-3 py-2 text-start text-xs font-medium transition-colors ${
                     selectedModuleId === "ALL"
                       ? "bg-indigo-600 font-semibold text-white shadow-sm"
                       : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -331,7 +341,7 @@ export default function HelpCenterPage() {
                     type="button"
                     data-testid={`filter-module-${mod.id}`}
                     onClick={() => setSelectedModuleId(mod.id)}
-                    className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium transition-colors ${
+                    className={`flex items-center gap-2 rounded-xl px-3 py-2 text-start text-xs font-medium transition-colors ${
                       selectedModuleId === mod.id
                         ? "bg-indigo-600 font-semibold text-white shadow-sm"
                         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
@@ -611,7 +621,7 @@ export default function HelpCenterPage() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-xs">
+                <table className="w-full border-collapse text-start text-xs">
                   <thead>
                     <tr className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
                       <th className="px-6 py-3.5">{t.help.colCapability}</th>
@@ -675,10 +685,10 @@ export default function HelpCenterPage() {
                           type="button"
                           data-testid={`faq-toggle-${faq.id}`}
                           onClick={() => toggleFaq(faq.id)}
-                          className="flex w-full items-center justify-between px-4 py-3.5 text-left text-xs font-semibold text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-white"
+                          className="flex w-full items-center justify-between px-4 py-3.5 text-start text-xs font-semibold text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-white"
                         >
                           <span>{faq.question}</span>
-                          <span className="ml-2 font-mono text-sm text-slate-400">
+                          <span className="ms-2 font-mono text-sm text-slate-400">
                             {isOpen ? "−" : "+"}
                           </span>
                         </button>

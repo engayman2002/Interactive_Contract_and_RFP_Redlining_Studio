@@ -328,7 +328,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 <span>
                   {t.radar.sourceClausePrefix} #{finding.source_clause_index + 1}
                 </span>
-                <ArrowRight className="h-3 w-3" />
+                <ArrowRight className="h-3 w-3 rtl:rotate-180" />
               </button>
 
               {finding.target_clause_id &&
@@ -343,7 +343,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                   <span>
                     {t.radar.targetClausePrefix} #{finding.target_clause_index + 1}
                   </span>
-                  <ArrowRight className="h-3 w-3" />
+                  <ArrowRight className="h-3 w-3 rtl:rotate-180" />
                 </button>
               ) : null}
             </div>

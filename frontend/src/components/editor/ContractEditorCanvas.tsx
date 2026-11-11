@@ -29,11 +29,11 @@ export interface ContractEditorCanvasProps {
 }
 
 const CLAUSE_ACCENT_BAR_MAP: Record<ClauseRiskBadge, string> = {
-  CRITICAL: "border-l-4 border-l-rose-500",
-  HIGH: "border-l-4 border-l-amber-500",
-  MEDIUM: "border-l-4 border-l-sky-500",
-  LOW: "border-l-4 border-l-sky-400",
-  COMPLIANT: "border-l-4 border-l-emerald-500",
+  CRITICAL: "border-s-4 border-s-rose-500",
+  HIGH: "border-s-4 border-s-amber-500",
+  MEDIUM: "border-s-4 border-s-sky-500",
+  LOW: "border-s-4 border-s-sky-400",
+  COMPLIANT: "border-s-4 border-s-emerald-500",
 };
 
 const RISK_PILL_STYLE_MAP: Record<ClauseRiskBadge, string> = {
@@ -100,7 +100,7 @@ const EditorClauseItem = React.memo(
             onSelect(clause.id);
           }
         }}
-        className={`cursor-pointer border-b border-slate-100/90 py-5 pl-5 pr-4 transition-all last:border-b-0 dark:border-slate-800/60 ${
+        className={`cursor-pointer border-b border-slate-100/90 py-5 ps-5 pe-4 transition-all last:border-b-0 dark:border-slate-800/60 ${
           CLAUSE_ACCENT_BAR_MAP[riskBadge]
         } ${
           isSelected

@@ -241,7 +241,7 @@ export const RedliningStudioWorkspace: React.FC<
             data-testid="back-to-dashboard-btn"
             className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
           >
-            <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden="true" />
+            <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-slate-500 rtl:rotate-180 dark:text-slate-400" aria-hidden="true" />
             <span>{t.studio.backToDashboard}</span>
           </Link>
 
@@ -462,7 +462,7 @@ export const RedliningStudioWorkspace: React.FC<
               type="button"
               data-testid="dismiss-quick-guide-btn"
               onClick={() => setIsGuideDismissed(true)}
-              className="ml-1 shrink-0 whitespace-nowrap rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white"
+              className="ms-1 shrink-0 whitespace-nowrap rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white"
               title={t.studio.hideGuideTitle}
             >
               <X className="h-3 w-3" />

@@ -57,10 +57,10 @@ const RISK_BADGE_STYLES: Record<RiskLevel, string> = {
 };
 
 const RISK_BORDER_ACCENT: Record<RiskLevel, string> = {
-  CRITICAL: "border-l-[3px] border-l-rose-500",
-  HIGH: "border-l-[3px] border-l-amber-500",
-  MEDIUM: "border-l-[3px] border-l-sky-500",
-  LOW: "border-l-[3px] border-l-emerald-500",
+  CRITICAL: "border-s-[3px] border-s-rose-500",
+  HIGH: "border-s-[3px] border-s-amber-500",
+  MEDIUM: "border-s-[3px] border-s-sky-500",
+  LOW: "border-s-[3px] border-s-emerald-500",
 };
 
 const RISK_DOT_COLORS: Record<RiskLevel, string> = {
@@ -111,6 +111,9 @@ function splitRationaleAndTalkingPoint(rawRationale: string): {
     " | Talking Point: ",
     " | Argumento: ",
     " | Argumentaire: ",
+    " | Argumentaire : ",
+    " | نقطة التفاوض: ",
+    " | نقطة التفاوض : ",
   ];
   for (const marker of markers) {
     const idx = rawRationale.indexOf(marker);
@@ -453,7 +456,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
 
         {/* Negotiation Talking Point Executive Callout */}
         {talkingPoint ? (
-          <div className="mb-2.5 rounded-r-lg border-l-2 border-indigo-500 bg-slate-50/90 p-2.5 dark:bg-slate-800/55">
+          <div className="mb-2.5 rounded-e-lg border-s-2 border-indigo-500 bg-slate-50/90 p-2.5 dark:bg-slate-800/55">
             <div className="mb-0.5 flex items-center justify-between gap-2">
               <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
                 {t.redlineCard.talkingPointLabel}

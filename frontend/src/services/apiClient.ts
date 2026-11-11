@@ -966,6 +966,110 @@ const LOCALIZED_REDLINE_TEMPLATES: Record<
       },
     ],
   },
+  ar: {
+    commercial: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "HIGH",
+        proposed_text:
+          "1.1 لا تتجاوز المسؤولية التراكمية الإجمالية لكل طرف بموجب هذا العقد ضعفي (2x) الرسوم السنوية المدفوعة بموجبه، وذلك لتسهيل الإغلاق السريع للصفقة.",
+        rationale:
+          "[الاستراتيجية التجارية السريعة] اعتماد الموقف البديل التجاري المعتمد مسبقاً لتسريع الإغلاق: سقف ضعفي (2x) الرسوم السنوية. | نقطة التفاوض: لتسريع إتمام الاتفاقية، وافقنا مسبقاً على الحد التجاري البديل بمقدار 2x الرسوم السنوية.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "HIGH",
+        proposed_text:
+          "2.1 يدافع المورّد عن العميل ويعوّضه ضد مطالبات الغير التي تدعي التعدي المباشر على براءات الاختراع أو حقوق النشر.",
+        rationale:
+          "[الاستراتيجية التجارية السريعة] اعتماد صياغة التعويض التجارية البديلة لتسهيل التوقيع السريع. | نقطة التفاوض: تغطية قياسية للملكية الفكرية لدعم سرعة الإغلاق.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "MEDIUM",
+        proposed_text:
+          "3.1 يستهدف المورّد توافراً شهرياً بنسبة 99.9% مع أرصدة خدمة متوافقة مع المعايير التجارية السائدة.",
+        rationale:
+          "[الاستراتيجية التجارية السريعة] تطبيق اتفاقية SLA تجارية قياسية للحفاظ على سرعة التفاوض. | نقطة التفاوض: هدف توافر متوازن تجارياً.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "HIGH",
+        proposed_text:
+          "4.1 يمتنع المورّد عن استخدام المعلومات السرية للعميل في تدريب نماذج الذكاء الاصطناعي العامة دون موافقة كتابية مسبقة.",
+        rationale:
+          "[الاستراتيجية التجارية السريعة] معيار تجاري بديل: حظر تدريب النماذج التأسيسية العامة دون إذن. | نقطة التفاوض: حماية عملية للبيانات السرية للعميل.",
+      },
+    ],
+    strict: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "CRITICAL",
+        proposed_text:
+          "1.1 لا تتجاوز المسؤولية التراكمية الإجمالية لكل طرف بموجب هذا العقد رسوم اثني عشر (12) شهراً مدفوعة أو مستحقة، مع تنازل متبادل صارم عن الأضرار التبعية دون أي استثناءات.",
+        rationale:
+          "[استراتيجية الحماية الصارمة] يفرض Playbook دون أي تنازل سقفاً متبادلاً لمدة 12 شهراً وإعفاءً صارماً من الأضرار غير المباشرة والتبعية. | نقطة التفاوض: سياسة شركتنا تلزمنا بسقف 12 شهراً القياسي دون استثناء.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "CRITICAL",
+        proposed_text:
+          "2.1 يدافع المورّد ويعوّض ويبرئ ذمة العميل بشكل غير مشروط ودون حدود عن جميع مطالبات الملكية الفكرية وتسريبات البيانات والإهمال الجسيم.",
+        rationale:
+          "[استراتيجية الحماية الصارمة] لا يمكن للعميل تعويض المورّد منفرداً؛ يجب أن يقدّم المورّد ضماناً كاملاً للملكية الفكرية والبيانات. | نقطة التفاوض: حماية صارمة وغير قابلة للتفاوض ضد مطالبات الغير.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "CRITICAL",
+        proposed_text:
+          "3.1 يضمن المورّد توافراً شهرياً بنسبة 99.99% مع أرصدة بنسبة 20% لكل 0.1% انقطاع وحق إنهاء فوري عند الإخلال المتتالي.",
+        rationale:
+          "[استراتيجية الحماية الصارمة] الاكتفاء ببذل العناية يخالف معايير SLA الصارمة في الشركة. | نقطة التفاوض: التوافر التشغيلي الحرج للمؤسسات غير قابل للتنازل.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "CRITICAL",
+        proposed_text:
+          "4.1 يعالج المورّد بيانات العميل حصراً لتقديم الخدمة ويُحظر عليه حظراً مطلقاً تدريب نماذج الذكاء الاصطناعي أو الاحتفاظ بمعلومات العميل السرية.",
+        rationale:
+          "[استراتيجية الحماية الصارمة] حظر مطلق لتدريب نماذج الذكاء الاصطناعي التأسيسية على معلومات العميل السرية. | نقطة التفاوض: حد صارم لحوكمة البيانات وسيادتها.",
+      },
+    ],
+    balanced: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "CRITICAL",
+        proposed_text:
+          "1.1 لا تتجاوز المسؤولية التراكمية الإجمالية لكل طرف بموجب هذا العقد رسوم اثني عشر (12) شهراً مدفوعة أو مستحقة، مع إعفاء متبادل من الأضرار التبعية.",
+        rationale:
+          "[الاستراتيجية المتوازنة المتبادلة] يفرض Playbook سقف مسؤولية متبادلاً ومتوازناً بمقدار 12 شهراً وإعفاءً متبادلاً من الأضرار غير المباشرة والتبعية. | نقطة التفاوض: سياستنا القياسية تتطلب شروطاً متوازنة لمدة 12 شهراً.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "CRITICAL",
+        proposed_text:
+          "2.1 يدافع المورّد عن العميل ويعوّضه ضد مطالبات الغير الخاصة بالتعدي على الملكية الفكرية والإهمال الجسيم.",
+        rationale:
+          "[الاستراتيجية المتوازنة المتبادلة] لا يمكن للعميل تعويض المورّد بشكل أحادي؛ يُشترط تعويض قياسي لانتهاك الملكية الفكرية. | نقطة التفاوض: بنود التعويض المتبادل القياسية مطلوبة للطرفين.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "HIGH",
+        proposed_text:
+          "3.1 يضمن المورّد توافراً شهرياً بنسبة 99.95% مع أرصدة خدمة بنسبة 10% لكل 0.1% انقطاع وحق الإنهاء عند الفشل المتكرر.",
+        rationale:
+          "[الاستراتيجية المتوازنة المتبادلة] غياب أرصدة الخدمة عند التوقف يخالف معايير SLA لدى الشركة. | نقطة التفاوض: يرجى مواءمة مستوى الخدمة مع الهدف القياسي 99.95%.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "CRITICAL",
+        proposed_text:
+          "4.1 يعالج المورّد بيانات العميل فقط لتقديم الخدمة ويُمنع تماماً من تدريب نماذج الذكاء الاصطناعي على بيانات العميل.",
+        rationale:
+          "[الاستراتيجية المتوازنة المتبادلة] حظر تدريب النماذج التأسيسية على المعلومات السرية للعميل وفق سياسة الخصوصية. | نقطة التفاوض: يمنع استخدام البيانات المملوكة للعميل في تدريب نماذج AI.",
+      },
+    ],
+  },
 };
 
 function buildLocalizedSimulatedRedlines(
@@ -1169,6 +1273,8 @@ export async function refineRedlineSuggestion(
       ? `Propuesta refinada según instrucción: "${validatedPayload.instruction}". El texto equilibra intereses comerciales protegiendo las garantías estándar.`
       : activeLocale === "fr"
       ? `Proposition affinée selon l'instruction : « ${validatedPayload.instruction} ». La formulation équilibre les intérêts commerciaux tout en préservant nos protections standards.`
+      : activeLocale === "ar"
+      ? `تم تنقيح المقترح وفق التوجيه: «${validatedPayload.instruction}». توازن الصياغة المصالح التجارية مع الحفاظ التام على الضمانات القياسية.`
       : `Refined per instruction: "${validatedPayload.instruction}". Proposed language balances commercial interests while safeguarding standard protections.`;
 
   // Search across localStorage workspaces or DEMO_WORKSPACE_DATA
@@ -1232,6 +1338,8 @@ export async function refineRedlineSuggestion(
         ? `Hemos ajustado nuestra propuesta para limitar la responsabilidad acumulada a ${formattedCap}, fijando un tope claro y predecible para ambas partes.`
         : activeLocale === "fr"
         ? `Nous avons ajusté notre proposition pour plafonner la responsabilité cumulée à ${formattedCap}, offrant un plafond clair et prévisible aux deux parties.`
+        : activeLocale === "ar"
+        ? `عدّلنا مقترحنا لتحديد سقف المسؤولية التراكمية عند ${formattedCap}، ما يضع حداً واضحاً وقابلاً للتوقع لكلا الطرفين.`
         : `We have revised our proposal to cap aggregate liability at ${formattedCap}, establishing a clear, predictable ceiling for both parties.`;
   }
 
@@ -1251,6 +1359,8 @@ export async function refineRedlineSuggestion(
         ? `Se añadió un plazo estándar de notificación y subsanación de ${cureStr} para evitar rescisiones inmediatas por retrasos operativos.`
         : activeLocale === "fr"
         ? `Ajout d'un préavis écrit et d'un délai de remédiation de ${cureStr} afin d'éviter toute résiliation immédiate pour retard administratif.`
+        : activeLocale === "ar"
+        ? `أُضيفت حماية قياسية للإشعار والمعالجة مدتها ${cureStr} لمنع الإنهاء الفوري بسبب أي تأخير إداري عارض.`
         : `Added standard ${cureStr} notice and cure protection so administrative delays do not trigger immediate termination.`;
   }
 
@@ -1258,7 +1368,8 @@ export async function refineRedlineSuggestion(
   if (
     instructionLower.includes("mutual") ||
     instructionLower.includes("bilateral") ||
-    instructionLower.includes("reciprocal")
+    instructionLower.includes("reciprocal") ||
+    instructionLower.includes("متبادل")
   ) {
     updatedText = updatedText
       .replace(/\bCustomer shall\b/gi, "Each party shall")
@@ -1269,6 +1380,8 @@ export async function refineRedlineSuggestion(
         ? "Proponemos hacer estas obligaciones bilaterales y recíprocas para que ambas organizaciones compartan garantías equivalentes."
         : activeLocale === "fr"
         ? "Nous proposons de rendre ces engagements bilatéraux et réciproques afin que chaque organisation bénéficie de protections équivalentes."
+        : activeLocale === "ar"
+        ? "نقترح جعل هذه الالتزامات ثنائية ومتبادلة بحيث تتمتع كلتا المؤسستين بضمانات متكافئة وعادلة."
         : "We propose making these covenants bilateral and mutual so both organizations share equivalent protections.";
   }
 
@@ -1276,7 +1389,8 @@ export async function refineRedlineSuggestion(
   if (
     instructionLower.includes("soften") ||
     instructionLower.includes("partner") ||
-    instructionLower.includes("friendly")
+    instructionLower.includes("friendly") ||
+    instructionLower.includes("تليين")
   ) {
     updatedText = updatedText.replace(
       /strictly prohibited/gi,
@@ -1287,6 +1401,8 @@ export async function refineRedlineSuggestion(
         ? "Adoptamos una redacción colaborativa y orientada a socios manteniendo nuestra línea base de cumplimiento."
         : activeLocale === "fr"
         ? "Formulation plus collaborative et orientée partenariat tout en maintenant notre socle de conformité."
+        : activeLocale === "ar"
+        ? "اعتمدنا صياغة تعاونية داعمة للشراكة الاستراتيجية مع الحفاظ التام على متطلبات الامتثال الأساسية."
         : "Adopted a collaborative, partnership-friendly phrasing while upholding our core compliance baseline.";
   }
 
@@ -1295,6 +1411,8 @@ export async function refineRedlineSuggestion(
       ? `[Copiloto IA Refinado: "${validatedPayload.instruction}"] Redacción actualizada según indicación del revisor.`
       : activeLocale === "fr"
       ? `[Copilote IA Affiné : "${validatedPayload.instruction}"] Formulation mise à jour selon la directive du réviseur.`
+      : activeLocale === "ar"
+      ? `[مُنقّح بالمساعد الذكي: «${validatedPayload.instruction}»] حُدّثت الصياغة بناءً على توجيه المراجع.`
       : `[AI Copilot Refined: "${validatedPayload.instruction}"] Updated wording per prompt instruction.`;
 
   const localizedCriticNotes =
@@ -1302,6 +1420,8 @@ export async function refineRedlineSuggestion(
       ? "Critic Guard: Alineado al Playbook • 0 frases prohibidas • Obligaciones preservadas tras el refinamiento del Copiloto (Confianza: 96%)."
       : activeLocale === "fr"
       ? "Critic Guard : Conforme au Playbook • 0 terme interdit • Obligations préservées après affinement par le Copilote (Confiance : 96 %)."
+      : activeLocale === "ar"
+      ? "حارس الدقة (Critic Guard): متوافق مع Playbook • صفر عبارات مرفوضة • الالتزامات محفوظة بعد تنقيح المساعد الذكي (الثقة: 96%)."
       : "Critic Guard: Playbook policy aligned • 0 banned triggers • Obligations preserved after Copilot refinement (Confidence: 96%).";
 
   const refinedSuggestion: RedlineSuggestionDTO = {
@@ -1496,11 +1616,21 @@ export async function verifyRedlineSuggestion(
       ? "VERIFIED"
       : "NEEDS_HUMAN_REVIEW";
 
-  const criticNotes = autoCorrected
-    ? `Critic Auto-Refined: ${repairs.join("; ")} • Playbook policy aligned (Confidence: ${confidenceScore}%).`
-    : `Critic Guard: Playbook policy aligned • 0 banned triggers • ${
-        prefixLabel ? `Section numbering ${prefixLabel} preserved` : "Obligations preserved"
-      } (Confidence: ${confidenceScore}%).`;
+  const activeLocale = getActiveLocale();
+  const criticNotes =
+    activeLocale === "ar"
+      ? autoCorrected
+        ? `حارس الدقة (مُحسَّن تلقائياً): تم الإصلاح التلقائي • متوافق مع سياسة Playbook (الثقة: ${confidenceScore}%).`
+        : `حارس الدقة (Critic Guard): متوافق مع سياسة Playbook • صفر عبارات محظورة • ${
+            prefixLabel
+              ? `ترقيم القسم ${prefixLabel} محفوظ`
+              : "الالتزامات محفوظة بدقة"
+          } (الثقة: ${confidenceScore}%).`
+      : autoCorrected
+      ? `Critic Auto-Refined: ${repairs.join("; ")} • Playbook policy aligned (Confidence: ${confidenceScore}%).`
+      : `Critic Guard: Playbook policy aligned • 0 banned triggers • ${
+          prefixLabel ? `Section numbering ${prefixLabel} preserved` : "Obligations preserved"
+        } (Confidence: ${confidenceScore}%).`;
 
   const updatedSuggestion: RedlineSuggestionDTO = {
     ...matchedSuggestion,
@@ -1752,6 +1882,14 @@ export async function simulateCounterpartyPushback(
       "Notre proposition remplace une exposition asymétrique par des engagements réciproques conformes aux standards du marché.";
     fallbackBody =
       "La responsabilité cumulée globale de chaque partie n'excédera pas deux fois (2x) les redevances annuelles pour la violation de données ou la PI, et douze (12) mois de redevances pour les dommages directs généraux.";
+  } else if (activeLocale === "ar") {
+    counterpartyPersona = "كبير المستشارين القانونيين والتجاريين للطرف الآخر";
+    expectedObjection =
+      "سيجادل مستشار الطرف الآخر بأن التعديل المقترح يغيّر التوزيع التجاري القياسي للمخاطر في العقد.";
+    rebuttalTalkingPoint =
+      "يستبدل مقترحنا الالتزامات أحادية الجانب بشروط ثنائية متوازنة ومتوافقة تماماً مع معايير السوق المؤسسية.";
+    fallbackBody =
+      "لا تتجاوز المسؤولية التراكمية الإجمالية لكل طرف ضعفي (2x) الرسوم السنوية لخروقات أمن البيانات أو الملكية الفكرية، واثني عشر (12) شهراً من الرسوم للأضرار المباشرة العامة.";
   }
 
   const origPrefixMatch = matchedClause?.original_text.match(
@@ -2353,6 +2491,9 @@ const OFFLINE_EXTRACTOR_PROFILES: OfflinePlaybookTemplate[] = [
       "datos del cliente",
       "modelos fundacionales",
       "modèles d'ia",
+      "الذكاء الاصطناعي",
+      "بيانات العميل",
+      "السرية",
     ],
     standard_position:
       "Vendor shall never use Customer Data to train public AI/foundation models, shall adhere to GDPR/CCPA DPA safeguards, and shall provide 24-hour confirmed incident notice.",
@@ -2377,6 +2518,9 @@ const OFFLINE_EXTRACTOR_PROFILES: OfflinePlaybookTemplate[] = [
       "responsabilité",
       "daños indirectos",
       "dommages indirects",
+      "تحديد المسؤولية",
+      "المسؤولية التراكمية",
+      "الأضرار غير المباشرة",
     ],
     standard_position:
       "Mutual aggregate liability cap equal to 12 months of fees (or approved floor), excluding indirect/consequential damages except for IP indemnity and confidentiality breaches.",
@@ -2401,6 +2545,9 @@ const OFFLINE_EXTRACTOR_PROFILES: OfflinePlaybookTemplate[] = [
       "disponibilité",
       "nivel de servicio",
       "niveau de service",
+      "مستوى الخدمة",
+      "التوافر",
+      "أرصدة خدمة",
     ],
     standard_position:
       "Minimum 99.9% monthly production availability backed by tiered SLA service credits and chronic failure termination rights.",
@@ -2447,6 +2594,9 @@ const OFFLINE_EXTRACTOR_PROFILES: OfflinePlaybookTemplate[] = [
       "résiliation",
       "subsanación",
       "remédiation",
+      "الإنهاء",
+      "مهلة معالجة",
+      "إشعار كتابي",
     ],
     standard_position:
       "Termination for material breach requires 30 days prior written notice and cure period, with pro-rata refund of prepaid unused fees.",
@@ -2468,6 +2618,7 @@ const OFFLINE_EXTRACTOR_PROFILES: OfflinePlaybookTemplate[] = [
       "work made for hire",
       "propiedad intelectual",
       "propriété intellectuelle",
+      "الملكية الفكرية",
     ],
     standard_position:
       "Customer retains sole ownership of pre-existing Background IP, Customer Data, and paid bespoke deliverables.",

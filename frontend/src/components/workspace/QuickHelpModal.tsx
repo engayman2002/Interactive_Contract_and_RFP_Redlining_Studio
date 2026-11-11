@@ -88,7 +88,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
             className="inline-flex h-7 items-center gap-1 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3 text-[11px] font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600"
           >
             <span>{t.quickHelp.tutorialCtaBtn}</span>
-            <ArrowRight className="h-3 w-3" />
+            <ArrowRight className="h-3 w-3 rtl:rotate-180" />
           </Link>
         </div>
 
@@ -740,7 +740,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
             className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
           >
             <span>{bodyCopy.footer.openFullGuide}</span>
-            <ArrowRight className="h-3.5 w-3.5" />
+            <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
           </Link>
           <button
             type="button"

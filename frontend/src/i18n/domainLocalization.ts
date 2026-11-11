@@ -43,6 +43,13 @@ export function localizeRiskLabel(
       LOW: "FAIBLE",
       COMPLIANT: "CONFORME",
     },
+    ar: {
+      CRITICAL: "حرج",
+      HIGH: "مرتفع",
+      MEDIUM: "متوسط",
+      LOW: "منخفض",
+      COMPLIANT: "متوافق",
+    },
   };
   return map[locale][risk] ?? risk;
 }
@@ -72,6 +79,12 @@ export function localizeSuggestionStatus(
       ACCEPTED: "ACCEPTÉ",
       MODIFIED: "MODIFIÉ",
       REJECTED: "REJETÉ",
+    },
+    ar: {
+      PENDING: "قيد المراجعة",
+      ACCEPTED: "مقبول",
+      MODIFIED: "معدّل",
+      REJECTED: "مرفوض",
     },
   };
   return map[locale][status] ?? status;
@@ -103,6 +116,12 @@ export function localizePushbackSeverityBadge(
       HIGH: "OBJECTION ÉLEVÉE",
       DEALBREAKER: "OBJECTION BLOQUANTE",
     },
+    ar: {
+      LOW: "اعتراض منخفض",
+      MODERATE: "اعتراض متوسط",
+      HIGH: "اعتراض مرتفع",
+      DEALBREAKER: "اعتراض جوهري حاسم",
+    },
   };
   return map[locale][severity] ?? `${severity}`;
 }
@@ -120,6 +139,14 @@ export function localizeDocumentStatus(
     if (upper === "READY") return "LISTO";
     if (upper === "INGESTED") return "INGESTIONADO";
     if (upper === "PROCESSING") return "PROCESANDO";
+    return status;
+  }
+  if (locale === "ar") {
+    if (upper === "ANALYZED") return "تم التحليل";
+    if (upper === "READY") return "جاهز";
+    if (upper === "INGESTED") return "تم الاستيعاب";
+    if (upper === "UPLOADED") return "تم الرفع";
+    if (upper === "PROCESSING") return "قيد المعالجة";
     return status;
   }
   if (upper === "ANALYZED") return "ANALYSÉ";
@@ -152,6 +179,11 @@ export function localizeNegotiationStance(
       balanced: "Équilibré",
       commercial: "Commercial",
     },
+    ar: {
+      strict: "صارم",
+      balanced: "متوازن",
+      commercial: "تجاري",
+    },
   };
   return map[locale][stance] ?? stance;
 }
@@ -163,22 +195,26 @@ export function localizeDemoDocumentTitle(
   if (locale === "en") {
     return title;
   }
-  const exactMap: Record<string, Record<"es" | "fr", string>> = {
+  const exactMap: Record<string, Record<"es" | "fr" | "ar", string>> = {
     "Master Cloud Infrastructure & Enterprise AI Services Agreement": {
       es: "Contrato Marco de Infraestructura Cloud y Servicios de IA Empresarial",
       fr: "Contrat-Cadre d'Infrastructure Cloud et de Services d'IA d'Entreprise",
+      ar: "الاتفاقية الإطارية للبنية السحابية وخدمات الذكاء الاصطناعي للمؤسسات",
     },
     "Master Commercial Agreement — Review Copy": {
       es: "Contrato Marco Comercial — Copia de Revisión",
       fr: "Contrat-Cadre Commercial — Copie de Révision",
+      ar: "الاتفاقية التجارية الإطارية — نسخة المراجعة",
     },
     "SaaS Enterprise Subscription Agreement (v2)": {
       es: "Contrato de Suscripción Empresarial SaaS (v2)",
       fr: "Contrat d'Abonnement SaaS Entreprise (v2)",
+      ar: "اتفاقية اشتراك SaaS للمؤسسات (v2)",
     },
     "Enterprise RFP Compliance Addendum": {
       es: "Anexo de Cumplimiento para Licitación Empresarial (RFP)",
       fr: "Addendum de Conformité Appel d'Offres Entreprise (RFP)",
+      ar: "ملحق الامتثال لكراسة الشروط والمناقصات المؤسسية (RFP)",
     },
   };
   return exactMap[title]?.[locale] ?? title;
@@ -191,7 +227,7 @@ interface LocalizedClauseContent {
 
 const DEMO_CLAUSE_TRANSLATIONS: Record<
   string,
-  Record<"es" | "fr", LocalizedClauseContent>
+  Record<"es" | "fr" | "ar", LocalizedClauseContent>
 > = {
   "c0000000-0000-4000-8000-000000000101": {
     es: {
@@ -203,6 +239,11 @@ const DEMO_CLAUSE_TRANSLATIONS: Record<
       heading: "1. Limitation de Responsabilité",
       originalText:
         "En aucun cas la responsabilité cumulée totale du Fournisseur au titre du présent Contrat n'excédera cinq cents dollars (500 $), y compris en cas de violation de confidentialité ou de propriété intellectuelle. Le Client supporte l'intégralité des dommages indirects, accessoires et consécutifs liés aux interruptions de service.",
+    },
+    ar: {
+      heading: "1. تحديد المسؤولية التعاقدية",
+      originalText:
+        "لا تتجاوز المسؤولية التراكمية الإجمالية للمورّد بموجب هذا العقد بأي حال من الأحوال خمسمائة دولار ($500)، بما في ذلك الإخلال بالسرية أو حقوق الملكية الفكرية. ويتحمل العميل كافة الأضرار غير المباشرة والعرضية والتبعية الناتجة عن انقطاع الخدمة.",
     },
   },
   "c0000000-0000-4000-8000-000000000102": {
@@ -216,6 +257,11 @@ const DEMO_CLAUSE_TRANSLATIONS: Record<
       originalText:
         "Le Client défendra, indemnisera et dégagera de toute responsabilité le Fournisseur contre toute réclamation, perte et dépense de tiers découlant de l'utilisation de la Plateforme par le Client ou de réclamations causées par la négligence grave du Fournisseur.",
     },
+    ar: {
+      heading: "2. التعويض",
+      originalText:
+        "يدافع العميل عن المورّد ويعوّضه ويبرئ ذمته من كافة مطالبات وخسائر ونفقات الغير الناشئة عن استخدام العميل للمنصة أو عن مطالبات ناجمة عن الإهمال الجسيم من جانب المورّد نفسه.",
+    },
   },
   "c0000000-0000-4000-8000-000000000103": {
     es: {
@@ -227,6 +273,11 @@ const DEMO_CLAUSE_TRANSLATIONS: Record<
       heading: "3. Accord de Niveau de Service (SLA)",
       originalText:
         "Le Fournisseur déploiera des efforts commercialement raisonnables pour maintenir une disponibilité mensuelle de 95,0 % de la plateforme. Les crédits de service restent à la seule discrétion du Fournisseur sans droit de résiliation pour manquements chroniques au SLA.",
+    },
+    ar: {
+      heading: "3. اتفاقية مستوى الخدمة (SLA)",
+      originalText:
+        "يبذل المورّد جهوداً معقولة تجارياً للحفاظ على توافر شهري للمنصة بنسبة 95.0%. وتخضع أرصدة الخدمة للتقدير المطلق للمورّد دون أي حق في الإنهاء المبكر عند الإخلال المتكرر بمستوى الخدمة.",
     },
   },
   "c0000000-0000-4000-8000-000000000104": {
@@ -240,6 +291,11 @@ const DEMO_CLAUSE_TRANSLATIONS: Record<
       originalText:
         "Le Fournisseur peut conserver une licence perpétuelle et irrévocable d'utiliser l'ensemble des Données Client et Informations Confidentielles importées afin d'entraîner des modèles de fondation d'IA publics et tiers.",
     },
+    ar: {
+      heading: "4. خصوصية البيانات وتدريب نماذج الذكاء الاصطناعي",
+      originalText:
+        "يجوز للمورّد الاحتفاظ بترخيص دائم وغير قابل للإلغاء لاستخدام كافة بيانات العميل والمعلومات السرية المرفوعة لأغراض تدريب نماذج الذكاء الاصطناعي العامة ونماذج الأطراف الثالثة.",
+    },
   },
   "c0000000-0000-4000-8000-000000000105": {
     es: {
@@ -251,6 +307,11 @@ const DEMO_CLAUSE_TRANSLATIONS: Record<
       heading: "5. Conditions de Paiement et de Facturation",
       originalText:
         "Toutes les factures sont exigibles et payables sous sept (7) jours à compter de leur émission sans droit de contestation. Le Fournisseur peut suspendre immédiatement les services de production sans préavis en cas de retard de paiement.",
+    },
+    ar: {
+      heading: "5. شروط الدفع والفوترة",
+      originalText:
+        "تستحق جميع الفواتير وتُدفع خلال سبعة (7) أيام من تاريخ إصدارها دون حق في الاعتراض. ويحق للمورّد تعليق خدمات الإنتاج فوراً ودون إشعار مسبق عند أي تأخر في السداد.",
     },
   },
   "c0000000-0000-4000-8000-000000000106": {
@@ -264,6 +325,11 @@ const DEMO_CLAUSE_TRANSLATIONS: Record<
       originalText:
         "Le présent Contrat est régi par les lois de l'État du Delaware, sans égard aux principes de conflit de lois. Chaque partie se conformera strictement aux réglementations applicables en matière de lutte contre la corruption et de contrôle des exportations.",
     },
+    ar: {
+      heading: "6. القانون الحاكم والامتثال",
+      originalText:
+        "يخضع هذا العقد ويفسّر وفق قوانين ولاية ديلاوير دون إعمال لقواعد تنازع القوانين. ويلتزم الطرفان التزاماً كاملاً بجميع قوانين مكافحة الفساد وضوابط التصدير المعمول بها.",
+    },
   },
 };
 
@@ -275,7 +341,7 @@ interface LocalizedRedlineContent {
 
 const DEMO_REDLINE_TRANSLATIONS: Record<
   string,
-  Record<"es" | "fr", LocalizedRedlineContent>
+  Record<"es" | "fr" | "ar", LocalizedRedlineContent>
 > = {
   "r0000000-0000-4000-8000-000000000201": {
     es: {
@@ -293,6 +359,14 @@ const DEMO_REDLINE_TRANSLATIONS: Record<
         "Un plafond unilatéral de 500 $ transfère un risque financier catastrophique au Client et enfreint directement le Playbook de l'entreprise. | Argumentaire : Les contrats SaaS d'entreprise exigent une parité mutuelle plafonnée à 12 mois de redevances avec exclusions réciproques des dommages consécutifs.",
       criticNotes:
         "Critic Guard : Alignement vérifié avec le Playbook (plafond mutuel 12 mois). Aucune hallucination détectée et préservation complète des obligations.",
+    },
+    ar: {
+      proposedText:
+        "باستثناء الإخلال بالتزامات السرية أو تعويضات الملكية الفكرية، لا تتجاوز المسؤولية التراكمية الإجمالية لأي من الطرفين بموجب هذا العقد إجمالي الرسوم المدفوعة أو المستحقة من العميل خلال الاثني عشر (12) شهراً السابقة مباشرة للمطالبة، ولا يتحمل أي طرف أي أضرار غير مباشرة أو عرضية أو خاصة أو تبعية.",
+      rationale:
+        "ينقل سقف المسؤولية الأحادي البالغ $500 مخاطرة مالية كارثية على العميل ويخالف سياسة Playbook الشركة مباشرة. | نقطة التفاوض: تتطلب عقود SaaS المؤسسية تكافؤاً متبادلاً بمقدار رسوم 12 شهراً مع إعفاء متبادل من الأضرار التبعية.",
+      criticNotes:
+        "حارس الدقة (Critic Guard): متوافق تماماً مع سياسة Playbook (سقف متبادل 12 شهراً). خالٍ من الهلوسة مع حفظ الإعفاء المتبادل من الأضرار التبعية.",
     },
   },
   "r0000000-0000-4000-8000-000000000202": {
@@ -312,6 +386,14 @@ const DEMO_REDLINE_TRANSLATIONS: Record<
       criticNotes:
         "Critic Guard : Clause réalignée sur une indemnisation mutuelle fondée sur la faute et la PI selon le Playbook.",
     },
+    ar: {
+      proposedText:
+        "يدافع كل طرف عن الطرف الآخر ويعوّضه ويبرئ ذمته من مطالبات الغير الناشئة عن التعدي على حقوق الملكية الفكرية أو الإهمال الجسيم المنسوب إلى الطرف المعوِّض، شريطة الإخطار الكتابي الفوري ومنح السيطرة المعقولة على الدفاع.",
+      rationale:
+        "لا يجوز أن يعوّض العميل المورّد عن الإهمال الجسيم الصادر عن المورّد نفسه. | نقطة التفاوض: يجب أن يكون التعويض متبادلاً ومتناسباً بدقة مع الخطأ المنسوب لكل طرف وحقوق الملكية الفكرية.",
+      criticNotes:
+        "حارس الدقة (Critic Guard): تم مواءمة البند إلى تعويض متبادل قائم على الخطأ والملكية الفكرية وفق سياسة الشركة.",
+    },
   },
   "r0000000-0000-4000-8000-000000000203": {
     es: {
@@ -329,6 +411,14 @@ const DEMO_REDLINE_TRANSLATIONS: Record<
         "Un SLA de 95,0 % autorise plus de 36 heures d'interruption mensuelle sans aucune garantie contraignante. | Argumentaire : Les environnements de production exigent un engagement de 99,9 % avec crédits automatiques et clause de sortie en cas d'échecs répétés.",
       criticNotes:
         "Critic Guard : Seuil de disponibilité 99,9 %, crédits progressifs et clause de résiliation validés selon le Playbook.",
+    },
+    ar: {
+      proposedText:
+        "يضمن المورّد حداً أدنى للتوافر الشهري بنسبة 99.9% في بيئة الإنتاج (باستثناء الصيانة المجدولة بإشعار مسبق 48 ساعة). وإذا انخفض التوافر عن 99.9%، يستحق العميل أرصدة خدمة متدرجة تصل إلى 25% من الرسوم الشهرية، مع حق الإنهاء بعد ثلاثة (3) أشهر متتالية من الإخلال.",
+      rationale:
+        "نسبة توافر 95.0% تسمح بأكثر من 36 ساعة توقف شهرياً دون أي تعويض تعاقدي. | نقطة التفاوض: تتطلب بيئات الإنتاج التزاماً تعاقدياً بنسبة 99.9% مع أرصدة تلقائية وحق الإنهاء عند الفشل المتكرر.",
+      criticNotes:
+        "حارس الدقة (Critic Guard): تم التحقق من ضمان SLA بنسبة 99.9% وآلية الأرصدة والإنهاء وفق سياسة Playbook دون أي هلوسة.",
     },
   },
   "r0000000-0000-4000-8000-000000000204": {
@@ -348,6 +438,14 @@ const DEMO_REDLINE_TRANSLATIONS: Record<
       criticNotes:
         "Critic Guard : Interdiction d'entraînement IA tiers et obligation de notification sous 24 heures entièrement validées.",
     },
+    ar: {
+      proposedText:
+        "يحتفظ العميل بالملكية الحصرية لكافة بيانات العميل. ويلتزم المورّد بتطبيق ضوابط حماية البيانات وفق RGPD/GDPR و CCPA، ويُحظر عليه نهائياً استخدام بيانات العميل أو معلوماته السرية لتدريب نماذج ذكاء اصطناعي عامة أو خاصة بأطراف ثالثة، مع الإخطار بأي خرق أمني مؤكد خلال 24 ساعة بحد أقصى.",
+      rationale:
+        "منح ترخيص دائم لتدريب نماذج الذكاء الاصطناعي العامة يعرّض الملكية الفكرية السرية للعميل للخطر وينتهك سياسات الحوكمة. | نقطة التفاوض: يجب عزل بيانات العميل السرية تماماً ومنع استخدامها في تدريب أي نماذج مشتركة.",
+      criticNotes:
+        "حارس الدقة (Critic Guard): تم التحقق من الحظر المطلق لتدريب النماذج العامة والتزام الإخطار خلال 24 ساعة بدقة تامة.",
+    },
   },
   "r0000000-0000-4000-8000-000000000205": {
     es: {
@@ -366,6 +464,14 @@ const DEMO_REDLINE_TRANSLATIONS: Record<
       criticNotes:
         "Critic Guard : Conditions Net 30 et préavis de remédiation de 30 jours validés sans divergence numérique.",
     },
+    ar: {
+      proposedText:
+        "تستحق الفواتير غير المتنازع عليها خلال ثلاثين (30) يوماً صافياً من استلامها الصحيح. ويحق للعميل حجب المبالغ محل النزاع بحسن نية لحين تسويتها، كما يلتزم المورّد بمنح إشعار كتابي مسبق ومهلة معالجة لا تقل عن ثلاثين (30) يوماً قبل تعليق أي خدمة.",
+      rationale:
+        "شرط السداد خلال 7 أيام دون حق الاعتراض ومع التعليق الفوري يعرض استمرارية الأعمال لمخاطر تشغيلية جسيمة. | نقطة التفاوض: تتطلب السياسة المالية السداد خلال Net 30 وحق المنازعة بحسن نية ومهلة 30 يوماً للمعالجة.",
+      criticNotes:
+        "حارس الدقة (Critic Guard): شروط السداد Net 30 وحماية مهلة المعالجة 30 يوماً متوافقة مع السياسة المالية دون حذف أي رقم.",
+    },
   },
 };
 
@@ -373,46 +479,55 @@ const HEADING_KEYWORD_TRANSLATIONS: Array<{
   match: RegExp;
   es: string;
   fr: string;
+  ar: string;
 }> = [
   {
     match: /Limitation of Liability/i,
     es: "Limitación de Responsabilidad",
     fr: "Limitation de Responsabilité",
+    ar: "تحديد المسؤولية التعاقدية",
   },
   {
     match: /Indemnification/i,
     es: "Indemnización",
     fr: "Indemnisation",
+    ar: "التعويض",
   },
   {
     match: /Service Level Agreement\s*\(SLA\)/i,
     es: "Acuerdo de Nivel de Servicio (SLA)",
     fr: "Accord de Niveau de Service (SLA)",
+    ar: "اتفاقية مستوى الخدمة (SLA)",
   },
   {
     match: /Data Privacy\s*&\s*AI Model Training/i,
     es: "Privacidad de Datos y Entrenamiento de IA",
     fr: "Confidentialité des Données et Entraînement d'IA",
+    ar: "خصوصية البيانات وتدريب نماذج الذكاء الاصطناعي",
   },
   {
     match: /Payment\s*&\s*Invoicing Terms/i,
     es: "Condiciones de Pago y Facturación",
     fr: "Conditions de Paiement et de Facturation",
+    ar: "شروط الدفع والفوترة",
   },
   {
     match: /Governing Law\s*&\s*Compliance/i,
     es: "Legislación Aplicable y Cumplimiento",
     fr: "Droit Applicable et Conformité",
+    ar: "القانون الحاكم والامتثال",
   },
   {
     match: /Governing Law\s*&\s*Dispute Resolution/i,
     es: "Legislación Aplicable y Resolución de Disputas",
     fr: "Droit Applicable et Règlement des Litiges",
+    ar: "القانون الحاكم وتسوية النزاعات",
   },
   {
     match: /Term\s*(?:&|and)\s*Termination/i,
     es: "Vigencia y Rescisión",
     fr: "Durée et Résiliation",
+    ar: "المدة والإنهاء",
   },
 ];
 
@@ -471,7 +586,7 @@ export function localizeClauseForDisplay(
 
 function translateGenericRedlineStrings(
   text: string,
-  locale: "es" | "fr"
+  locale: "es" | "fr" | "ar"
 ): string {
   let out = text;
   if (locale === "es") {
@@ -482,6 +597,14 @@ function translateGenericRedlineStrings(
       .replace(/\s*\|\s*Talking Point:\s*/g, " | Argumento: ")
       .replace(/\[Auto-Refined by Critic\]/g, "[Refinado Automáticamente por Critic]")
       .replace(/\[Copilot AI Refined\]/g, "[Refinado con Copiloto IA]");
+  } else if (locale === "ar") {
+    out = out
+      .replace(/\[Strict Protective Stance\]/g, "[استراتيجية الحماية الصارمة]")
+      .replace(/\[Balanced Mutual Stance\]/g, "[الاستراتيجية المتوازنة المتبادلة]")
+      .replace(/\[Commercial Fast-Close Stance\]/g, "[الاستراتيجية التجارية السريعة]")
+      .replace(/\s*\|\s*Talking Point:\s*/g, " | نقطة التفاوض: ")
+      .replace(/\[Auto-Refined by Critic\]/g, "[مُحسَّن تلقائياً بحارس الدقة]")
+      .replace(/\[Copilot AI Refined\]/g, "[مُنقّح بالمساعد الذكي]");
   } else {
     out = out
       .replace(/\[Strict Protective Stance\]/g, "[Posture Protectrice Stricte]")
@@ -508,6 +631,9 @@ export function localizeCriticNotesText(
     raw ===
     "Verified by Critic Agent against Playbook policy and hallucination guard."
   ) {
+    if (locale === "ar") {
+      return "تم التحقق بواسطة حارس الدقة وفق سياسة Playbook وحماية منع الهلوسة.";
+    }
     return locale === "es"
       ? "Verificado por Critic Agent frente a la política del Playbook y el guardia anti-alucinaciones."
       : "Vérifié par l'Agent Critic au regard du Playbook et du garde-fou anti-hallucinations.";
@@ -521,6 +647,17 @@ export function localizeCriticNotesText(
       .replace(
         /no hallucinations detected/gi,
         "sin alucinaciones detectadas"
+      );
+  }
+  if (locale === "ar") {
+    return raw
+      .replace(
+        /^Critic Guard:\s*Playbook policy aligned\b/i,
+        "حارس الدقة (Critic Guard): متوافق مع سياسة Playbook"
+      )
+      .replace(
+        /no hallucinations detected/gi,
+        "دون رصد أي هلوسة"
       );
   }
   return raw
@@ -546,6 +683,9 @@ export function localizeRedlineSuggestionForDisplay(
     locale === "es"
       ? suggestion.rationale.includes("[Postura ") ||
         suggestion.rationale.includes("Argumento:")
+      : locale === "ar"
+      ? suggestion.rationale.includes("[الاستراتيجية") ||
+        suggestion.rationale.includes("نقطة التفاوض:")
       : suggestion.rationale.includes("[Posture ") ||
         suggestion.rationale.includes("Argumentaire :");
 
@@ -589,6 +729,11 @@ export function localizeCrossClauseIssueType(
     if (issueType === "BROKEN_REFERENCE") return "Referencia Rota";
     return "Término Sin Definir";
   }
+  if (locale === "ar") {
+    if (issueType === "CONTRADICTION") return "تناقض تعاقدي";
+    if (issueType === "BROKEN_REFERENCE") return "إحالة معطلة";
+    return "مصطلح غير معرّف";
+  }
   if (issueType === "CONTRADICTION") return "Contradiction";
   if (issueType === "BROKEN_REFERENCE") return "Renvoi Cassé";
   return "Terme Non Défini";
@@ -604,6 +749,16 @@ export function localizeCrossClauseFindingForDisplay(
 
   const id = finding.id;
   if (id.includes("liability")) {
+    if (locale === "ar") {
+      return {
+        ...finding,
+        title: "تناقض متقاطع بين تحديد المسؤولية والتعويض",
+        description:
+          "يفرض بند تحديد المسؤولية سقفاً صارماً ($500) بينما يفرض بند التعويض التزامات واسعة أو غير مقيدة دون استثناء صريح في بند السقف.",
+        recommended_fix:
+          "وحّد البندين عبر تحديد التزامات التعويض المستثناة من السقف العام أو إخضاعها لسقف أعلى متبادل (مثل 2× الرسوم السنوية).",
+      };
+    }
     return locale === "es"
       ? {
           ...finding,
@@ -629,6 +784,14 @@ export function localizeCrossClauseFindingForDisplay(
     const netMatches = finding.title.match(/Net\s+(\d+)\s+vs\.\s+Net\s+(\d+)/i);
     const d1 = netMatches?.[1] ?? "7";
     const d2 = netMatches?.[2] ?? "30";
+    if (locale === "ar") {
+      return {
+        ...finding,
+        title: `مواعيد سداد متعارضة (صافي ${d1} يوماً مقابل صافي ${d2} يوماً)`,
+        description: `تحدد البنود نوافذ فوترة غير متسقة (صافي ${d1} يوماً في قسم مقابل صافي ${d2} يوماً في قسم آخر)، مما يسبب نزاعات تشغيلية في المدفوعات.`,
+        recommended_fix: `وحّد جميع مواعيد السداد في العقد إلى صافي ${Math.max(Number(d1), Number(d2))} يوماً مع مهلة إشعار موحدة.`,
+      };
+    }
     return locale === "es"
       ? {
           ...finding,
@@ -645,6 +808,16 @@ export function localizeCrossClauseFindingForDisplay(
   }
 
   if (id.includes("cure")) {
+    if (locale === "ar") {
+      return {
+        ...finding,
+        title: "تناقض في حقوق الإنهاء ومهلة المعالجة",
+        description:
+          "يجيز أحد البنود التعليق أو الإنهاء الفوري دون إشعار، في تعارض مباشر مع البند الذي يكفل إشعاراً كتابياً ومهلة معالجة مدتها 30 يوماً.",
+        recommended_fix:
+          "قيّد أي حق في التعليق بانتهاء الإشعار الكتابي المسبق ومهلة المعالجة البالغة 30 يوماً.",
+      };
+    }
     return locale === "es"
       ? {
           ...finding,
@@ -665,6 +838,16 @@ export function localizeCrossClauseFindingForDisplay(
   }
 
   if (id.includes("ai-train")) {
+    if (locale === "ar") {
+      return {
+        ...finding,
+        title: "تناقض بين بيانات العميل وتدريب نماذج الذكاء الاصطناعي",
+        description:
+          "يمنح بند البيانات ترخيصاً لتدريب نماذج الذكاء الاصطناعي العامة، مما يتعارض مع التزامات السرية وامتثال RGPD/GDPR و CCPA.",
+        recommended_fix:
+          "احظر صراحةً تدريب أي نماذج ذكاء اصطناعي على بيانات العميل واقصر القياسات التشغيلية على الإحصاءات المجهّلة لأغراض الأمان.",
+      };
+    }
     return locale === "es"
       ? {
           ...finding,
@@ -687,6 +870,14 @@ export function localizeCrossClauseFindingForDisplay(
   const brokenRefMatch = finding.title.match(/Section\s+([0-9.]+)/i);
   if (finding.issue_type === "BROKEN_REFERENCE" && brokenRefMatch) {
     const sec = brokenRefMatch[1];
+    if (locale === "ar") {
+      return {
+        ...finding,
+        title: `إحالة معطلة إلى القسم ${sec}`,
+        description: `يشير هذا البند إلى القسم ${sec}، لكن لا يوجد أي بند مرقّم برقم ${sec} داخل العقد الخاضع للتحليل.`,
+        recommended_fix: `حدّث أو احذف الإحالة المرجعية المفقودة إلى القسم ${sec} لمنع الغموض التعاقدي.`,
+      };
+    }
     return locale === "es"
       ? {
           ...finding,
@@ -705,6 +896,14 @@ export function localizeCrossClauseFindingForDisplay(
   const undefinedTermMatch = finding.title.match(/:\s*'([^']+)'/);
   if (finding.issue_type === "UNDEFINED_TERM" && undefinedTermMatch) {
     const term = undefinedTermMatch[1];
+    if (locale === "ar") {
+      return {
+        ...finding,
+        title: `مصطلح غير معرّف: '${term}'`,
+        description: `المصطلح التعاقدي "${term}" مستخدم في التزام تشغيلي دون تعريف ملزم في الوثيقة.`,
+        recommended_fix: `أضف تعريفاً رسمياً لمصطلح "${term}" في قسم التعريفات أو استبدله بصياغة وصفية قياسية.`,
+      };
+    }
     return locale === "es"
       ? {
           ...finding,
@@ -726,7 +925,7 @@ export function localizeCrossClauseFindingForDisplay(
 const SEEDED_PLAYBOOK_TRANSLATIONS: Record<
   string,
   Record<
-    "es" | "fr",
+    "es" | "fr" | "ar",
     {
       category: string;
       standard_position: string;
@@ -754,6 +953,15 @@ const SEEDED_PLAYBOOK_TRANSLATIONS: Record<
       unacceptable_triggers:
         "plafond à 500 $, responsabilité illimitée du Client, exclusion totale de responsabilité du Fournisseur",
     },
+    ar: {
+      category: "تحديد المسؤولية التعاقدية",
+      standard_position:
+        "سقف مسؤولية تراكمي متبادل لا يتجاوز 12 شهراً من الرسوم المدفوعة أو المستحقة، مع إعفاء متبادل من الأضرار غير المباشرة والتبعية.",
+      fallback_position:
+        "سقف أعلى متبادل يعادل 2× الرسوم السنوية لانتهاكات أمن البيانات والسرية أو تعويضات الملكية الفكرية.",
+      unacceptable_triggers:
+        "سقف $500، مسؤولية غير محدودة على العميل، إعفاء كلي للمورّد من المسؤولية",
+    },
   },
   "p0000000-0000-4000-8000-000000000302": {
     es: {
@@ -773,6 +981,15 @@ const SEEDED_PLAYBOOK_TRANSLATIONS: Record<
         "Indemnisation mutuelle proportionnelle à la faute avec notification écrite préalable et mesures standard de remédiation PI.",
       unacceptable_triggers:
         "indemniser le Fournisseur pour sa propre négligence grave, indemnisation unilatérale du Client",
+    },
+    ar: {
+      category: "التعويض",
+      standard_position:
+        "تعويض متبادل ضد التعدي على حقوق الملكية الفكرية للغير أو الإهمال الجسيم أو سوء السلوك المتعمد مع سيطرة معقولة على الدفاع.",
+      fallback_position:
+        "تعويض متبادل متناسب مع الخطأ مع إخطار كتابي مسبق ومعالجة قياسية للملكية الفكرية.",
+      unacceptable_triggers:
+        "تعويض المورّد عن إهماله الجسيم، تعويض أحادي الجانب من العميل",
     },
   },
   "p0000000-0000-4000-8000-000000000303": {
@@ -794,6 +1011,15 @@ const SEEDED_PLAYBOOK_TRANSLATIONS: Record<
       unacceptable_triggers:
         "disponibilité de 95 %, crédits à seule discrétion, obligation de moyens sans garantie SLA",
     },
+    ar: {
+      category: "اتفاقية مستوى الخدمة (SLA)",
+      standard_position:
+        "توافر شهري مضمون بنسبة 99.9% في الإنتاج، وأرصدة خدمة متدرجة تصل إلى 25% مع حق الإنهاء عند الإخلال المتكرر.",
+      fallback_position:
+        "توافر 99.9% باستثناء الصيانة المجدولة بإشعار 48 ساعة مع أرصدة متدرجة حتى 15%.",
+      unacceptable_triggers:
+        "توافر 95%، أرصدة وفق التقدير المطلق، التزام ببذل العناية دون ضمان",
+    },
   },
   "p0000000-0000-4000-8000-000000000304": {
     es: {
@@ -813,6 +1039,15 @@ const SEEDED_PLAYBOOK_TRANSLATIONS: Record<
         "Usage autorisé uniquement de télémétrie strictement agrégée et irréversiblement anonymisée à des fins de sécurité.",
       unacceptable_triggers:
         "licence perpétuelle d'entraînement IA, entraînement de modèles publics sur Données Client",
+    },
+    ar: {
+      category: "خصوصية البيانات وتدريب نماذج الذكاء الاصطناعي",
+      standard_position:
+        "حظر صارم لاستخدام بيانات العميل في تدريب نماذج الذكاء الاصطناعي العامة أو الخاصة بالغير؛ التزام RGPD/GDPR و CCPA والإخطار خلال 24 ساعة.",
+      fallback_position:
+        "الترخيص فقط بقياسات تشغيلية مجمّعة ومجهّلة بشكل نهائي لأغراض الأمان واستقرار المنصة.",
+      unacceptable_triggers:
+        "ترخيص دائم لتدريب AI، تدريب نماذج مشتركة على بيانات العميل",
     },
   },
   "p0000000-0000-4000-8000-000000000305": {
@@ -834,13 +1069,22 @@ const SEEDED_PLAYBOOK_TRANSLATIONS: Record<
       unacceptable_triggers:
         "suspension immédiate sans préavis, paiement Net 7 jours sans contestation",
     },
+    ar: {
+      category: "القانون الحاكم وتسوية النزاعات",
+      standard_position:
+        "قوانين ولاية ديلاوير أو اختصاص متبادل محايد، مع حق حجب المبالغ المتنازع عليها بحسن نية ومهلة معالجة 30 يوماً.",
+      fallback_position:
+        "قوانين نيويورك أو كاليفورنيا مع تصعيد إداري مسبق ومهلة إخطار لا تقل عن 15 يوماً قبل التعليق.",
+      unacceptable_triggers:
+        "تعليق فوري دون إشعار، السداد خلال 7 أيام دون حق الاعتراض",
+    },
   },
 };
 
 const EXTRACTED_PROFILE_TRANSLATIONS: Record<
   string,
   Record<
-    "es" | "fr",
+    "es" | "fr" | "ar",
     {
       category: string;
       standard_position: string;
@@ -874,6 +1118,18 @@ const EXTRACTED_PROFILE_TRANSLATIONS: Record<
         "aucun délai de notification de violation",
       ],
     },
+    ar: {
+      category: "خصوصية البيانات والذكاء الاصطناعي",
+      standard_position:
+        "يلتزم المورّد بعدم استخدام بيانات العميل لتدريب نماذج AI عامة، والامتثال لضوابط RGPD/GDPR و CCPA والإخطار بالخروقات المؤكدة خلال 24 ساعة.",
+      fallback_position:
+        "السماح بالقياسات المجهّلة كلياً فقط بموافقة كتابية مسبقة وإخطار خلال 72 ساعة.",
+      unacceptable_triggers: [
+        "تدريب نماذج الذكاء الاصطناعي العامة",
+        "ترخيص غير قابل للإلغاء لبيانات العميل",
+        "غياب جدول الإخطار بالاختراقات",
+      ],
+    },
   },
   Liability: {
     es: {
@@ -898,6 +1154,18 @@ const EXTRACTED_PROFILE_TRANSLATIONS: Record<
         "responsabilité illimitée",
         "dommages consécutifs non plafonnés",
         "seul responsable sans plafond",
+      ],
+    },
+    ar: {
+      category: "تحديد المسؤولية التعاقدية",
+      standard_position:
+        "سقف مسؤولية تراكمي متبادل يعادل 12 شهراً من الرسوم، مع استثناء الأضرار غير المباشرة والتبعية باستثناء السرية وتعويضات الملكية الفكرية.",
+      fallback_position:
+        "سقف أعلى متبادل يصل إلى 24 شهراً لمخالفات أمن البيانات مع إبقاء سقف الأضرار المباشرة.",
+      unacceptable_triggers: [
+        "مسؤولية غير محدودة",
+        "أضرار تبعية غير مقيدة",
+        "مسؤولية منفردة دون سقف",
       ],
     },
   },
@@ -926,6 +1194,18 @@ const EXTRACTED_PROFILE_TRANSLATIONS: Record<
         "fourniture en l'état sans garantie",
       ],
     },
+    ar: {
+      category: "اتفاقية SLA والتوافر",
+      standard_position:
+        "حد أدنى للتوافر الشهري 99.9% في الإنتاج مدعوم بأرصدة خدمة متدرجة وحق الإنهاء عند الفشل المتكرر.",
+      fallback_position:
+        "توافر شهري مستهدف بنسبة 99.5% مع أرصدة محدودة بنسبة 15% من الاشتراك الشهري.",
+      unacceptable_triggers: [
+        "التزام بأقصى جهد دون ضمان",
+        "غياب أرصدة الخدمة",
+        "تقديم الخدمة كما هي دون SLA",
+      ],
+    },
   },
   "Payment Terms": {
     es: {
@@ -950,6 +1230,18 @@ const EXTRACTED_PROFILE_TRANSLATIONS: Record<
         "exigible immédiatement à réception",
         "aucun droit de contester les factures",
         "hausse de prix unilatérale illimitée",
+      ],
+    },
+    ar: {
+      category: "شروط الدفع والفوترة",
+      standard_position:
+        "تدفع الفواتير غير المتنازع عليها خلال 30 إلى 45 يوماً صافياً من الاستلام مع حق حجب المبالغ المتنازع عليها بحسن نية.",
+      fallback_position:
+        "صافي 30 يوماً للمبالغ المؤكدة بفائدة تأخير بحد أقصى 1.0% شهرياً وإخطار 60 يوماً لأي تعديل سعري.",
+      unacceptable_triggers: [
+        "مستحق الدفع فوراً عند الاستلام",
+        "منع الاعتراض على الفواتير",
+        "زيادة أسعار أحادية غير مقيدة",
       ],
     },
   },
@@ -978,6 +1270,18 @@ const EXTRACTED_PROFILE_TRANSLATIONS: Record<
         "reconduction automatique bloquée sur 3 ans",
       ],
     },
+    ar: {
+      category: "المدة والإنهاء",
+      standard_position:
+        "يتطلب الإنهاء للإخلال الجوهري إشعاراً كتابياً مسبقاً بـ 30 يوماً ومهلة معالجة 30 يوماً، مع رد الرسوم المدفوعة مقدماً نسبياً.",
+      fallback_position:
+        "15 يوم عمل للمعالجة في حالات عدم السداد غير المتنازع عليه و60 يوماً إشعاراً متبادلاً لعدم التجديد.",
+      unacceptable_triggers: [
+        "إنهاء فوري دون إشعار",
+        "مصادرة الرسوم المدفوعة مقدماً",
+        "تجديد تلقائي إلزامي لـ 3 سنوات",
+      ],
+    },
   },
   "IP Ownership": {
     es: {
@@ -1002,6 +1306,17 @@ const EXTRACTED_PROFILE_TRANSLATIONS: Record<
         "le fournisseur détient tous les livrables sur mesure",
       ],
     },
+    ar: {
+      category: "ملكية حقوق الملكية الفكرية",
+      standard_position:
+        "يحتفظ العميل بالملكية الحصرية لملكيته الفكرية السابقة وبياناته والمخرجات المخصصة المدفوعة الأجر.",
+      fallback_position:
+        "يحتفظ المورّد بأدوات المنصة العامة مع منح العميل ترخيصاً مؤسسياً دائماً ومجانياً للمخرجات.",
+      unacceptable_triggers: [
+        "التنازل عن كامل ملكية العميل للمورّد",
+        "امتلاك المورّد للمخرجات المخصصة بالكامل",
+      ],
+    },
   },
   "Commercial Terms": {
     es: {
@@ -1024,6 +1339,17 @@ const EXTRACTED_PROFILE_TRANSLATIONS: Record<
       unacceptable_triggers: [
         "modification unilatérale par la contrepartie",
         "renonciation totale à une obligation protectrice",
+      ],
+    },
+    ar: {
+      category: "الشروط التجارية",
+      standard_position:
+        "الحفاظ على المعايير التعاقدية الأساسية المعتمدة للشركة.",
+      fallback_position:
+        "السماح بتعديلات تجارية متبادلة محدودة دون المساس بتوزيع المخاطر الجوهري.",
+      unacceptable_triggers: [
+        "تعديل أحادي الجانب من الطرف الآخر",
+        "التنازل الكامل عن التزام وقائي",
       ],
     },
   },
@@ -1092,7 +1418,7 @@ export function localizeAuditAction(
   if (locale === "en") {
     return action;
   }
-  const map: Record<"es" | "fr", Record<AuditAction, string>> = {
+  const map: Record<"es" | "fr" | "ar", Record<AuditAction, string>> = {
     es: {
       DOCUMENT_INGESTED: "DOCUMENTO_INGESTIONADO",
       DOCUMENT_ANALYZED: "DOCUMENTO_ANALIZADO",
@@ -1123,6 +1449,21 @@ export function localizeAuditAction(
       DOCUMENT_EXPORTED: "DOCUMENT_EXPORTÉ",
       CROSS_CLAUSE_CHECKED: "RADAR_CROISÉ_VÉRIFIÉ",
     },
+    ar: {
+      DOCUMENT_INGESTED: "تم_استيعاب_العقد",
+      DOCUMENT_ANALYZED: "تم_تحليل_العقد",
+      SUGGESTION_ACCEPTED: "تم_قبول_التعديل",
+      SUGGESTION_MODIFIED: "تم_تعديل_المقترح",
+      SUGGESTION_REJECTED: "تم_رفض_التعديل",
+      SUGGESTION_REFINED: "تحسين_بالمساعد_الذكي",
+      SUGGESTION_VERIFIED: "فحص_حارس_الدقة",
+      PUSHBACK_SIMULATED: "محاكاة_الاعتراض",
+      PLAYBOOK_AUTO_EXTRACTED: "استخراج_Playbook_تلقائي",
+      AI_CACHE_CLEARED: "تفريغ_الذاكرة_الدلالية",
+      COMMENT_CREATED: "إضافة_تعليق",
+      DOCUMENT_EXPORTED: "تصدير_المستند",
+      CROSS_CLAUSE_CHECKED: "فحص_رادار_التناقضات",
+    },
   };
   return map[locale][action] ?? action;
 }
@@ -1134,7 +1475,7 @@ export function localizeOperationName(
   if (locale === "en") {
     return operation;
   }
-  const map: Record<"es" | "fr", Record<string, string>> = {
+  const map: Record<"es" | "fr" | "ar", Record<string, string>> = {
     es: {
       DOCUMENT_AUDIT: "AUDITORÍA_DOCUMENTO",
       CLAUSE_COPILOT: "COPILOTO_CLÁUSULA",
@@ -1151,6 +1492,15 @@ export function localizeOperationName(
       PLAYBOOK_EXTRACTOR: "EXTRACTEUR_PLAYBOOK",
       CROSS_CLAUSE_RADAR: "RADAR_CROISÉ",
     },
+    ar: {
+      DOCUMENT_AUDIT: "تدقيق_المستند",
+      CLAUSE_AUDIT: "تدقيق_البند",
+      CLAUSE_COPILOT: "المساعد_الذكي_للبند",
+      CRITIC_VERIFY: "تحقق_حارس_الدقة",
+      PUSHBACK_SIMULATOR: "محاكي_الاعتراضات",
+      PLAYBOOK_EXTRACTOR: "مستخرج_السياسات",
+      CROSS_CLAUSE_RADAR: "رادار_التناقضات",
+    },
   };
   return map[locale][operation] ?? operation;
 }
@@ -1166,6 +1516,18 @@ export function localizePushbackSimulationForDisplay(
   const personaLower = sim.counterparty_persona.toLowerCase();
 
   if (objLower.includes("$500") || objLower.includes("liability cap")) {
+    if (locale === "ar") {
+      return {
+        ...sim,
+        counterparty_persona: "المستشار القانوني والتجاري للمورّد المؤسسي",
+        expected_objection:
+          "سيدفع محامي الطرف الآخر بأن رفع سقف المسؤولية من 500$ إلى 12 شهراً من الرسوم يخلق تعرضاً مالياً غير متناسب مع الإيرادات السنوية المتكررة.",
+        rebuttal_talking_point:
+          "سقف 500$ الأحادي ينقل مخاطر التوقف الكارثية للخدمة السحابية بالكامل إلى العميل ولا يتوافق مع معايير لجنة التدقيق. السقف المتبادل بـ 12 شهراً من الرسوم مع استبعاد الأضرار التبعية هو المعيار السائد في السوق.",
+        fallback_compromise_text:
+          "لا تتجاوز المسؤولية التراكمية الإجمالية لكل طرف بموجب هذا العقد ضعفي (2×) الرسوم السنوية المدفوعة لخروقات البيانات أو تعويض الملكية الفكرية، واثني عشر (12) شهراً من الرسوم للأضرار المباشرة العامة.",
+      };
+    }
     return locale === "es"
       ? {
           ...sim,
@@ -1190,6 +1552,18 @@ export function localizePushbackSimulationForDisplay(
   }
 
   if (personaLower.includes("intellectual property") || objLower.includes("indemnity")) {
+    if (locale === "ar") {
+      return {
+        ...sim,
+        counterparty_persona: "مستشار المخاطر والملكية الفكرية لدى المورّد",
+        expected_objection:
+          "سيقاوم الطرف الآخر التعرض الواسع لتعويضات الملكية الفكرية والأخطاء ويطالب بسقف متناسب مع نسبة الخطأ والسيطرة المنفردة على الدفاع.",
+        rebuttal_talking_point:
+          "لا يستطيع العميل تعويض المورّد عن الإهمال الجسيم الصادر عن المورّد نفسه أو عن مطالبات تخص برمجيات المورّد المملوكة. التعويض المتبادل القائم على الخطأ يحمي الطرفين بعدالة.",
+        fallback_compromise_text:
+          "يدافع كل طرف عن الطرف الآخر ويعوّضه ضد مطالبات الغير المتعلقة بانتهاك الملكية الفكرية والإهمال الجسيم، مع سقف أعلى متبادل يعادل ضعفي (2×) الرسوم السنوية وإخطار كتابي فوري.",
+      };
+    }
     return locale === "es"
       ? {
           ...sim,
@@ -1214,6 +1588,18 @@ export function localizePushbackSimulationForDisplay(
   }
 
   if (objLower.includes("sla") || objLower.includes("uptime") || objLower.includes("revenue deferral")) {
+    if (locale === "ar") {
+      return {
+        ...sim,
+        counterparty_persona: "مستشار العمليات السحابية والإيرادات لدى المورّد",
+        expected_objection:
+          "سيحتج المورّد بأن غرامات SLA الصارمة وحق الإنهاء عند الفشل المتكرر يثيران تحفظات محاسبية للاعتراف بالإيرادات أثناء صيانة المزودين الفرعيين.",
+        rebuttal_talking_point:
+          "تشغيل الأنظمة الحيوية يتطلب التزامات توافر ملزمة. الأرصدة المتدرجة المسقوفة بالاشتراك الشهري وحق الخروج فقط عند الإخلال المزمن يحصران مخاطر المورّد.",
+        fallback_compromise_text:
+          "يضمن المورّد توافراً شهرياً بنسبة 99.9% مع أرصدة خدمة متدرجة حتى 15% من الرسوم الشهرية، ويحق للعميل الإنهاء عند انخفاض التوافر عن 99.5% لمدة أربعة (4) أشهر متتالية.",
+      };
+    }
     return locale === "es"
       ? {
           ...sim,
@@ -1238,6 +1624,18 @@ export function localizePushbackSimulationForDisplay(
   }
 
   if (personaLower.includes("privacy") || objLower.includes("telemetry") || objLower.includes("ai")) {
+    if (locale === "ar") {
+      return {
+        ...sim,
+        counterparty_persona: "مسؤول حماية البيانات (DPO) ومنتجات الذكاء الاصطناعي للمورّد",
+        expected_objection:
+          "قد يجادل الطرف الآخر بحاجته إلى جمع قياسات تشغيلية مؤتمتة لرصد الشذوذ ومنع إساءة الاستخدام وضمان موثوقية المنصة.",
+        rebuttal_talking_point:
+          "تظل المقاييس التشغيلية المجمّعة والمجهّلة بشكل نهائي لأغراض الأمن مسموحاً بها، بينما يُحظر تماماً تدريب نماذج الذكاء الاصطناعي التأسيسية المشتركة على بيانات العميل السرية.",
+        fallback_compromise_text:
+          "لا يجوز للمورّد استخدام بيانات العميل السرية لتدريب نماذج الذكاء الاصطناعي العامة أو الخاصة بأطراف ثالثة، ويجوز له تحليل قياسات مجمّعة ومجهّلة حصراً لأمن وموثوقية المنصة.",
+      };
+    }
     return locale === "es"
       ? {
           ...sim,
@@ -1259,6 +1657,19 @@ export function localizePushbackSimulationForDisplay(
           fallback_compromise_text:
             "Le Fournisseur n'utilisera pas les Données Confidentielles du Client pour entraîner des modèles d'IA publics ou tiers, mais pourra analyser une télémétrie strictement agrégée et anonymisée pour la sécurité du service.",
         };
+  }
+
+  if (locale === "ar") {
+    return {
+      ...sim,
+      counterparty_persona: "كبير المستشارين التجاريين للطرف الآخر",
+      expected_objection:
+        "سيجادل محامي الطرف الآخر بأن التعديل المقترح يغيّر التوزيع التجاري القياسي في عقده.",
+      rebuttal_talking_point:
+        "يستبدل مقترحنا التعرض الأحادي بشروط متبادلة عادلة متوافقة مع معايير السوق المؤسسية.",
+      fallback_compromise_text:
+        "ينفذ كل طرف التزاماته بطريقة معقولة تجارياً ومتبادلة مع إتاحة مهلة معالجة مدتها 30 يوماً.",
+    };
   }
 
   return locale === "es"
@@ -1491,6 +1902,57 @@ export const STUDIO_DRAWER_UI_COPY: Record<
     gutterMapLabel: "Carte",
     compliantFallbackHeading: "Stipulation",
   },
+  ar: {
+    copilotTitle: "المساعد الذكي لكل بند والتوجيه المباشر",
+    copilotSubtitle: "وجّه صياغة التعديل بتعليمات مخصصة",
+    chipMutualLabel: "جعله متبادلاً بالكامل",
+    chipMutualPrompt:
+      "اجعل هذا الالتزام متبادلاً بالكامل واستبعد الأضرار غير المباشرة.",
+    chipCapLabel: "تحديد السقف بـ 100,000$",
+    chipCapPrompt:
+      "حدّد المسؤولية التراكمية الإجمالية بمبلغ 100,000$ بدلاً من 12 شهراً من الرسوم.",
+    chipCureLabel: "إضافة مهلة معالجة 30 يوماً",
+    chipCurePrompt:
+      "أضف إشعاراً كتابياً مسبقاً ومهلة تصحيح 30 يوماً قبل أي إنهاء.",
+    chipSoftenLabel: "تليين الصياغة لشريك",
+    chipSoftenPrompt:
+      "ليّن النبرة القانونية بما يناسب شريكاً استراتيجياً مع الحفاظ على حماية الملكية الفكرية.",
+    copilotPlaceholder:
+      "مثال: حدّد المسؤولية بـ 100,000$ وأضف مهلة إشعار وتصحيح 30 يوماً...",
+    copilotClose: "إغلاق",
+    copilotRefining: "جارٍ التنقيح...",
+    copilotRefineBtn: "تنقيح بالذكاء الاصطناعي",
+    copilotSuccessFallback: "تم تنقيح البند بنجاح!",
+    copilotErrorFallback: "تعذّر تنقيح البند.",
+    pushbackTitle: "محاكي اعتراضات الطرف الآخر واستراتيجية الجولة الثانية",
+    simulatedPersonaPrefix: "الشخصية المحاكاة:",
+    acceptanceLikelihoodPrefix: "احتمال القبول:",
+    simulatingSpinner: "جارٍ محاكاة رد مستشار الطرف الآخر...",
+    expectedObjectionLabel: "الاعتراض المتوقع من الطرف الآخر",
+    round2RebuttalLabel: "نص الرد القانوني — الجولة الثانية",
+    copiedBtn: "تم النسخ",
+    copyRebuttalBtn: "نسخ الرد",
+    fallbackCompromiseLabel: "صياغة التسوية البديلة — الجولة الثانية",
+    useCompromiseBtn: "استخدام صياغة التسوية",
+    reSimulateBtn: "إعادة المحاكاة",
+    compromiseAppliedToast: "تم تطبيق تسوية الجولة الثانية على الصياغة المقترحة.",
+    pushbackErrorFallback: "تعذّرت محاكاة اعتراض الطرف الآخر.",
+    verifyErrorFallback: "فشل فحص حارس الدقة.",
+    emptyScanTitle: "لم يتم مسح هيكل العقد بعد",
+    emptyScanDesc:
+      "انقر على «فحص الاتساق عبر البنود» أعلاه لاكتشاف الالتزامات المتضاربة والإحالات المفقودة والمصطلحات غير المعرّفة.",
+    telemetryTokensSavedUnit: "موفّر",
+    telemetryTokUnit: "رمز",
+    telemetryViewerTitle: "لا يملك دور المشاهد صلاحية تفريغ الذاكرة الدلالية",
+    telemetryPurgeError: "تعذّر تفريغ ذاكرة تدقيق البنود الدلالية.",
+    extractorMinCharsError:
+      "يرجى لصق 20 حرفاً على الأقل من نص العقد القياسي أو تحميل النموذج المجهز.",
+    extractorNoFileError: "يرجى اختيار ملف عقد قياسي بصيغة .docx أو .pdf.",
+    extractorViewerTitle:
+      "لا يملك دور المشاهد صلاحية تشغيل المستخرج التلقائي للسياسات",
+    gutterMapLabel: "الخريطة",
+    compliantFallbackHeading: "بند تعاقدي",
+  },
 };
 
 export const SAMPLE_GOLDEN_CONTRACT_TEXT_BY_LOCALE: Record<
@@ -1518,4 +1980,11 @@ export const SAMPLE_GOLDEN_CONTRACT_TEXT_BY_LOCALE: Record<
 3. Accord de Niveau de Service (SLA). Le Fournisseur garantit une disponibilité mensuelle minimale de 99,9 % en production hors maintenance planifiée, assortie de crédits mensuels progressifs jusqu'à 25 % et d'un droit de résiliation en cas de manquements chroniques au SLA.
 
 4. Durée et Préavis de Résiliation. Chaque partie ne pourra résilier pour manquement substantiel qu'après avoir adressé un préavis écrit d'au moins 30 jours précisant le manquement avec un délai complet de remédiation de 30 jours, le Fournisseur remboursant au prorata les redevances prépayées non consommées.`,
+  ar: `1. تحديد المسؤولية التعاقدية. باستثناء خروقات السرية وتعويضات الملكية الفكرية، لا تتجاوز المسؤولية التراكمية الإجمالية لأي من الطرفين إجمالي الرسوم المدفوعة من العميل خلال الاثني عشر (12) شهراً السابقة مباشرة للمطالبة، ولا يتحمل أي طرف أي أضرار غير مباشرة أو خاصة أو تبعية.
+
+2. خصوصية البيانات وضوابط الذكاء الاصطناعي. يلتزم المورّد بتطبيق ضوابط حماية البيانات وفق RGPD/GDPR و CCPA، ويحظر استخدام بيانات العميل أو معلوماته السرية لتدريب نماذج الذكاء الاصطناعي العامة أو الخاصة بأطراف ثالثة، مع إخطار العميل خلال 24 ساعة من أي خرق أمني مؤكد.
+
+3. اتفاقية مستوى الخدمة (SLA). يضمن المورّد توافراً شهرياً لا يقل عن 99.9% في بيئة الإنتاج باستثناء الصيانة المجدولة، مع أرصدة خدمة شهرية متدرجة تصل إلى 25% وحق الإنهاء عند الإخلال المتكرر.
+
+4. المدة وإشعار الإنهاء. يحق لأي طرف الإنهاء للإخلال الجوهري فقط بعد إرسال إشعار كتابي مسبق بمدة لا تقل عن 30 يوماً يحدد الإخلال مع منح مهلة معالجة كاملة مدتها 30 يوماً، ويلتزم المورّد برد الرسوم المدفوعة مقدماً غير المستخدمة على أساس نسبي.`,
 };

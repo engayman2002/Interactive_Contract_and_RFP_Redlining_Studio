@@ -500,5 +500,139 @@ export const AI_SETTINGS_TRANSLATIONS: Record<
     msgActivatedSuffix: "embeddings.",
     errSaveConfig: "Échec de l'enregistrement de la configuration du moteur IA.",
   },
+  ar: {
+    title: "إعدادات ومبدّل محركات الذكاء الاصطناعي والمتجهات",
+    hotSwapBadge: "تبديل فوري دون إعادة تشغيل",
+    subtitle:
+      "اضبط نماذج اللغة السحابية، وخوادم Ollama/vLLM المحلية، ومحركات التضمين 1536-d في الوقت الفعلي.",
+    loadingRuntime: "جارٍ مزامنة إعدادات الذكاء الاصطناعي النشطة...",
+    presetsHeading: "إعدادات المزودين الجاهزة",
+    presetsHint:
+      "اختر مزوداً، ثم أدخل معرّف النموذج أو اجلب النماذج الحية مباشرة",
+    providers: {
+      deterministic: {
+        tagline:
+          "تقييم محلي فوري <5ms وفق السياسات • صفر اتصالات شبكية خارجية",
+        badge: "دون مفتاح API",
+      },
+      gemini: {
+        tagline:
+          "واجهة Google Generative Language REST الأصلية • جلب مباشر عبر /models",
+        badge: "Google AI",
+      },
+      groq: {
+        tagline:
+          "استدلال LPU فائق السرعة وانخفاض الكمون • جلب مباشر عبر /models",
+        badge: "LPU فائق السرعة",
+      },
+      openai: {
+        tagline:
+          "واجهة OpenAI Chat و Vector Embeddings • جلب مباشر عبر /models",
+        badge: "OpenAI Cloud",
+      },
+      anthropic: {
+        tagline:
+          "واجهة Anthropic Messages للتحليل القانوني المتقدم • جلب /models",
+        badge: "تحليل قانوني",
+      },
+      ollama: {
+        tagline:
+          "خادم محلي خاص 100% (localhost:11434) • جلب مباشر عبر /api/tags",
+        badge: "محلي وخاص 100%",
+      },
+      openai_compatible: {
+        tagline:
+          "نقطة نهاية vLLM أو LM Studio أو llama.cpp أو TEI • جلب /v1/models",
+        badge: "استضافة ذاتية vLLM",
+      },
+    },
+    customProviderTagline: "مزود مخصص",
+    apiKeyShortBadge: "مفتاح API",
+    localShortBadge: "محلي",
+    section1Title: "1. محرك الاستدلال اللغوي (LLM)",
+    section1Badge: "مدقق البنود",
+    activeLlmProviderLabel: "مزود LLM النشط",
+    modelIdLabel: "معرّف النموذج (Model ID)",
+    manualIdBadge: "إدخال يدوي",
+    fetchLiveModelsBtn: "جلب النماذج الحية",
+    fetchingBtn: "جارٍ الجلب...",
+    builtInEngineOption: "المحرك المدمج...",
+    pickLiveModelOption: "اختر نموذجاً حياً...",
+    livePrefix: "مباشر:",
+    modelInputPlaceholder: "اكتب Model ID أو اضغط جلب النماذج الحية...",
+    fetchedLlmModelsPrefix: "✓ تم جلب",
+    fetchedLlmModelsMiddle: "نموذج LLM حي من واجهة المزود",
+    serverBaseUrlLabel: "عنوان الخادم (Base URL)",
+    apiKeyLabel: "مفتاح API",
+    noKeyRequiredBadge: "لا يتطلب مفتاحاً",
+    keyConfiguredPrefix: "مفتاح محفوظ:",
+    apiKeyRequiredBadge: "مفتاح API مطلوب",
+    apiKeyOptionalPlaceholder: "مفتاح اختياري (غير مطلوب محلياً)",
+    apiKeyStoredPrefix: "محفوظ (",
+    apiKeyStoredSuffix: ") — اكتب للاستبدال",
+    apiKeyPastePlaceholder: "الصق مفتاح API الخاص بالمزود (يُحفظ في الذاكرة فقط)",
+    samplingTempLabel: "درجة الحرارة (Sampling Temperature)",
+    deterministicSuffix: "(0.00 = حتمي دقيق)",
+    section2Title: "2. محرك التضمين المتجهي (Embeddings)",
+    section2Badge: "متوافق 1536-d",
+    activeEmbeddingProviderLabel: "مزود التضمين النشط",
+    embeddingModelIdLabel: "معرّف نموذج التضمين",
+    fetchedEmbModelsPrefix: "✓ تم جلب",
+    fetchedEmbModelsMiddle: "نموذج Embedding حي",
+    embeddingBaseUrlLabel: "عنوان خادم التضمين",
+    embeddingApiKeyLabel: "مفتاح API للتضمين",
+    storedPrefix: "محفوظ:",
+    inheritsLlmKey: "يرث مفتاح LLM",
+    separateKeyRequired: "يتطلب مفتاحاً مستقلاً",
+    embKeyReusePlaceholder: "اتركه فارغاً لإعادة استخدام مفتاح LLM أعلاه",
+    embKeyOptionalPlaceholder: "مفتاح API اختياري لمزود التضمين",
+    pgvectorTitle: "التكيّف التلقائي لـ pgvector 1536-d:",
+    pgvectorDesc:
+      "يتم توحيد أي بُعد متجهي (384–3072) تلقائياً بمعيار L2 دون تعديل مخطط قاعدة البيانات.",
+    missingModelPrefix: "معرّف النموذج مطلوب: اكتب Model ID يدوياً أو اضغط ",
+    missingModelSuffix: " قبل التفعيل.",
+    vaultTitle: "خزنة الإعدادات المشفرة",
+    vaultSubtitlePrefix: "تصدير أو استعادة مفاتيحك المشفرة بصيغة ",
+    vaultSubtitleSuffix: " دون اتصال",
+    vaultPassphraseLabel: "عبارة مرور الخزنة",
+    vaultMinChars: "8 أحرف على الأقل",
+    vaultPassphrasePlaceholder: "أدخل عبارة مرور سرية (8 أحرف فأكثر)...",
+    exportVaultBtn: "تصدير الخزنة (.rsvault)",
+    encryptingBtn: "جارٍ التشفير...",
+    selectVaultFileBtn: "اختيار ملف .rsvault.json",
+    unlockRestoreBtn: "فك القفل والاستعادة",
+    unlockingBtn: "جارٍ فك القفل...",
+    connVerifiedTitle: "تم التحقق من الاتصال — المحرك جاهز",
+    connFailedTitle: "فشل فحص الاتصال",
+    sampleAuditProbeLabel: "فحص تدقيق تجريبي:",
+    testConnectionBtn: "اختبار الاتصال",
+    testingEngineBtn: "جارٍ فحص المحرك...",
+    cancelBtn: "إلغاء",
+    saveActivateBtn: "حفظ وتفعيل",
+    activatingBtn: "جارٍ التفعيل...",
+    errMissingModel:
+      "معرّف النموذج مطلوب: أدخل Model ID يدوياً أو اختر نموذجاً حياً.",
+    errVaultPassphraseShort:
+      "أدخل عبارة مرور للخزنة مكوّنة من 8 أحرف على الأقل.",
+    errVaultMissingModel:
+      "معرّف النموذج مطلوب: حدد Model ID لمحرك LLM والتضمين قبل تصدير الخزنة.",
+    msgVaultExported:
+      "تم تصدير الخزنة المشفرة (redline-studio-ai-config.rsvault.json • AES-256-GCM + PBKDF2 600k تكرار).",
+    errVaultExport: "تعذّر تصدير خزنة إعدادات الذكاء الاصطناعي المشفرة.",
+    msgVaultLoadedPrefix: 'تم تحميل ملف الخزنة المشفر "',
+    msgVaultLoadedSuffix:
+      '". أدخل عبارة المرور السرية واضغط «فك القفل والاستعادة».',
+    errInvalidVaultFile:
+      "ملف خزنة غير صالح: يجب اختيار ملف AES-256-GCM بصيغة .rsvault.json صالحة.",
+    errSelectVaultFirst:
+      "يرجى اختيار ملف .rsvault.json أولاً قبل الضغط على فك القفل.",
+    msgVaultUnlockedPrefix: "تم فتح الخزنة وتفعيل المحرك:",
+    msgVaultUnlockedSuffix: "تضمين متجهي.",
+    errVaultUnlock:
+      "فشل فك قفل الخزنة: عبارة المرور غير صحيحة أو الملف تالف.",
+    msgActivatedPrefix: "تم التفعيل:",
+    msgActivatedSuffix: "تضمين متجهي.",
+    errSaveConfig: "تعذّر حفظ إعدادات محرك الذكاء الاصطناعي.",
+  },
 };
 
