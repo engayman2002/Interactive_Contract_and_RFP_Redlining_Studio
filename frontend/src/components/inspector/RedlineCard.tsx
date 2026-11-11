@@ -567,174 +567,176 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
           </div>
         </div>
 
-        {/* AI Power Tools Segmented Pill Dock (Compact Footer Bar) */}
+        {/* Secondary AI Power Tools & Critic Guard Verification Dock */}
         <div
           onClick={(e) => e.stopPropagation()}
-          className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 dark:border-slate-800 dark:bg-slate-800/70"
+          className="divide-y divide-slate-200/70 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/75 dark:divide-slate-800/70 dark:border-slate-800/80 dark:bg-slate-950/50"
         >
-          <span className="px-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            AI Power Tools
-          </span>
-          <div className="flex flex-wrap items-center gap-1">
-            <button
-              type="button"
-              data-testid={`toggle-copilot-btn-${suggestion.id}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                selectClause(clause.id, "inspector");
-                setActiveToolDrawer((prev) =>
-                  prev === "copilot" ? null : "copilot"
-                );
-              }}
-              className={`inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[11px] font-semibold transition-all ${
-                isCopilotOpen
-                  ? "bg-indigo-600 text-white shadow-sm ring-1 ring-inset ring-white/20"
-                  : "bg-white/95 text-indigo-700 shadow-sm hover:bg-white dark:bg-slate-900/90 dark:text-indigo-300 dark:hover:bg-slate-900"
-              }`}
-            >
-              <Sparkles className="h-3 w-3 shrink-0" />
-              <span>✨ AI Copilot</span>
-            </button>
-
-            <button
-              type="button"
-              data-testid={`simulate-pushback-btn-${suggestion.id}`}
-              onClick={handleSimulatePushback}
-              disabled={isSimulatingPushback}
-              className={`inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[11px] font-semibold transition-all disabled:opacity-60 ${
-                isPushbackOpen
-                  ? "bg-orange-600 text-white shadow-sm ring-1 ring-inset ring-white/20"
-                  : "bg-white/95 text-orange-700 shadow-sm hover:bg-white dark:bg-slate-900/90 dark:text-orange-300 dark:hover:bg-slate-900"
-              }`}
-            >
-              {isSimulatingPushback ? (
-                <>
-                  <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
-                  <span>Simulating...</span>
-                </>
-              ) : (
-                <>
-                  <Target className="h-3 w-3 shrink-0" />
-                  <span>🎯 Simulate Pushback</span>
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              data-testid={`toggle-critic-btn-${suggestion.id}`}
-              onClick={() => setIsCriticExpanded((prev) => !prev)}
-              className={`inline-flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2.5 text-[11px] font-semibold transition-all ${
-                isCriticExpanded
-                  ? "bg-emerald-600 text-white shadow-sm ring-1 ring-inset ring-white/20"
-                  : "bg-white/95 text-slate-700 shadow-sm hover:bg-white dark:bg-slate-900/90 dark:text-slate-300 dark:hover:bg-slate-900"
-              }`}
-            >
-              <ShieldCheck
-                className={`h-3 w-3 shrink-0 ${
-                  isCriticExpanded
-                    ? "text-white"
-                    : "text-emerald-600 dark:text-emerald-400"
-                }`}
-              />
-              <span>🛡️ Critic Guard</span>
-              {isCriticExpanded ? (
-                <ChevronUp className="h-3 w-3 shrink-0 opacity-80" />
-              ) : (
-                <ChevronDown className="h-3 w-3 shrink-0 opacity-70" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Agent 2: Compact Critic Verification Gates Strip */}
-        <div
-          data-testid={`critic-guard-panel-${suggestion.id}`}
-          onClick={(e) => e.stopPropagation()}
-          className="rounded-lg border border-slate-200/80 bg-slate-50/70 px-2.5 py-1.5 dark:border-slate-800 dark:bg-slate-950/60"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-1.5">
-            <div className="flex flex-wrap items-center gap-1 text-[10px] font-semibold">
-              <span
-                className={`inline-flex items-center gap-1 whitespace-nowrap rounded border px-1.5 py-0.5 ${
-                  policyPassed
-                    ? "border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
-                    : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+          {/* Upper Band: AI Power Tools Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              AI Power Tools
+            </span>
+            <div className="flex flex-wrap items-center gap-1">
+              <button
+                type="button"
+                data-testid={`toggle-copilot-btn-${suggestion.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selectClause(clause.id, "inspector");
+                  setActiveToolDrawer((prev) =>
+                    prev === "copilot" ? null : "copilot"
+                  );
+                }}
+                className={`inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-[11px] font-semibold transition-all ${
+                  isCopilotOpen
+                    ? "border-indigo-600 bg-indigo-600 text-white shadow-sm"
+                    : "border-slate-200/80 bg-white text-indigo-700 hover:border-indigo-300 hover:bg-indigo-50/70 dark:border-slate-700/80 dark:bg-slate-900 dark:text-indigo-300 dark:hover:bg-slate-800"
                 }`}
               >
-                {!policyPassed && <ShieldAlert className="h-3 w-3" />}
-                <span>
-                  {policyPassed ? "✓ Policy Grounded" : "Policy Review Needed"}
-                </span>
-              </span>
-              <span
-                className={`inline-flex items-center gap-1 whitespace-nowrap rounded border px-1.5 py-0.5 ${
-                  hallucinationFreePassed
-                    ? "border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
-                    : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300"
+                <Sparkles className="h-3 w-3 shrink-0" />
+                <span>✨ AI Copilot</span>
+              </button>
+
+              <button
+                type="button"
+                data-testid={`simulate-pushback-btn-${suggestion.id}`}
+                onClick={handleSimulatePushback}
+                disabled={isSimulatingPushback}
+                className={`inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-[11px] font-semibold transition-all disabled:opacity-60 ${
+                  isPushbackOpen
+                    ? "border-orange-600 bg-orange-600 text-white shadow-sm"
+                    : "border-slate-200/80 bg-white text-orange-700 hover:border-orange-300 hover:bg-orange-50/70 dark:border-slate-700/80 dark:bg-slate-900 dark:text-orange-300 dark:hover:bg-slate-800"
                 }`}
               >
-                {!hallucinationFreePassed && <ShieldAlert className="h-3 w-3" />}
-                <span>
-                  {hallucinationFreePassed
-                    ? "✓ Hallucination-Free"
-                    : "Hallucination Flagged"}
-                </span>
-              </span>
-              <span
-                className={`inline-flex items-center gap-1 whitespace-nowrap rounded border px-1.5 py-0.5 ${
-                  obligationPreservedPassed
-                    ? "border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
-                    : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
-                }`}
-              >
-                {!obligationPreservedPassed && (
-                  <ShieldAlert className="h-3 w-3" />
+                {isSimulatingPushback ? (
+                  <>
+                    <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+                    <span>Simulating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Target className="h-3 w-3 shrink-0" />
+                    <span>🎯 Simulate Pushback</span>
+                  </>
                 )}
-                <span>
-                  {obligationPreservedPassed
-                    ? "✓ Obligations & Numbering Preserved"
-                    : "Numbering Altered"}
-                </span>
-              </span>
-            </div>
+              </button>
 
-            <button
-              type="button"
-              data-testid={`verify-critic-btn-${suggestion.id}`}
-              disabled={isVerifyingCritic}
-              onClick={handleVerifyWithCritic}
-              className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-slate-200/90 bg-white px-2 text-[10px] font-semibold text-slate-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
-            >
-              {isVerifyingCritic ? (
-                <>
-                  <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
-                  <span>Verifying...</span>
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-3 w-3 shrink-0" />
-                  <span>Re-Verify with Critic</span>
-                </>
-              )}
-            </button>
+              <button
+                type="button"
+                data-testid={`toggle-critic-btn-${suggestion.id}`}
+                onClick={() => setIsCriticExpanded((prev) => !prev)}
+                className={`inline-flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border px-2.5 text-[11px] font-semibold transition-all ${
+                  isCriticExpanded
+                    ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                    : "border-slate-200/80 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/60 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                }`}
+              >
+                <ShieldCheck
+                  className={`h-3 w-3 shrink-0 ${
+                    isCriticExpanded
+                      ? "text-white"
+                      : "text-emerald-600 dark:text-emerald-400"
+                  }`}
+                />
+                <span>🛡️ Critic Guard</span>
+                {isCriticExpanded ? (
+                  <ChevronUp className="h-3 w-3 shrink-0 opacity-80" />
+                ) : (
+                  <ChevronDown className="h-3 w-3 shrink-0 opacity-70" />
+                )}
+              </button>
+            </div>
           </div>
 
-          {isCriticExpanded && (
-            <div className="mt-2 space-y-1.5 border-t border-slate-200/70 pt-2 dark:border-slate-800/80">
-              <p
-                data-testid={`critic-notes-${suggestion.id}`}
-                className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400"
+          {/* Lower Band: Compact Critic Verification Gates Strip */}
+          <div
+            data-testid={`critic-guard-panel-${suggestion.id}`}
+            className="px-2.5 py-1.5"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-1.5">
+              <div className="flex flex-wrap items-center gap-1 text-[10px] font-semibold">
+                <span
+                  className={`inline-flex items-center gap-1 whitespace-nowrap rounded border px-1.5 py-0.5 ${
+                    policyPassed
+                      ? "border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                      : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+                  }`}
+                >
+                  {!policyPassed && <ShieldAlert className="h-3 w-3" />}
+                  <span>
+                    {policyPassed ? "✓ Policy Grounded" : "Policy Review Needed"}
+                  </span>
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 whitespace-nowrap rounded border px-1.5 py-0.5 ${
+                    hallucinationFreePassed
+                      ? "border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                      : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300"
+                  }`}
+                >
+                  {!hallucinationFreePassed && <ShieldAlert className="h-3 w-3" />}
+                  <span>
+                    {hallucinationFreePassed
+                      ? "✓ Hallucination-Free"
+                      : "Hallucination Flagged"}
+                  </span>
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 whitespace-nowrap rounded border px-1.5 py-0.5 ${
+                    obligationPreservedPassed
+                      ? "border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                      : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+                  }`}
+                >
+                  {!obligationPreservedPassed && (
+                    <ShieldAlert className="h-3 w-3" />
+                  )}
+                  <span>
+                    {obligationPreservedPassed
+                      ? "✓ Obligations & Numbering Preserved"
+                      : "Numbering Altered"}
+                  </span>
+                </span>
+              </div>
+
+              <button
+                type="button"
+                data-testid={`verify-critic-btn-${suggestion.id}`}
+                disabled={isVerifyingCritic}
+                onClick={handleVerifyWithCritic}
+                className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-slate-200/90 bg-white px-2 text-[10px] font-semibold text-slate-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
               >
-                {criticNotes}
-              </p>
-              {verifyError && (
-                <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
-                  {verifyError}
-                </p>
-              )}
+                {isVerifyingCritic ? (
+                  <>
+                    <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-3 w-3 shrink-0" />
+                    <span>Re-Verify with Critic</span>
+                  </>
+                )}
+              </button>
             </div>
-          )}
+
+            {isCriticExpanded && (
+              <div className="mt-2 space-y-1.5 border-t border-slate-200/70 pt-2 dark:border-slate-800/80">
+                <p
+                  data-testid={`critic-notes-${suggestion.id}`}
+                  className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400"
+                >
+                  {criticNotes}
+                </p>
+                {verifyError && (
+                  <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    {verifyError}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Inline Clause AI Copilot Drawer */}

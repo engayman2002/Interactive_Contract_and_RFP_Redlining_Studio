@@ -225,10 +225,10 @@ export const RedliningStudioWorkspace: React.FC<
       data-testid="redlining-studio-workspace"
       className="bg-enterprise-canvas flex h-screen w-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100"
     >
-      {/* Clean, Non-Wrapping 3-Zone Executive Command Bar */}
-      <header className="flex min-h-[56px] shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-slate-200/80 bg-white/90 px-4 py-2 backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#070B14]/90 xl:overflow-visible">
-        {/* Zone 1: Left — Document Context Only */}
-        <div className="flex min-w-0 shrink-0 items-center gap-2.5">
+      {/* Tier 1: Primary Studio Header — Maximum 3 Clean Clusters Fitting Within 1280px */}
+      <header className="flex h-[52px] shrink-0 items-center justify-between gap-2 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#070B14]/95">
+        {/* Left Cluster: Back + Title + Single Status Pill (flex-1 min-w-0 ensures title truncates instead of pushing Right Cluster off-screen) */}
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <Link
             href="/"
             data-testid="back-to-dashboard-btn"
@@ -243,32 +243,31 @@ export const RedliningStudioWorkspace: React.FC<
             aria-hidden="true"
           />
 
-          <div className="flex min-w-0 items-center gap-2">
-            <h1 className="max-w-[140px] truncate whitespace-nowrap text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100 lg:max-w-[200px] xl:max-w-[260px] 2xl:max-w-[340px]">
-              {currentTitle}
-            </h1>
+          <h1 className="min-w-0 max-w-[320px] truncate whitespace-nowrap text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+            {currentTitle}
+          </h1>
+
+          <span
+            className={`micro-badge shrink-0 whitespace-nowrap font-mono ${
+              currentStatus === "ANALYZED"
+                ? "border-emerald-200/90 bg-emerald-50/80 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
+                : "border-sky-200/90 bg-sky-50/80 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300"
+            }`}
+          >
             <span
-              className={`micro-badge shrink-0 whitespace-nowrap font-mono ${
-                currentStatus === "ANALYZED"
-                  ? "border-emerald-200/90 bg-emerald-50/80 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
-                  : "border-sky-200/90 bg-sky-50/80 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300"
+              className={`micro-badge-dot ${
+                currentStatus === "ANALYZED" ? "bg-emerald-500" : "bg-sky-500"
               }`}
-            >
-              <span
-                className={`micro-badge-dot ${
-                  currentStatus === "ANALYZED" ? "bg-emerald-500" : "bg-sky-500"
-                }`}
-                aria-hidden="true"
-              />
-              <span>
-                v{documentVersion} • {currentStatus}
-              </span>
+              aria-hidden="true"
+            />
+            <span>
+              v{documentVersion} • {currentStatus}
             </span>
-          </div>
+          </span>
         </div>
 
-        {/* Zone 2: Center — Unified AI Control Pod */}
-        <div className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 dark:border-slate-800 dark:bg-slate-900/90">
+        {/* Center Cluster: AI Control Pod */}
+        <div className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-100/85 p-1 dark:border-slate-800 dark:bg-slate-900/90">
           <div
             data-testid="negotiation-stance-selector"
             className="inline-flex h-7 shrink-0 items-center rounded-lg border border-slate-200/80 bg-white p-0.5 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
@@ -321,7 +320,7 @@ export const RedliningStudioWorkspace: React.FC<
             data-testid="trigger-sse-audit-btn"
             onClick={handleTriggerAiAnalysis}
             disabled={streamProgress.isStreaming}
-            className="inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-2.5 text-xs font-semibold text-white shadow-[0_1px_2px_rgba(79,70,229,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] transition-all hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50"
+            className="inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3 text-xs font-semibold text-white shadow-[0_1px_2px_rgba(79,70,229,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] transition-all hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50"
           >
             <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>
@@ -336,13 +335,13 @@ export const RedliningStudioWorkspace: React.FC<
             className="inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-indigo-200/80 bg-white px-2.5 font-mono text-xs font-semibold text-indigo-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
           >
             <Cpu className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span className="max-w-[96px] truncate">
+            <span className="max-w-[140px] truncate">
               {formatActiveAIBadge(activeLLMProvider, activeLLMModel)}
             </span>
           </button>
         </div>
 
-        {/* Zone 3: Right — Compact Document & Help Utilities */}
+        {/* Right Cluster: Primary File Actions + Theme Toggle */}
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
@@ -354,28 +353,16 @@ export const RedliningStudioWorkspace: React.FC<
             <span>Upload</span>
           </button>
 
-          {lastExportedFilename ? (
-            <span
-              data-testid="export-status-badge"
-              className="hidden h-8 shrink-0 items-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 font-mono text-[11px] font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300 2xl:inline-flex"
-            >
-              Exported: {lastExportedFilename}
-            </span>
-          ) : null}
-
           <button
             type="button"
             data-testid="export-track-changes-btn"
             aria-label="Export Track Changes (.docx)"
             onClick={() => void handleExport("track_changes")}
             disabled={isExporting}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-300/80 bg-emerald-50/70 px-2.5 text-[11px] font-semibold text-emerald-800 shadow-sm transition-colors hover:border-emerald-400 hover:bg-emerald-100/70 disabled:opacity-50 dark:border-emerald-500/35 dark:bg-emerald-950/35 dark:text-emerald-300 dark:hover:bg-emerald-900/45"
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-300/80 bg-emerald-50/75 px-2.5 text-xs font-semibold text-emerald-800 shadow-sm transition-colors hover:border-emerald-400 hover:bg-emerald-100/75 disabled:opacity-50 dark:border-emerald-500/35 dark:bg-emerald-950/35 dark:text-emerald-300 dark:hover:bg-emerald-900/45"
           >
             <Download className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <span>
-              <span className="hidden 2xl:inline">Export </span>Track Changes
-              (.docx)
-            </span>
+            <span>Track Changes (.docx)</span>
           </button>
 
           <button
@@ -384,59 +371,24 @@ export const RedliningStudioWorkspace: React.FC<
             aria-label="Export Clean (.docx)"
             onClick={() => void handleExport("clean")}
             disabled={isExporting}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-[11px] font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
           >
             <FileCheck2 className="h-3.5 w-3.5 shrink-0 text-slate-500 dark:text-slate-400" />
-            <span>
-              <span className="hidden 2xl:inline">Export </span>Clean (.docx)
-            </span>
-          </button>
-
-          <Link
-            href="/playbooks"
-            data-testid="header-playbook-link"
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
-          >
-            <BookOpen
-              className="h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-400"
-              aria-hidden="true"
-            />
-            <span>Playbooks</span>
-          </Link>
-
-          <Link
-            href="/help"
-            data-testid="open-interactive-tutorial-btn"
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
-          >
-            <GraduationCap
-              className="h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-400"
-              aria-hidden="true"
-            />
-            <span>Tutorial</span>
-          </Link>
-
-          <button
-            type="button"
-            data-testid="open-quick-help-btn"
-            onClick={() => setIsQuickHelpOpen(true)}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
-          >
-            <HelpCircle className="h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
-            <span>Help</span>
+            <span>Clean (.docx)</span>
           </button>
 
           <ThemeToggle />
         </div>
       </header>
 
-      {/* Ultra-Slim Executive Workflow Progress Strip */}
-      {!isGuideDismissed ? (
-        <div
-          data-testid="studio-quick-guide-banner"
-          className="flex h-8 shrink-0 items-center justify-between border-b border-slate-200/70 bg-slate-50/90 px-4 text-[11px] text-slate-600 dark:border-slate-800/70 dark:bg-[#080C16] dark:text-slate-400"
-        >
-          <div className="flex flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap">
+      {/* Tier 2: Secondary Sub-Header (Always Accessible Workflow Progress + Playbooks / Tutorial / Help) */}
+      <div
+        data-testid="studio-quick-guide-banner"
+        className="flex h-9 shrink-0 items-center justify-between gap-3 border-b border-slate-200/70 bg-slate-50/95 px-4 text-[11px] text-slate-600 dark:border-slate-800/70 dark:bg-[#080C16] dark:text-slate-400"
+      >
+        {/* Left side: 4-step progress strip (dismissible without hiding utilities) */}
+        {!isGuideDismissed ? (
+          <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-x-auto whitespace-nowrap">
             {[
               {
                 num: 1,
@@ -446,13 +398,13 @@ export const RedliningStudioWorkspace: React.FC<
               },
               {
                 num: 2,
-                label: "2. Select Stance & Audit",
+                label: "2. Stance & Audit",
                 done: isAnalyzedStage,
                 active: hasClauses && !isAnalyzedStage,
               },
               {
                 num: 3,
-                label: "3. Review & Refine Clauses",
+                label: "3. Review Clauses",
                 done: hasResolvedRedlines,
                 active: isAnalyzedStage && !hasResolvedRedlines,
               },
@@ -496,18 +448,66 @@ export const RedliningStudioWorkspace: React.FC<
                 ) : null}
               </React.Fragment>
             ))}
+
+            <button
+              type="button"
+              data-testid="dismiss-quick-guide-btn"
+              onClick={() => setIsGuideDismissed(true)}
+              className="ml-1 shrink-0 whitespace-nowrap rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white"
+              title="Hide workflow steps"
+            >
+              <X className="h-3 w-3" />
+            </button>
           </div>
+        ) : (
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={() => setIsGuideDismissed(false)}
+              className="whitespace-nowrap font-mono text-[10px] font-medium text-slate-500 transition-colors hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300"
+            >
+              Show 4-step workflow guide
+            </button>
+          </div>
+        )}
+
+        {/* Right side: Workspace Navigation & Help Links (always visible, never clipped) */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Link
+            href="/playbooks"
+            data-testid="header-playbook-link"
+            className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-slate-200/90 bg-white px-2.5 text-[11px] font-medium text-slate-700 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500/40 dark:hover:bg-slate-800"
+          >
+            <BookOpen
+              className="h-3 w-3 shrink-0 text-indigo-600 dark:text-indigo-400"
+              aria-hidden="true"
+            />
+            <span>Playbooks</span>
+          </Link>
+
+          <Link
+            href="/help"
+            data-testid="open-interactive-tutorial-btn"
+            className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-slate-200/90 bg-white px-2.5 text-[11px] font-medium text-slate-700 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500/40 dark:hover:bg-slate-800"
+          >
+            <GraduationCap
+              className="h-3 w-3 shrink-0 text-indigo-600 dark:text-indigo-400"
+              aria-hidden="true"
+            />
+            <span>🎓 Tutorial</span>
+          </Link>
+
           <button
             type="button"
-            data-testid="dismiss-quick-guide-btn"
-            onClick={() => setIsGuideDismissed(true)}
-            className="ml-3 shrink-0 whitespace-nowrap rounded p-1 text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white"
-            title="Dismiss Workflow Bar"
+            data-testid="open-quick-help-btn"
+            onClick={() => setIsQuickHelpOpen(true)}
+            className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-slate-200/90 bg-white px-2.5 text-[11px] font-medium text-slate-700 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500/40 dark:hover:bg-slate-800"
           >
-            <X className="h-3 w-3" />
+            <HelpCircle className="h-3 w-3 shrink-0 text-indigo-600 dark:text-indigo-400" />
+            <span>? Quick Help</span>
           </button>
         </div>
-      ) : null}
+      </div>
 
       {/* Optimistic Concurrency Version Conflict (409) Banner */}
       {conflictError ? (
@@ -587,6 +587,23 @@ export const RedliningStudioWorkspace: React.FC<
           />
         </section>
       </div>
+
+      {/* Floating Export Status Toast Pill (Never overflows header) */}
+      {lastExportedFilename ? (
+        <div
+          role="status"
+          data-testid="export-status-badge"
+          className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl border border-emerald-200/90 bg-white/95 px-3.5 py-2 font-mono text-xs font-medium text-emerald-700 shadow-lg backdrop-blur-md dark:border-emerald-500/30 dark:bg-slate-900/95 dark:text-emerald-300"
+        >
+          <CheckCircle2
+            className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+            aria-hidden="true"
+          />
+          <span className="whitespace-nowrap">
+            Exported: {lastExportedFilename}
+          </span>
+        </div>
+      ) : null}
 
       {/* Quick Upload Modal */}
       {isUploadModalOpen ? (

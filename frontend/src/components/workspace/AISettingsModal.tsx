@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Activity,
   AlertCircle,
@@ -167,6 +168,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     useState<boolean>(false);
 
   const isMountedRef = useRef<boolean>(true);
+  const vaultFileInputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -667,6 +669,8 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
             "Invalid vault file: expected a valid AES-256-GCM .rsvault.json envelope.",
         });
       }
+    } finally {
+      event.target.value = "";
     }
   };
 
@@ -723,32 +727,36 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
     }
   };
 
-  return (
+  if (!isOpen) {
+    return null;
+  }
+
+  const modalContent = (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="AI Engine & Model Configuration"
       data-testid="ai-settings-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm dark:bg-black/75"
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-slate-950/75 p-4 backdrop-blur-sm"
     >
-      <div className="surface-card flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl shadow-2xl">
-        {/* Modal Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-200/80 bg-slate-50/75 px-6 py-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/75">
+      <div className="relative flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-[#0B101E]">
+        {/* Locked Modal Header */}
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200/80 bg-slate-50/90 px-6 py-3.5 dark:border-slate-800 dark:bg-[#080C17]">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-sm">
-              <Cpu className="h-5 w-5" aria-hidden="true" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-sm ring-1 ring-inset ring-white/20">
+              <Cpu className="h-4 w-4" aria-hidden="true" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">
+                <h2 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
                   AI Inference &amp; Vector Engine Switcher
                 </h2>
-                <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300">
+                <span className="hidden rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300 sm:inline-block">
                   Zero-Restart Hot Swap
                 </span>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                Dynamically configure, test, and switch Cloud LLMs, Local Ollama/vLLM servers, and 1536-d Vector Embeddings in real time.
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                Configure Cloud LLMs, local Ollama/vLLM endpoints, and 1536-d Vector Embeddings in real time.
               </p>
             </div>
           </div>
@@ -758,38 +766,41 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
             data-testid="close-ai-settings-modal-btn"
             onClick={onClose}
             aria-label="Close AI Settings Modal"
-            className="rounded-lg border border-slate-200/90 bg-white p-1.5 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+            className="shrink-0 rounded-lg border border-slate-200/90 bg-white p-1.5 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Scrollable Body */}
-        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+        {/* Scroll-Isolated Body */}
+        <div
+          onScroll={(e) => e.stopPropagation()}
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4"
+        >
           {isLoadingSettings ? (
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300">
-              <Loader2 className="h-4 w-4 animate-spin text-indigo-600 dark:text-indigo-400" />
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600 dark:text-indigo-400" />
               <span>Synchronizing active runtime AI configuration...</span>
             </div>
           ) : null}
 
-          {/* Quick-Select Provider Preset Cards */}
+          {/* Row 1: Compact 7-Column Provider Preset Strip */}
           <section aria-label="AI Provider Presets">
-            <div className="mb-2.5 flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Quick-Select Provider Presets
               </h3>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                Select a provider, then type a Model ID manually or click Fetch Live Models
+              <span className="hidden text-[11px] text-slate-500 dark:text-slate-400 sm:inline">
+                Select a provider, then enter Model ID or fetch live models
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
               {catalog.map((preset) => {
                 const isSelected = llmProvider === preset.provider_id;
                 const meta = PRESET_DISPLAY_META[preset.provider_id] ?? {
-                  tagline: preset.default_llm_model ?? "Custom Plugin Provider",
-                  badge: preset.requires_api_key ? "API Key" : "Local / Custom",
+                  tagline: preset.default_llm_model ?? "Custom Provider",
+                  badge: preset.requires_api_key ? "API Key" : "Local",
                 };
 
                 return (
@@ -798,43 +809,29 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                     type="button"
                     data-testid={`provider-preset-${preset.provider_id}`}
                     onClick={() => handleSelectPresetCard(preset)}
-                    className={`flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all ${
+                    title={meta.tagline}
+                    className={`flex flex-col justify-between rounded-xl border p-2.5 text-left transition-all ${
                       isSelected
-                        ? "border-indigo-500 bg-indigo-50/60 shadow-sm ring-2 ring-indigo-500/20 dark:border-indigo-500 dark:bg-indigo-950/30 dark:ring-indigo-500/30"
-                        : "border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/90 dark:hover:border-slate-700 dark:hover:bg-slate-800/60"
+                        ? "border-indigo-500 bg-indigo-50/70 shadow-sm ring-2 ring-indigo-500/20 dark:border-indigo-500 dark:bg-indigo-950/35 dark:ring-indigo-500/30"
+                        : "border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/80 dark:hover:border-slate-700 dark:hover:bg-slate-800/70"
                     }`}
                   >
-                    <div>
-                      <div className="mb-1.5 flex items-center justify-between gap-1.5">
-                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                          {preset.display_name}
-                        </span>
-                        <span
-                          className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                            !preset.requires_api_key
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
-                              : "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300"
-                          }`}
-                        >
-                          {meta.badge}
-                        </span>
-                      </div>
-                      <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-400">
-                        {meta.tagline}
-                      </p>
-                    </div>
-
-                    <div className="mt-2.5 flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                      {preset.supports_llm ? (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono dark:bg-slate-800">
-                          LLM
-                        </span>
-                      ) : null}
-                      {preset.supports_embeddings ? (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono dark:bg-slate-800">
-                          1536-d Vec
-                        </span>
-                      ) : null}
+                    <span className="truncate text-[11px] font-semibold leading-tight text-slate-900 dark:text-slate-100">
+                      {preset.display_name}
+                    </span>
+                    <div className="mt-1.5 flex items-center justify-between gap-1">
+                      <span
+                        className={`truncate rounded px-1.5 py-0.5 text-[9px] font-semibold ${
+                          !preset.requires_api_key
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                            : "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300"
+                        }`}
+                      >
+                        {meta.badge}
+                      </span>
+                      <span className="font-mono text-[9px] text-slate-400 dark:text-slate-500">
+                        {preset.supports_embeddings ? "LLM+V" : "LLM"}
+                      </span>
                     </div>
                   </button>
                 );
@@ -842,21 +839,21 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
             </div>
           </section>
 
-          {/* Dual Engine Configuration Panels */}
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {/* Row 2: Side-by-Side LLM & Vector Embedding Engine Cards */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Panel 1: LLM Reasoning Engine */}
             <section
               aria-label="LLM Reasoning Engine Configuration"
-              className="space-y-4 rounded-xl border border-slate-200/90 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/40"
+              className="space-y-3 rounded-xl border border-slate-200/90 bg-slate-50/60 p-3.5 dark:border-slate-800 dark:bg-slate-900/50"
             >
-              <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5 dark:border-slate-800">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              <div className="flex items-center justify-between border-b border-slate-200/80 pb-2 dark:border-slate-800">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
                   <h3 className="text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     1. LLM Reasoning Engine
                   </h3>
                 </div>
-                <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-[10px] font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                <span className="rounded border border-slate-200 bg-white px-2 py-0.5 font-mono text-[10px] font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                   Clause Auditor
                 </span>
               </div>
@@ -865,7 +862,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
               <div>
                 <label
                   htmlFor="ai-llm-provider-select"
-                  className="block text-xs font-medium text-slate-700 dark:text-slate-300"
+                  className="block text-[11px] font-medium text-slate-700 dark:text-slate-300"
                 >
                   Active LLM Provider
                 </label>
@@ -874,7 +871,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   data-testid="ai-settings-llm-provider-select"
                   value={llmProvider}
                   onChange={(e) => handleLlmProviderSelect(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 >
                   {llmCapableProviders.map((item) => (
                     <option key={item.provider_id} value={item.provider_id}>
@@ -890,13 +887,13 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   <div className="flex items-center gap-1.5">
                     <label
                       htmlFor="ai-llm-model-input"
-                      className="block text-xs font-medium text-slate-700 dark:text-slate-300"
+                      className="block text-[11px] font-medium text-slate-700 dark:text-slate-300"
                     >
-                      Model ID (Manual Entry or Live Discovery)
+                      Model ID
                     </label>
                     {llmModelName.trim() &&
                     !availableLlmModels.includes(llmModelName.trim()) ? (
-                      <span className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300">
+                      <span className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300">
                         Manual ID
                       </span>
                     ) : null}
@@ -908,10 +905,10 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                       data-testid="fetch-live-models-btn"
                       disabled={isFetchingLlmModels}
                       onClick={() => void runLiveDiscovery("llm")}
-                      className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50/80 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-50 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
+                      className="inline-flex h-6 items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50/80 px-2 text-[10px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-50 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
                     >
                       <RefreshCw
-                        className={`h-3 w-3 ${
+                        className={`h-2.5 w-2.5 ${
                           isFetchingLlmModels ? "animate-spin" : ""
                         }`}
                       />
@@ -936,7 +933,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                             setLlmModelName(e.target.value);
                           }
                         }}
-                        className="max-w-[165px] truncate rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
+                        className="h-6 max-w-[140px] truncate rounded-md border border-slate-200 bg-white px-1.5 text-[10px] font-medium text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
                       >
                         <option value="" disabled>
                           {llmProvider === "deterministic"
@@ -960,8 +957,8 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   data-testid="ai-settings-llm-model-input"
                   value={llmModelName}
                   onChange={(e) => setLlmModelName(e.target.value)}
-                  placeholder="Type model ID manually or click Fetch Live Models..."
-                  className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  placeholder="Type model ID or click Fetch Live Models..."
+                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <datalist id="ai-llm-models-datalist">
                   {availableLlmModels.map((m) => (
@@ -972,7 +969,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 {activeLlmDiscoveryStatus ? (
                   <div
                     data-testid="live-models-status-badge"
-                    className={`mt-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
+                    className={`mt-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-medium ${
                       activeLlmDiscoveryStatus.source === "live_api"
                         ? "border-emerald-200 bg-emerald-50/80 text-emerald-800 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
                         : "border-amber-200 bg-amber-50/80 text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
@@ -987,7 +984,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 {availableLlmModels.length > 0 ? (
                   <div
                     aria-label="Quick-pick LLM models"
-                    className="mt-2 flex max-h-20 flex-wrap gap-1.5 overflow-y-auto"
+                    className="mt-1.5 flex max-h-14 flex-wrap gap-1 overflow-y-auto"
                   >
                     {availableLlmModels.slice(0, 12).map((m) => {
                       const active = llmModelName === m;
@@ -1016,9 +1013,9 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 <div>
                   <label
                     htmlFor="ai-llm-base-url-input"
-                    className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    className="flex items-center gap-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-300"
                   >
-                    <Globe className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <Globe className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
                     <span>Server Base URL</span>
                   </label>
                   <input
@@ -1032,7 +1029,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                         ? "http://localhost:11434"
                         : "http://localhost:8000/v1"
                     }
-                    className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                   />
                 </div>
               ) : null}
@@ -1042,14 +1039,14 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 <div className="flex items-center justify-between gap-2">
                   <label
                     htmlFor="ai-llm-api-key-input"
-                    className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    className="flex items-center gap-1 text-[11px] font-medium text-slate-700 dark:text-slate-300"
                   >
-                    <KeyRound className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+                    <KeyRound className="h-3 w-3 text-slate-500 dark:text-slate-400" />
                     <span>API Key</span>
                   </label>
                   <span
                     data-testid="ai-settings-key-status-badge"
-                    className={`rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold ${
+                    className={`rounded-full border px-2 py-0.5 font-mono text-[9px] font-semibold ${
                       !selectedLlmCatalog?.requires_api_key
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
                         : llmHasStoredKey && llmMaskedKey
@@ -1065,7 +1062,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   </span>
                 </div>
 
-                <div className="relative mt-1.5">
+                <div className="relative mt-1">
                   <input
                     id="ai-llm-api-key-input"
                     type={showApiKey ? "text" : "password"}
@@ -1075,12 +1072,12 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                     onChange={(e) => setLlmApiKeyInput(e.target.value)}
                     placeholder={
                       !selectedLlmCatalog?.requires_api_key
-                        ? "Optional bearer key (not required for local engine)"
+                        ? "Optional bearer key (not required locally)"
                         : llmHasStoredKey && llmMaskedKey
-                        ? `Stored (${llmMaskedKey}) — enter new key to replace`
-                        : "Paste provider API key (never returned in plaintext)"
+                        ? `Stored (${llmMaskedKey}) — enter to replace`
+                        : "Paste provider API key (kept in memory)"
                     }
-                    className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-3 pr-9 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="h-9 w-full rounded-lg border border-slate-300 bg-white pl-3 pr-9 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                   />
                   <button
                     type="button"
@@ -1097,17 +1094,17 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* Temperature Control */}
+              {/* Compact Temperature Slider */}
               <div>
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center justify-between text-[11px]">
                   <label
                     htmlFor="ai-llm-temperature-input"
                     className="font-medium text-slate-700 dark:text-slate-300"
                   >
                     Sampling Temperature
                   </label>
-                  <span className="font-mono text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
-                    {llmTemperature.toFixed(2)} (0.00 = Deterministic Legal Audit)
+                  <span className="font-mono text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
+                    {llmTemperature.toFixed(2)} (0.00 = Deterministic)
                   </span>
                 </div>
                 <input
@@ -1119,7 +1116,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   data-testid="ai-settings-temperature-input"
                   value={llmTemperature}
                   onChange={(e) => setLlmTemperature(Number(e.target.value))}
-                  className="mt-1.5 w-full accent-indigo-600"
+                  className="mt-1 w-full accent-indigo-600"
                 />
               </div>
             </section>
@@ -1127,17 +1124,17 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
             {/* Panel 2: Vector Embedding Engine */}
             <section
               aria-label="Vector Embedding Engine Configuration"
-              className="space-y-4 rounded-xl border border-slate-200/90 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/40"
+              className="space-y-3 rounded-xl border border-slate-200/90 bg-slate-50/60 p-3.5 dark:border-slate-800 dark:bg-slate-900/50"
             >
-              <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5 dark:border-slate-800">
-                <div className="flex items-center gap-2">
-                  <Database className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <div className="flex items-center justify-between border-b border-slate-200/80 pb-2 dark:border-slate-800">
+                <div className="flex items-center gap-1.5">
+                  <Database className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   <h3 className="text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     2. Vector Embedding Engine
                   </h3>
                 </div>
-                <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
-                  1536-d Auto-Adapted
+                <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                  1536-d Adapted
                 </span>
               </div>
 
@@ -1145,7 +1142,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
               <div>
                 <label
                   htmlFor="ai-embedding-provider-select"
-                  className="block text-xs font-medium text-slate-700 dark:text-slate-300"
+                  className="block text-[11px] font-medium text-slate-700 dark:text-slate-300"
                 >
                   Active Embedding Provider
                 </label>
@@ -1156,7 +1153,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   onChange={(e) =>
                     handleEmbeddingProviderSelect(e.target.value)
                   }
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 >
                   {embeddingCapableProviders.map((item) => (
                     <option key={item.provider_id} value={item.provider_id}>
@@ -1172,15 +1169,15 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   <div className="flex items-center gap-1.5">
                     <label
                       htmlFor="ai-embedding-model-input"
-                      className="block text-xs font-medium text-slate-700 dark:text-slate-300"
+                      className="block text-[11px] font-medium text-slate-700 dark:text-slate-300"
                     >
-                      Embedding Model ID (Manual Entry or Live Discovery)
+                      Embedding Model ID
                     </label>
                     {embeddingModelName.trim() &&
                     !availableEmbeddingModels.includes(
                       embeddingModelName.trim()
                     ) ? (
-                      <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
                         Manual ID
                       </span>
                     ) : null}
@@ -1192,10 +1189,10 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                       data-testid="fetch-live-embedding-models-btn"
                       disabled={isFetchingEmbeddingModels}
                       onClick={() => void runLiveDiscovery("embedding")}
-                      className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+                      className="inline-flex h-6 items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50/80 px-2 text-[10px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
                     >
                       <RefreshCw
-                        className={`h-3 w-3 ${
+                        className={`h-2.5 w-2.5 ${
                           isFetchingEmbeddingModels ? "animate-spin" : ""
                         }`}
                       />
@@ -1220,7 +1217,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                             setEmbeddingModelName(e.target.value);
                           }
                         }}
-                        className="max-w-[165px] truncate rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
+                        className="h-6 max-w-[140px] truncate rounded-md border border-slate-200 bg-white px-1.5 text-[10px] font-medium text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
                       >
                         <option value="" disabled>
                           {embeddingProvider === "deterministic"
@@ -1246,8 +1243,8 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   data-testid="ai-settings-embedding-model-input"
                   value={embeddingModelName}
                   onChange={(e) => setEmbeddingModelName(e.target.value)}
-                  placeholder="Type model ID manually or click Fetch Live Models..."
-                  className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  placeholder="Type model ID or click Fetch Live Models..."
+                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <datalist id="ai-embedding-models-datalist">
                   {availableEmbeddingModels.map((m) => (
@@ -1259,7 +1256,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 embeddingProvider !== llmProvider ? (
                   <div
                     data-testid="live-embedding-models-status-badge"
-                    className={`mt-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
+                    className={`mt-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-medium ${
                       activeEmbDiscoveryStatus.source === "live_api"
                         ? "border-emerald-200 bg-emerald-50/80 text-emerald-800 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
                         : "border-amber-200 bg-amber-50/80 text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
@@ -1274,7 +1271,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 {availableEmbeddingModels.length > 0 ? (
                   <div
                     aria-label="Quick-pick Embedding models"
-                    className="mt-2 flex max-h-20 flex-wrap gap-1.5 overflow-y-auto"
+                    className="mt-1.5 flex max-h-14 flex-wrap gap-1 overflow-y-auto"
                   >
                     {availableEmbeddingModels.slice(0, 10).map((m) => {
                       const active = embeddingModelName === m;
@@ -1303,9 +1300,9 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 <div>
                   <label
                     htmlFor="ai-embedding-base-url-input"
-                    className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    className="flex items-center gap-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-300"
                   >
-                    <Server className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <Server className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                     <span>Embedding Server Base URL</span>
                   </label>
                   <input
@@ -1319,27 +1316,27 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                         ? "http://localhost:11434"
                         : "http://localhost:8080/v1"
                     }
-                    className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                   />
                 </div>
               ) : null}
 
-              {/* Embedding API Key (optional override when using a different provider from LLM) */}
+              {/* Embedding API Key */}
               <div>
                 <div className="flex items-center justify-between gap-2">
                   <label
                     htmlFor="ai-embedding-api-key-input"
-                    className="text-xs font-medium text-slate-700 dark:text-slate-300"
+                    className="text-[11px] font-medium text-slate-700 dark:text-slate-300"
                   >
                     Embedding API Key
                   </label>
-                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="font-mono text-[9px] text-slate-500 dark:text-slate-400">
                     {!selectedEmbeddingCatalog?.requires_api_key
                       ? "No Key Required"
                       : embeddingHasStoredKey && embeddingMaskedKey
                       ? `Stored: ${embeddingMaskedKey}`
                       : embeddingProvider === llmProvider
-                      ? "Inherits LLM API Key if blank"
+                      ? "Inherits LLM Key"
                       : "Separate Key Required"}
                   </span>
                 </div>
@@ -1352,21 +1349,18 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   onChange={(e) => setEmbeddingApiKeyInput(e.target.value)}
                   placeholder={
                     embeddingProvider === llmProvider
-                      ? "Leave blank to reuse LLM API key above"
-                      : "Optional separate embedding provider API key"
+                      ? "Leave blank to reuse LLM API key"
+                      : "Optional separate embedding API key"
                   }
-                  className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              {/* Architectural Note on Isometric Dimension Adaptation */}
-              <div className="rounded-lg border border-slate-200/80 bg-white p-3 text-[11px] leading-relaxed text-slate-600 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-400">
+              <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-[11px] leading-snug text-slate-600 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-400">
                 <strong className="font-semibold text-slate-800 dark:text-slate-200">
-                  Automatic 1536-d pgvector Adaptation:
+                  1536-d pgvector Auto-Adaptation:
                 </strong>{" "}
-                Any 384-d, 768-d, 1024-d, or 3072-d provider vector is
-                automatically adapted and L2-normalized to unit length with zero
-                database schema migrations.
+                Any dimension (384–3072) is L2-normalized automatically with zero schema migrations.
               </div>
             </section>
           </div>
@@ -1374,58 +1368,55 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
           {isMissingRequiredModelId ? (
             <div
               data-testid="ai-settings-model-required-hint"
-              className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-2.5 text-xs font-medium text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
+              className="rounded-xl border border-amber-200 bg-amber-50/80 px-3.5 py-2 text-xs font-medium text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
             >
               Model ID required: Type an explicit model ID manually or click{" "}
-              <strong className="font-semibold">Fetch Live Models</strong> to
-              select an available model from the provider API before activating.
+              <strong className="font-semibold">Fetch Live Models</strong> before activating.
             </div>
           ) : null}
 
-          {/* Encrypted Configuration Vault (Backup & Restore API Keys) */}
+          {/* Row 3: Sleek Encrypted Configuration Vault Bar */}
           <section
             aria-label="Encrypted Configuration Vault"
-            className="space-y-4 rounded-xl border border-slate-200/90 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/50"
+            className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-2.5 dark:border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                <div>
+                <ShieldCheck className="h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                <div className="flex flex-wrap items-baseline gap-x-2">
                   <h3 className="text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                    Encrypted Configuration Vault (Backup &amp; Restore API Keys)
+                    Encrypted Configuration Vault
                   </h3>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                    Runtime API keys stay strictly in memory. Export a passphrase-locked{" "}
-                    <code className="rounded bg-slate-200/70 px-1 py-0.5 font-mono text-[10px] dark:bg-slate-800">
-                      .rsvault.json
-                    </code>{" "}
-                    bundle to reload settings across future sessions without re-typing keys.
-                  </p>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Export or reload encrypted{" "}
+                    <code className="font-mono text-[10px]">.rsvault.json</code>{" "}
+                    keys offline
+                  </span>
                 </div>
               </div>
 
-              <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300">
+              <span className="shrink-0 whitespace-nowrap rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300">
                 AES-256-GCM • PBKDF2 600k
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-              {/* Passphrase Input */}
+            <div className="grid grid-cols-1 gap-3 border-t border-slate-200/80 pt-3 dark:border-slate-800 lg:grid-cols-12 lg:items-end">
+              {/* Left: Vault Passphrase Input */}
               <div className="lg:col-span-5">
                 <div className="flex items-center justify-between gap-2">
                   <label
                     htmlFor="ai-vault-passphrase-input"
-                    className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    className="flex items-center gap-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-300"
                   >
-                    <Lock className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <Lock className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
                     <span>Vault Passphrase</span>
                   </label>
                   <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
-                    Min 8 chars • Never stored
+                    Min 8 chars
                   </span>
                 </div>
 
-                <div className="relative mt-1.5">
+                <div className="relative mt-1">
                   <input
                     id="ai-vault-passphrase-input"
                     type={showVaultPassphrase ? "text" : "password"}
@@ -1435,7 +1426,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                     value={vaultPassphrase}
                     onChange={(e) => setVaultPassphrase(e.target.value)}
                     placeholder="Enter secret passphrase (min 8 chars)..."
-                    className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-3 pr-9 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="h-9 w-full rounded-lg border border-slate-300 bg-white pl-3 pr-9 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                   />
                   <button
                     type="button"
@@ -1456,81 +1447,82 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* Export & Import Actions */}
-              <div className="flex flex-col justify-end gap-2.5 lg:col-span-7">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    data-testid="export-ai-vault-btn"
-                    disabled={
-                      isExportingVault || isImportingVault || isReadOnlyRole
-                    }
-                    title={
-                      isReadOnlyRole
-                        ? "Only ADMIN users can export encrypted AI vaults"
-                        : "Encrypt & download active/typed AI settings as .rsvault.json"
-                    }
-                    onClick={() => void handleExportVault()}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25"
-                  >
-                    {isExportingVault ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5" />
-                    )}
-                    <span>
-                      {isExportingVault
-                        ? "Encrypting..."
-                        : "Export Encrypted Vault (.rsvault.json)"}
-                    </span>
-                  </button>
+              {/* Right: Export / Select File (display:none ref) / Unlock Horizontal Bar */}
+              <div className="flex flex-wrap items-center gap-2 lg:col-span-7 lg:justify-end">
+                <button
+                  type="button"
+                  data-testid="export-ai-vault-btn"
+                  disabled={
+                    isExportingVault || isImportingVault || isReadOnlyRole
+                  }
+                  title={
+                    isReadOnlyRole
+                      ? "Only ADMIN users can export encrypted AI vaults"
+                      : "Encrypt & download active/typed AI settings as .rsvault.json"
+                  }
+                  onClick={() => void handleExportVault()}
+                  className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25"
+                >
+                  {isExportingVault ? (
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5 shrink-0" />
+                  )}
+                  <span>
+                    {isExportingVault ? "Encrypting..." : "Export Vault (.rsvault)"}
+                  </span>
+                </button>
 
-                  <label
-                    htmlFor="import-ai-vault-file-input"
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500/40"
-                  >
-                    <Upload className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
-                    <span className="max-w-[180px] truncate">
-                      {pendingVaultFileName
-                        ? pendingVaultFileName
-                        : "Select .rsvault.json"}
-                    </span>
-                    <input
-                      id="import-ai-vault-file-input"
-                      type="file"
-                      accept=".json,.rsvault.json,application/json"
-                      data-testid="import-ai-vault-file-input"
-                      onChange={(e) => void handleVaultFileChange(e)}
-                      className="sr-only"
-                    />
-                  </label>
+                {/* display:none file input triggered via button prevents native Chromium focus-scroll */}
+                <input
+                  ref={vaultFileInputRef}
+                  id="import-ai-vault-file-input"
+                  type="file"
+                  accept=".json,.rsvault.json,application/json"
+                  data-testid="import-ai-vault-file-input"
+                  onChange={(e) => void handleVaultFileChange(e)}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    vaultFileInputRef.current?.click();
+                  }}
+                  className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500/40"
+                >
+                  <Upload className="h-3.5 w-3.5 shrink-0 text-slate-500 dark:text-slate-400" />
+                  <span className="max-w-[150px] truncate">
+                    {pendingVaultFileName
+                      ? pendingVaultFileName
+                      : "Select .rsvault.json"}
+                  </span>
+                </button>
 
-                  <button
-                    type="button"
-                    data-testid="import-ai-vault-btn"
-                    disabled={
-                      isImportingVault || isExportingVault || isReadOnlyRole
-                    }
-                    title={
-                      isReadOnlyRole
-                        ? "Only ADMIN users can unlock and activate encrypted AI vaults"
-                        : "Decrypt .rsvault.json and immediately activate settings"
-                    }
-                    onClick={() => void handleImportVault()}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isImportingVault ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Unlock className="h-3.5 w-3.5" />
-                    )}
-                    <span>
-                      {isImportingVault
-                        ? "Unlocking..."
-                        : "Unlock & Restore Vault"}
-                    </span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  data-testid="import-ai-vault-btn"
+                  disabled={
+                    isImportingVault || isExportingVault || isReadOnlyRole
+                  }
+                  title={
+                    isReadOnlyRole
+                      ? "Only ADMIN users can unlock and activate encrypted AI vaults"
+                      : "Decrypt .rsvault.json and immediately activate settings"
+                  }
+                  onClick={() => void handleImportVault()}
+                  className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isImportingVault ? (
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                  ) : (
+                    <Unlock className="h-3.5 w-3.5 shrink-0" />
+                  )}
+                  <span>
+                    {isImportingVault ? "Unlocking..." : "Unlock & Restore"}
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -1538,7 +1530,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
               <div
                 data-testid="ai-vault-status-banner"
                 role={vaultStatus.tone === "error" ? "alert" : "status"}
-                className={`rounded-lg border px-3.5 py-2.5 text-xs font-medium ${
+                className={`mt-3 rounded-lg border px-3 py-2 text-xs font-medium ${
                   vaultStatus.tone === "success"
                     ? "border-emerald-200 bg-emerald-50/90 text-emerald-800 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
                     : vaultStatus.tone === "error"
@@ -1555,7 +1547,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
           {testResult ? (
             <div
               data-testid="ai-connection-test-result"
-              className={`rounded-xl border p-4 ${
+              className={`rounded-xl border p-3.5 ${
                 testResult.success
                   ? "border-emerald-200 bg-emerald-50/70 text-emerald-900 dark:border-emerald-500/25 dark:bg-emerald-950/25 dark:text-emerald-200"
                   : "border-rose-200 bg-rose-50/70 text-rose-900 dark:border-rose-500/25 dark:bg-rose-950/25 dark:text-rose-200"
@@ -1583,12 +1575,12 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                 </span>
               </div>
 
-              <p className="mt-1.5 text-xs leading-relaxed">
+              <p className="mt-1 text-xs leading-relaxed">
                 {testResult.message}
               </p>
 
               {testResult.sample_output_preview ? (
-                <div className="mt-2.5 rounded-lg border border-emerald-200/80 bg-white/80 px-3 py-2 font-mono text-[11px] text-slate-700 dark:border-emerald-500/20 dark:bg-slate-900/80 dark:text-slate-300">
+                <div className="mt-2 rounded-lg border border-emerald-200/80 bg-white/80 px-3 py-1.5 font-mono text-[11px] text-slate-700 dark:border-emerald-500/20 dark:bg-slate-900/80 dark:text-slate-300">
                   Sample Audit Probe: {testResult.sample_output_preview}
                 </div>
               ) : null}
@@ -1598,43 +1590,41 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
           {saveError ? (
             <div
               role="alert"
-              className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300"
+              className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300"
             >
               {saveError}
             </div>
           ) : null}
 
           {saveSuccessBanner ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
               {saveSuccessBanner}
             </div>
           ) : null}
         </div>
 
-        {/* Modal Footer */}
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 bg-slate-50/80 px-6 py-4 dark:border-slate-800 dark:bg-slate-950/60">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              data-testid="test-ai-connection-btn"
-              disabled={isTesting || isSaving}
-              onClick={() => void handleTestConnection()}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-800 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-indigo-500/40 dark:hover:bg-slate-700"
-            >
-              {isTesting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600 dark:text-indigo-400" />
-              ) : (
-                <Activity className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-              )}
-              <span>{isTesting ? "Testing Engine..." : "Test Connection"}</span>
-            </button>
-          </div>
+        {/* Locked Modal Footer */}
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 bg-slate-50/90 px-6 py-3.5 dark:border-slate-800 dark:bg-[#080C17]">
+          <button
+            type="button"
+            data-testid="test-ai-connection-btn"
+            disabled={isTesting || isSaving}
+            onClick={() => void handleTestConnection()}
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-indigo-500/40 dark:hover:bg-slate-700"
+          >
+            {isTesting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600 dark:text-indigo-400" />
+            ) : (
+              <Activity className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+            )}
+            <span>{isTesting ? "Testing Engine..." : "Test Connection"}</span>
+          </button>
 
           <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             >
               Cancel
             </button>
@@ -1653,7 +1643,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
                   : "Save & Activate AI Engine"
               }
               onClick={() => void handleSaveAndActivate()}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSaving ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1669,5 +1659,10 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
       </div>
     </div>
   );
+
+  if (typeof document !== "undefined") {
+    return createPortal(modalContent, document.body);
+  }
+  return modalContent;
 };
 

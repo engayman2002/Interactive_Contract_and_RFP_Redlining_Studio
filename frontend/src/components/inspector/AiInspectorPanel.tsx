@@ -273,96 +273,95 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
     >
       {/* Compressed 2-Row Executive Inspector Header (~85px shorter so Clause #1 actions sit above the fold) */}
       <div className="sticky top-0 z-10 shrink-0 border-b border-slate-200/80 bg-white/95 px-4 py-2.5 backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#070B14]/95">
-        {/* Row 1: Compact Title + Stance Pill + 4-Tab Segmented Switcher */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex shrink-0 items-center gap-2">
-            <h2 className="whitespace-nowrap text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-              AI Redline Inspector
-            </h2>
+        {/* Row 1: Compact Header Title + Stance Pill */}
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="whitespace-nowrap text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+            AI Redline Inspector
+          </h2>
+          <span
+            data-testid="inspector-active-stance-badge"
+            className={`micro-badge shrink-0 whitespace-nowrap uppercase tracking-wider ${
+              negotiationStance === "strict"
+                ? "border-rose-200/90 bg-rose-50/90 text-rose-700 dark:border-rose-500/30 dark:bg-rose-950/40 dark:text-rose-300"
+                : negotiationStance === "commercial"
+                ? "border-emerald-200/90 bg-emerald-50/90 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300"
+                : "border-indigo-200/90 bg-indigo-50/90 text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300"
+            }`}
+          >
             <span
-              data-testid="inspector-active-stance-badge"
-              className={`micro-badge shrink-0 whitespace-nowrap uppercase tracking-wider ${
+              className={`micro-badge-dot ${
                 negotiationStance === "strict"
-                  ? "border-rose-200/90 bg-rose-50/90 text-rose-700 dark:border-rose-500/30 dark:bg-rose-950/40 dark:text-rose-300"
+                  ? "bg-rose-500"
                   : negotiationStance === "commercial"
-                  ? "border-emerald-200/90 bg-emerald-50/90 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300"
-                  : "border-indigo-200/90 bg-indigo-50/90 text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300"
+                  ? "bg-emerald-500"
+                  : "bg-indigo-500"
               }`}
-            >
-              <span
-                className={`micro-badge-dot ${
-                  negotiationStance === "strict"
-                    ? "bg-rose-500"
-                    : negotiationStance === "commercial"
-                    ? "bg-emerald-500"
-                    : "bg-indigo-500"
-                }`}
-                aria-hidden="true"
-              />
-              Stance: {negotiationStance}
-            </span>
-          </div>
+              aria-hidden="true"
+            />
+            Stance: {negotiationStance}
+          </span>
+        </div>
 
-          <div className="inline-flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-slate-200/80 bg-slate-100/90 p-0.5 dark:border-slate-800 dark:bg-slate-900">
-            <button
-              type="button"
-              data-testid="inspector-tab-redlines"
-              onClick={() => setActiveViewTab("redlines")}
-              className={`inline-flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[11px] font-semibold transition-all ${
-                activeViewTab === "redlines"
-                  ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
-              }`}
-            >
-              <Sparkles className="h-3 w-3 shrink-0 text-indigo-500" />
-              <span>Redlines</span>
-              <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] leading-none tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                {redlines.length}
-              </span>
-            </button>
-            <button
-              type="button"
-              data-testid="inspector-tab-cross-clause"
-              onClick={() => setActiveViewTab("radar")}
-              className={`inline-flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[11px] font-semibold transition-all ${
-                activeViewTab === "radar"
-                  ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
-              }`}
-            >
-              <ShieldAlert className="h-3 w-3 shrink-0 text-amber-500" />
-              <span>Radar</span>
-            </button>
-            <button
-              type="button"
-              data-testid="inspector-tab-telemetry"
-              onClick={() => setActiveViewTab("telemetry")}
-              className={`inline-flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[11px] font-semibold transition-all ${
-                activeViewTab === "telemetry"
-                  ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
-              }`}
-            >
-              <Activity className="h-3 w-3 shrink-0 text-emerald-500" />
-              <span>⚡ AI Telemetry</span>
-            </button>
-            <button
-              type="button"
-              data-testid="inspector-tab-audit"
-              onClick={() => setActiveViewTab("audit")}
-              className={`inline-flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[11px] font-semibold transition-all ${
-                activeViewTab === "audit"
-                  ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
-              }`}
-            >
-              <ClipboardList className="h-3 w-3 shrink-0 text-sky-500" />
-              <span>Audit Trail</span>
-              <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] leading-none tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                {resolvedAuditLogs.length}
-              </span>
-            </button>
-          </div>
+        {/* Full-Width Evenly Proportioned 4-Tab Bar */}
+        <div className="mt-2 grid w-full grid-cols-4 gap-1 rounded-lg border border-slate-200/80 bg-slate-100/90 p-0.5 dark:border-slate-800 dark:bg-slate-900">
+          <button
+            type="button"
+            data-testid="inspector-tab-redlines"
+            onClick={() => setActiveViewTab("redlines")}
+            className={`inline-flex h-7 items-center justify-center gap-1 whitespace-nowrap rounded-md px-1.5 text-[11px] font-semibold transition-all ${
+              activeViewTab === "redlines"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            <Sparkles className="h-3 w-3 shrink-0 text-indigo-500" />
+            <span className="truncate">Redlines</span>
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] leading-none tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+              {redlines.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            data-testid="inspector-tab-cross-clause"
+            onClick={() => setActiveViewTab("radar")}
+            className={`inline-flex h-7 items-center justify-center gap-1 whitespace-nowrap rounded-md px-1.5 text-[11px] font-semibold transition-all ${
+              activeViewTab === "radar"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            <ShieldAlert className="h-3 w-3 shrink-0 text-amber-500" />
+            <span className="truncate">Radar</span>
+          </button>
+          <button
+            type="button"
+            data-testid="inspector-tab-telemetry"
+            onClick={() => setActiveViewTab("telemetry")}
+            className={`inline-flex h-7 items-center justify-center gap-1 whitespace-nowrap rounded-md px-1.5 text-[11px] font-semibold transition-all ${
+              activeViewTab === "telemetry"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            <Activity className="h-3 w-3 shrink-0 text-emerald-500" />
+            <span className="truncate">⚡ AI Telemetry</span>
+          </button>
+          <button
+            type="button"
+            data-testid="inspector-tab-audit"
+            onClick={() => setActiveViewTab("audit")}
+            className={`inline-flex h-7 items-center justify-center gap-1 whitespace-nowrap rounded-md px-1.5 text-[11px] font-semibold transition-all ${
+              activeViewTab === "audit"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            <ClipboardList className="h-3 w-3 shrink-0 text-sky-500" />
+            <span className="truncate">Audit Trail</span>
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] leading-none tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+              {resolvedAuditLogs.length}
+            </span>
+          </button>
         </div>
 
         {/* Real-time SSE Audit Progress Bar */}
@@ -399,9 +398,9 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
           </div>
         ) : null}
 
-        {/* Row 2: Unified Single-Line Risk Filter Pills with Embedded Counts */}
+        {/* Row 2: Calm Neatly Aligned Risk Filter Pills with Embedded Counts */}
         {activeViewTab === "redlines" ? (
-          <div className="mt-2 flex h-7 items-center gap-1.5 overflow-x-auto">
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {FILTER_TABS.map((tab) => {
               const active = riskFilter === tab.mode;
               const count = filterCounts[tab.mode];
@@ -423,11 +422,11 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
                   onClick={() => setRiskFilter(tab.mode)}
                   className={`inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[11px] font-medium transition-all ${
                     active
-                      ? "border-indigo-600 bg-gradient-to-b from-indigo-500 to-indigo-600 font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20"
-                      : "border-slate-200/90 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                      ? "border-indigo-500/80 bg-indigo-50 font-semibold text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-950/60 dark:text-indigo-200"
+                      : "border-slate-200/80 bg-white/80 text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                   }`}
                 >
-                  {dotClass && !active ? (
+                  {dotClass ? (
                     <span
                       className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`}
                       aria-hidden="true"
