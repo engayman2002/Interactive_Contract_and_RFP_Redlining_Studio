@@ -1,11 +1,17 @@
 import {
+  AIOperationType,
   AISettingsResponseDTO,
   AISettingsResponseDTOSchema,
+  AITelemetryEventDTO,
+  AITelemetrySummaryDTO,
+  AITelemetrySummaryDTOSchema,
   AuditLogEntryDTO,
   AuditLogEntryDTOSchema,
   ClauseCommentDTO,
   ClauseCommentDTOSchema,
   ClauseDTO,
+  ClearAICacheResponseDTO,
+  ClearAICacheResponseDTOSchema,
   CreateClauseCommentRequestDTOSchema,
   CreatePlaybookRuleRequestDTO,
   CrossClauseAnalysisReportDTO,
@@ -800,6 +806,15 @@ export async function triggerDocumentAnalysis(
 
       local.redlines = simulatedRedlines;
       local.status = "ANALYZED";
+      for (const c of local.clauses) {
+        recordOfflineAITelemetryEvent({
+          operation: "CLAUSE_AUDIT",
+          cacheKey: `${c.id}:${c.current_text}:${stance}`,
+          promptTokens: Math.max(80, Math.round(c.current_text.length / 4) + 180),
+          completionTokens: 115,
+          latencyMs: 7.5,
+        });
+      }
       local.audit_logs.push({
         id: `audit-${Date.now()}-2`,
         org_id: DEMO_ORG_ID,
@@ -3286,6 +3301,268 @@ export async function importAIVault(
   const parsed = AISettingsResponseDTOSchema.parse(raw);
   offlineAISettingsState = parsed;
   return parsed;
+}
+
+const OFFLINE_CACHE_DEFAULT_KEYS: string[] = [
+  "demo-clause-1:balanced",
+  "demo-clause-2:balanced",
+  "demo-clause-3:balanced",
+  "demo-clause-4:balanced",
+];
+
+const offlineSemanticCacheKeys = new Set<string>(OFFLINE_CACHE_DEFAULT_KEYS);
+
+const ALL_AI_OPERATIONS: AIOperationType[] = [
+  "CLAUSE_AUDIT",
+  "COPILOT_REFINE",
+  "CRITIC_VERIFY",
+  "PUSHBACK_SIMULATION",
+  "CROSS_CLAUSE_RADAR",
+  "PLAYBOOK_EXTRACTION",
+];
+
+let offlineRecentEvents: AITelemetryEventDTO[] = [
+  {
+    event_id: "evt-demo-04",
+    timestamp: new Date(Date.now() - 45_000).toISOString(),
+    operation: "CLAUSE_AUDIT",
+    provider: "deterministic",
+    model: "policy-deterministic-v1",
+    cache_hit: true,
+    prompt_tokens: 0,
+    completion_tokens: 0,
+    tokens_saved: 412,
+    latency_ms: 0.31,
+  },
+  {
+    event_id: "evt-demo-03",
+    timestamp: new Date(Date.now() - 90_000).toISOString(),
+    operation: "CRITIC_VERIFY",
+    provider: "deterministic",
+    model: "policy-deterministic-v1",
+    cache_hit: false,
+    prompt_tokens: 185,
+    completion_tokens: 74,
+    tokens_saved: 0,
+    latency_ms: 4.2,
+  },
+  {
+    event_id: "evt-demo-02",
+    timestamp: new Date(Date.now() - 120_000).toISOString(),
+    operation: "CLAUSE_AUDIT",
+    provider: "deterministic",
+    model: "policy-deterministic-v1",
+    cache_hit: false,
+    prompt_tokens: 340,
+    completion_tokens: 132,
+    tokens_saved: 0,
+    latency_ms: 8.4,
+  },
+];
+
+const offlineTelemetryCounters = {
+  total_requests: 5,
+  cache_hits: 2,
+  cache_misses: 3,
+  prompt_tokens: 960,
+  completion_tokens: 342,
+  estimated_tokens_saved: 824,
+  estimated_cost_usd: 0.003492,
+  estimated_cost_saved_usd: 0.002966,
+  total_latency_ms: 21.8,
+};
+
+export function recordOfflineAITelemetryEvent(params: {
+  operation: AIOperationType;
+  cacheKey?: string;
+  promptTokens?: number;
+  completionTokens?: number;
+  latencyMs?: number;
+}): void {
+  const active = offlineAISettingsState;
+  const provider = active?.llm_provider ?? "deterministic";
+  const model = active?.llm_model_name ?? "policy-deterministic-v1";
+  const pTokens = params.promptTokens ?? 260;
+  const cTokens = params.completionTokens ?? 110;
+  const isCacheHit = Boolean(
+    params.cacheKey && offlineSemanticCacheKeys.has(params.cacheKey)
+  );
+
+  if (params.cacheKey && !isCacheHit) {
+    offlineSemanticCacheKeys.add(params.cacheKey);
+  }
+
+  const latency = isCacheHit ? 0.28 : (params.latencyMs ?? 6.4);
+  const tokensSaved = isCacheHit ? pTokens + cTokens : 0;
+  const usedPrompt = isCacheHit ? 0 : pTokens;
+  const usedComp = isCacheHit ? 0 : cTokens;
+
+  offlineTelemetryCounters.total_requests += 1;
+  if (isCacheHit) {
+    offlineTelemetryCounters.cache_hits += 1;
+  } else {
+    offlineTelemetryCounters.cache_misses += 1;
+  }
+  offlineTelemetryCounters.prompt_tokens += usedPrompt;
+  offlineTelemetryCounters.completion_tokens += usedComp;
+  offlineTelemetryCounters.estimated_tokens_saved += tokensSaved;
+  offlineTelemetryCounters.estimated_cost_usd +=
+    (usedPrompt / 1000) * 0.0015 + (usedComp / 1000) * 0.006;
+  offlineTelemetryCounters.estimated_cost_saved_usd += isCacheHit
+    ? (pTokens / 1000) * 0.0015 + (cTokens / 1000) * 0.006
+    : 0;
+  offlineTelemetryCounters.total_latency_ms += latency;
+
+  const evt: AITelemetryEventDTO = {
+    event_id: `evt-off-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    timestamp: new Date().toISOString(),
+    operation: params.operation,
+    provider,
+    model,
+    cache_hit: isCacheHit,
+    prompt_tokens: usedPrompt,
+    completion_tokens: usedComp,
+    tokens_saved: tokensSaved,
+    latency_ms: latency,
+  };
+  offlineRecentEvents = [evt, ...offlineRecentEvents].slice(0, 50);
+}
+
+export function buildOfflineAITelemetrySummary(): AITelemetrySummaryDTO {
+  const totalReq = offlineTelemetryCounters.total_requests;
+  const hitRate =
+    totalReq > 0
+      ? Math.round((offlineTelemetryCounters.cache_hits / totalReq) * 10000) /
+        100
+      : 0;
+  const avgLat =
+    totalReq > 0
+      ? Math.round((offlineTelemetryCounters.total_latency_ms / totalReq) * 1000) /
+        1000
+      : 0;
+
+  const opMetrics = ALL_AI_OPERATIONS.map((operation) => {
+    const matching = offlineRecentEvents.filter((e) => e.operation === operation);
+    const totalCalls = matching.length;
+    const cacheHits = matching.filter((e) => e.cache_hit).length;
+    const totalTokens = matching.reduce(
+      (sum, e) => sum + e.prompt_tokens + e.completion_tokens,
+      0
+    );
+    const avgLatency =
+      totalCalls > 0
+        ? Math.round(
+            (matching.reduce((sum, e) => sum + e.latency_ms, 0) / totalCalls) *
+              1000
+          ) / 1000
+        : 0;
+    return {
+      operation,
+      total_calls: totalCalls,
+      cache_hits: cacheHits,
+      total_tokens: totalTokens,
+      avg_latency_ms: avgLatency,
+    };
+  });
+
+  return {
+    active_provider: offlineAISettingsState?.llm_provider ?? "deterministic",
+    active_model:
+      offlineAISettingsState?.llm_model_name ?? "policy-deterministic-v1",
+    semantic_cache_enabled: true,
+    cached_entries_count: offlineSemanticCacheKeys.size,
+    total_requests: totalReq,
+    cache_hits: offlineTelemetryCounters.cache_hits,
+    cache_misses: offlineTelemetryCounters.cache_misses,
+    cache_hit_rate_pct: hitRate,
+    prompt_tokens: offlineTelemetryCounters.prompt_tokens,
+    completion_tokens: offlineTelemetryCounters.completion_tokens,
+    total_tokens:
+      offlineTelemetryCounters.prompt_tokens +
+      offlineTelemetryCounters.completion_tokens,
+    estimated_tokens_saved: offlineTelemetryCounters.estimated_tokens_saved,
+    estimated_cost_usd:
+      Math.round(offlineTelemetryCounters.estimated_cost_usd * 1_000_000) /
+      1_000_000,
+    estimated_cost_saved_usd:
+      Math.round(
+        offlineTelemetryCounters.estimated_cost_saved_usd * 1_000_000
+      ) / 1_000_000,
+    avg_latency_ms: avgLat,
+    operation_metrics: opMetrics,
+    recent_events: offlineRecentEvents,
+  };
+}
+
+export async function fetchAITelemetry(
+  token?: string
+): Promise<AITelemetrySummaryDTO> {
+  if (!token) {
+    return buildOfflineAITelemetrySummary();
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/ai-settings/telemetry`, {
+      method: "GET",
+      headers: buildHeaders(token),
+    });
+    if (!response.ok) {
+      return buildOfflineAITelemetrySummary();
+    }
+    const raw = await response.json();
+    return AITelemetrySummaryDTOSchema.parse(raw);
+  } catch {
+    return buildOfflineAITelemetrySummary();
+  }
+}
+
+export async function clearAISemanticCache(
+  token?: string
+): Promise<ClearAICacheResponseDTO> {
+  if (!token) {
+    const cleared = offlineSemanticCacheKeys.size;
+    offlineSemanticCacheKeys.clear();
+    return {
+      cleared_entries: cleared,
+      message: `Purged ${cleared} cached clause audit ${
+        cleared === 1 ? "entry" : "entries"
+      } for your organization.`,
+    };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/ai-settings/telemetry/clear-cache`,
+      {
+        method: "POST",
+        headers: buildHeaders(token),
+      }
+    );
+  } catch {
+    const cleared = offlineSemanticCacheKeys.size;
+    offlineSemanticCacheKeys.clear();
+    return {
+      cleared_entries: cleared,
+      message: `Purged ${cleared} cached clause audit entries (offline mode).`,
+    };
+  }
+
+  if (response.status === 403) {
+    throw new Error(
+      "Forbidden (403): VIEWER role cannot purge the Semantic Clause Audit Cache."
+    );
+  }
+  if (!response.ok) {
+    const msg = await extractBackendErrorMessage(
+      response,
+      `Failed to purge semantic cache (${response.status}).`
+    );
+    throw new Error(msg);
+  }
+
+  const raw = await response.json();
+  return ClearAICacheResponseDTOSchema.parse(raw);
 }
 
 

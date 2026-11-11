@@ -79,6 +79,17 @@ class ExportMode(StrEnum):
     CLEAN = "clean"
 
 
+class AIOperationType(StrEnum):
+    """Distinct AI capability operations tracked in FinOps telemetry."""
+
+    CLAUSE_AUDIT = "CLAUSE_AUDIT"
+    COPILOT_REFINE = "COPILOT_REFINE"
+    CRITIC_VERIFY = "CRITIC_VERIFY"
+    PUSHBACK_SIMULATION = "PUSHBACK_SIMULATION"
+    CROSS_CLAUSE_RADAR = "CROSS_CLAUSE_RADAR"
+    PLAYBOOK_EXTRACTION = "PLAYBOOK_EXTRACTION"
+
+
 class AuditAction(StrEnum):
     """Immutable compliance audit log actions recorded across the workspace lifecycle."""
 
@@ -91,12 +102,14 @@ class AuditAction(StrEnum):
     SUGGESTION_VERIFIED = "SUGGESTION_VERIFIED"
     PUSHBACK_SIMULATED = "PUSHBACK_SIMULATED"
     PLAYBOOK_AUTO_EXTRACTED = "PLAYBOOK_AUTO_EXTRACTED"
+    AI_CACHE_CLEARED = "AI_CACHE_CLEARED"
     COMMENT_CREATED = "COMMENT_CREATED"
     DOCUMENT_EXPORTED = "DOCUMENT_EXPORTED"
     CROSS_CLAUSE_CHECKED = "CROSS_CLAUSE_CHECKED"
 
 
 __all__ = [
+    "AIOperationType",
     "AuditAction",
     "CrossClauseIssueType",
     "DocumentStatus",

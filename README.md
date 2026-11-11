@@ -31,6 +31,7 @@ The **Interactive Contract & RFP Redlining Studio** is an enterprise-grade, mult
 - **Critic-Refiner Multi-Agent Verification Loop & Hallucination Guard:** Passes every generated, Copilot-refined, or on-demand redline through a 2-agent pipeline (**Agent 1: Clause Auditor & Drafter** &rarr; **Agent 2: Critic & Hallucination Guard**). Agent 2 audits every candidate wording across 3 strict gates (**Policy Grounding & Trigger Scrubbing**, **Hallucination & Placeholder Guard**, and **Section Numbering & Obligation Preservation**), auto-repairs defects (`AUTO_REFINED`) when detected, assigns a calibrated `0–100%` confidence score, and supports on-demand re-verification via `POST /api/v1/suggestions/{id}/verify` with immutable `SUGGESTION_VERIFIED` audit trail logging.
 - **Counterparty Pushback Simulator & Round-2 Rebuttal Engine:** Simulates opposing counsel pushback before sending redlines externally (`POST /api/v1/suggestions/{id}/simulate-pushback`), calculating an adversarial **Acceptance Probability (`0–100%`)**, classifying **Pushback Severity (`LOW | MODERATE | HIGH | DEALBREAKER`)**, articulating the opposing persona's strongest legal/commercial objection, generating a copy-ready Round-2 rebuttal script, and synthesizing a pre-numbered **Round-2 Fallback Compromise** clause adoptable in one click (`PUSHBACK_SIMULATED`).
 - **AI Playbook Auto-Extractor & Golden Contract Rule Generator:** Automatically extracts structured Company Playbook rules (`category`, `standard_position`, `fallback_position`, `unacceptable_triggers`, `source_clause_excerpt`, `confidence_score`) from pasted signed Golden Contract text (`POST /api/v1/playbooks/extract-from-text`) or uploaded `.docx`/`.pdf` reference templates (`POST /api/v1/playbooks/extract-from-file`). Supports ADMIN bulk `auto_save` with automatic 1536-d vector embedding generation alongside Preview Mode (`auto_save=false`) for Legal Counsel and Technical Leads (`PLAYBOOK_AUTO_EXTRACTED`).
+- **Semantic Clause Audit Cache & Live AI FinOps Telemetry:** Eliminates redundant LLM spend and latency on unchanged contract clauses via a thread-safe, tenant-isolated SHA-256 LRU cache keyed on `(org_id, normalized_clause_text, heading, negotiation_stance, matched_playbook_fingerprint, active_llm_provider, active_llm_model)`, delivering `<1ms` cache hits with automatic invalidation on AI model changes or manual cache purge (`GET /api/v1/ai-settings/telemetry`, `POST /api/v1/ai-settings/telemetry/clear-cache`). Tracks token consumption, avoided spend (`$ USD`), latency, cache hit rate, and per-operation breakdowns across all 6 AI workflows (`CLAUSE_AUDIT`, `COPILOT_REFINE`, `CRITIC_VERIFY`, `PUSHBACK_SIMULATION`, `CROSS_CLAUSE_RADAR`, `PLAYBOOK_EXTRACTION`).
 - **Bidirectional Split-Screen Editor & Surgical Word Diffs:** Binds each PostgreSQL `document_clauses` row to a custom TipTap/ProseMirror [`ClauseNodeExtension`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/ClauseNodeExtension.ts#L23-L84) (`div[data-clause-id]`) paired with a visual [`RiskHeatmapGutter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/RiskHeatmapGutter.tsx#L44-L92) and hover-activated [`InlineDiffPreview`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/diff/InlineDiffPreview.tsx#L12-L72).
 - **Optimistic Concurrency & Multi-Tenant RBAC:** Enforces `org_id` isolation on every repository query, 4-tier RBAC (`ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD`, `VIEWER`), and `expected_clause_version` optimistic locking that automatically rejects stale concurrent edits with `409 Conflict` and rolls back client state.
 - **Native Microsoft Word OpenXML Track-Changes Export:** Reconstructs valid `.docx` archives embedding native `<w:del>` (`<w:delText>`) and `<w:ins>` (`<w:t>`) revision tags with `w:author` and ISO-8601 `w:date` attributes, `<w:commentRangeStart/>`/`<w:commentRangeEnd/>` anchors, AI rationales, and reviewer comments.
@@ -890,6 +891,8 @@ The OpenXML `.docx` reconstruction engine is located in [`backend/src/infrastruc
 | 33 | `POST /api/v1/ai-settings/import-vault` | `ADMIN` | `200 OK` (`400` bad passphrase) | Decrypt, validate (SSRF & registry), and activate an AES-256-GCM `.rsvault.json` vault |
 | 34 | `POST /api/v1/playbooks/extract-from-text` | `ADMIN` (`auto_save=true`), `LEGAL_COUNSEL`/`TECHNICAL_LEAD` (`auto_save=false`) | `200 OK` (`403` insufficient role) | Extract structured Playbook rules from pasted golden contract text & optionally generate 1536-d embeddings + save (`PLAYBOOK_AUTO_EXTRACTED`) |
 | 35 | `POST /api/v1/playbooks/extract-from-file` | `ADMIN` (`auto_save=true`), `LEGAL_COUNSEL`/`TECHNICAL_LEAD` (`auto_save=false`) | `200 OK` (`403` insufficient role) | Parse uploaded `.docx`/`.pdf` golden contract and auto-extract corporate Playbook rules (`PLAYBOOK_AUTO_EXTRACTED`) |
+| 36 | `GET /api/v1/ai-settings/telemetry` | All Authenticated Roles (`ADMIN`–`VIEWER`) | `200 OK` | Retrieve real-time AI FinOps telemetry (cache hit rate, tokens used/saved, avoided USD cost, latency, per-op metrics, recent events) |
+| 37 | `POST /api/v1/ai-settings/telemetry/clear-cache` | `ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD` | `200 OK` (`403` for `VIEWER`) | Purge organization-scoped SHA-256 Semantic Clause Audit Cache entries |
 
 ---
 
@@ -1086,6 +1089,15 @@ curl -sS -X POST "${API_URL}/playbooks/extract-from-text" \
     "max_rules": 6,
     "auto_save": true
   }' | python3 -m json.tool
+
+# -----------------------------------------------------------------------------
+# 17. Inspect Live AI FinOps Telemetry & Purge Semantic Clause Audit Cache
+# -----------------------------------------------------------------------------
+curl -sS -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+  "${API_URL}/ai-settings/telemetry" | python3 -m json.tool
+
+curl -sS -X POST -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+  "${API_URL}/ai-settings/telemetry/clear-cache" | python3 -m json.tool
 ```
 
 ---

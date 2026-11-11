@@ -48,6 +48,7 @@ class ClauseAuditorPort(Protocol):
         candidate_risk: RiskLevel,
         matched_rules: Sequence[MatchedPlaybookRule],
         stance: NegotiationStance = NegotiationStance.BALANCED,
+        org_id: UUID | None = None,
     ) -> CriticVerificationReport:
         """Audit candidate redline against Playbook grounding, hallucinations, and numbering."""
         ...

@@ -1,7 +1,10 @@
 """Integration tests for In-App AI Provider Switcher, Live Model Discovery, RBAC, and Custom IDs."""
 
+import io
+
 import httpx
 import pytest
+from docx import Document as CreateDocxDocument
 from httpx import AsyncClient
 from src.domain.enums import UserRole
 from src.infrastructure.ai.config_vault import encrypt_ai_settings_vault
@@ -650,4 +653,148 @@ async def test_ai_settings_encrypted_vault_export_import_roundtrip_and_rbac(
     assert unlocked_body["embedding_model_name"] == "text-embedding-004"
     assert unlocked_body["embedding_has_api_key"] is True
     assert unlocked_body["embedding_api_key_masked"] == "AIza...8877"
+
+
+def _build_telemetry_test_docx() -> bytes:
+    """Create a multi-clause DOCX contract for semantic cache & telemetry integration testing."""
+    doc = CreateDocxDocument()
+    doc.add_paragraph(
+        "1.1 Limitation of Liability. Vendor liability shall not exceed $500 and Customer "
+        "accepts unlimited liability for consequential damages."
+    )
+    doc.add_paragraph(
+        "2.1 Data Privacy. Vendor may train public foundation models using Customer Data."
+    )
+    doc.add_paragraph(
+        "3.1 Confidentiality. Each party shall keep confidential information strictly "
+        "confidential and proprietary."
+    )
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+
+async def test_semantic_clause_audit_cache_hit_telemetry_and_rbac(
+    client: AsyncClient,
+) -> None:
+    """Verify Semantic Cache hits (<1ms), FinOps savings, stance scoping, tenant isolation, RBAC."""
+    admin_headers = await _register_org_and_admin(client, "telemetry")
+    viewer_headers = await _create_and_login_role_user(
+        client,
+        admin_headers,
+        email="viewer-telemetry@aiswitcher.io",
+        role=UserRole.VIEWER,
+    )
+    counsel_headers = await _create_and_login_role_user(
+        client,
+        admin_headers,
+        email="counsel-telemetry@aiswitcher.io",
+        role=UserRole.LEGAL_COUNSEL,
+    )
+
+    # 1. Clear cache upfront
+    init_clear = await client.post(
+        "/api/v1/ai-settings/telemetry/clear-cache",
+        headers=admin_headers,
+    )
+    assert init_clear.status_code == 200
+    assert init_clear.json()["cleared_entries"] == 0
+
+    # 2. Upload multi-clause document (3 clauses)
+    docx_bytes = _build_telemetry_test_docx()
+    upload_resp = await client.post(
+        "/api/v1/documents/upload",
+        headers=admin_headers,
+        files={
+            "file": (
+                "telemetry_contract.docx",
+                docx_bytes,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+        data={"title": "Telemetry Benchmark MSA"},
+    )
+    assert upload_resp.status_code == 201
+    doc_id = str(upload_resp.json()["document_id"])
+
+    # 3. Pass 1: Analyze document (Cache Misses across 3 clauses)
+    pass1 = await client.post(
+        f"/api/v1/documents/{doc_id}/analyze",
+        headers=admin_headers,
+        json={"stance": "balanced"},
+    )
+    assert pass1.status_code == 200
+
+    tel_pass1 = await client.get("/api/v1/ai-settings/telemetry", headers=admin_headers)
+    assert tel_pass1.status_code == 200
+    b1 = tel_pass1.json()
+    assert b1["total_requests"] == 3
+    assert b1["cache_misses"] == 3
+    assert b1["cache_hits"] == 0
+    assert b1["cached_entries_count"] == 3
+    assert b1["total_tokens"] > 0
+    assert b1["estimated_cost_usd"] > 0.0
+    assert b1["estimated_tokens_saved"] == 0
+
+    # 4. Pass 2: Re-run analyze on identical unchanged clauses & stance -> Semantic Cache Hits
+    pass2 = await client.post(
+        f"/api/v1/documents/{doc_id}/analyze",
+        headers=admin_headers,
+        json={"stance": "balanced"},
+    )
+    assert pass2.status_code == 200
+
+    tel_pass2 = await client.get("/api/v1/ai-settings/telemetry", headers=admin_headers)
+    assert tel_pass2.status_code == 200
+    b2 = tel_pass2.json()
+    assert b2["total_requests"] == 6
+    assert b2["cache_hits"] == 3
+    assert b2["cache_hit_rate_pct"] == 50.0
+    assert b2["estimated_tokens_saved"] > 0
+    assert b2["estimated_cost_saved_usd"] > 0.0
+    assert len(b2["recent_events"]) == 6
+    assert any(
+        evt["cache_hit"] is True and evt["latency_ms"] < 1.0 and evt["tokens_saved"] > 0
+        for evt in b2["recent_events"]
+    )
+
+    # 5. Different stance (COMMERCIAL) never collides in cache -> 3 new misses (6 cached entries)
+    pass3 = await client.post(
+        f"/api/v1/documents/{doc_id}/analyze",
+        headers=admin_headers,
+        json={"stance": "commercial"},
+    )
+    assert pass3.status_code == 200
+    tel_pass3 = await client.get("/api/v1/ai-settings/telemetry", headers=admin_headers)
+    assert tel_pass3.status_code == 200
+    assert tel_pass3.json()["cached_entries_count"] == 6
+
+    # 6. Tenant Isolation: Separate Org B sees 0 telemetry events and 0 cached entries
+    org_b_headers = await _register_org_and_admin(client, "telemetry-orgb")
+    tel_org_b = await client.get("/api/v1/ai-settings/telemetry", headers=org_b_headers)
+    assert tel_org_b.status_code == 200
+    assert tel_org_b.json()["total_requests"] == 0
+    assert tel_org_b.json()["cached_entries_count"] == 0
+
+    # 7. RBAC: VIEWER can read telemetry (200), but receives 403 on clear-cache
+    viewer_tel = await client.get("/api/v1/ai-settings/telemetry", headers=viewer_headers)
+    assert viewer_tel.status_code == 200
+
+    viewer_clear = await client.post(
+        "/api/v1/ai-settings/telemetry/clear-cache",
+        headers=viewer_headers,
+    )
+    assert viewer_clear.status_code == 403
+
+    # 8. LEGAL_COUNSEL clears Org A semantic cache -> 6 entries evicted, Org A count drops to 0
+    counsel_clear = await client.post(
+        "/api/v1/ai-settings/telemetry/clear-cache",
+        headers=counsel_headers,
+    )
+    assert counsel_clear.status_code == 200
+    assert counsel_clear.json()["cleared_entries"] == 6
+
+    tel_after_clear = await client.get("/api/v1/ai-settings/telemetry", headers=admin_headers)
+    assert tel_after_clear.status_code == 200
+    assert tel_after_clear.json()["cached_entries_count"] == 0
 

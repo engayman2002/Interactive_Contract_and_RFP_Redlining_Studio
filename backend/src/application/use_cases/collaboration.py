@@ -440,6 +440,7 @@ class VerifyRedlineSuggestionUseCase:
             candidate_risk=suggestion.risk,
             matched_rules=matched_rules,
             stance=stance,
+            org_id=actor.org_id,
         )
 
         # 5. Apply Critic results and persist auto-refined wording if repaired

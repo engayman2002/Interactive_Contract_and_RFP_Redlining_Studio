@@ -54,8 +54,17 @@ from src.infrastructure.ai.runtime_settings import (
     mask_api_key,
     sanitize_secret_from_text,
 )
+from src.infrastructure.ai.telemetry_and_cache import (
+    AITelemetrySnapshot,
+    OperationMetricsSnapshot,
+    SemanticAuditCacheAndTelemetryManager,
+    TelemetryEventRecord,
+    build_semantic_cache_key,
+    reset_ai_telemetry_and_cache,
+)
 
 __all__ = [
+    "AITelemetrySnapshot",
     "AnthropicMessagesChatRunnable",
     "BatchDocumentAuditWorker",
     "CURATED_PROVIDER_PRESETS",
@@ -72,6 +81,7 @@ __all__ = [
     "LangChainPlaybookExtractor",
     "OllamaChatRunnable",
     "OpenAICompatibleChatRunnable",
+    "OperationMetricsSnapshot",
     "PLAYBOOK_EXTRACTION_SYSTEM_PROMPT",
     "PUSHBACK_SIMULATION_SYSTEM_PROMPT",
     "PolicyAwareDeterministicChatModel",
@@ -79,10 +89,13 @@ __all__ = [
     "RedlineOutput",
     "RuntimeAISettingsManager",
     "SYSTEM_PROMPT",
+    "SemanticAuditCacheAndTelemetryManager",
+    "TelemetryEventRecord",
     "UnsupportedAIProviderError",
     "audit_document_celery_task",
     "build_pushback_simulation_chain",
     "build_redline_chain",
+    "build_semantic_cache_key",
     "celery_app",
     "create_celery_app",
     "create_llm_runnable",
@@ -94,6 +107,7 @@ __all__ = [
     "parse_and_validate_pushback_output",
     "parse_and_validate_redline_output",
     "register_llm_provider",
+    "reset_ai_telemetry_and_cache",
     "sanitize_secret_from_text",
     "segment_reference_text",
 ]

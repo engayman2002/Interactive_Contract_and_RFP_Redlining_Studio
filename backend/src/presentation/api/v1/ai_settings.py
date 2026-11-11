@@ -8,7 +8,11 @@ from fastapi import APIRouter, Depends, status
 from pydantic import ValidationError
 
 from src.application.dtos import (
+    AIOperationMetricsDTO,
     AISettingsResponseDTO,
+    AITelemetryEventDTO,
+    AITelemetrySummaryDTO,
+    ClearAICacheResponseDTO,
     DiscoverModelsRequestDTO,
     DiscoverModelsResponseDTO,
     EncryptedAIVaultEnvelopeDTO,
@@ -29,6 +33,7 @@ from src.infrastructure.ai import (
     LangChainClauseAuditor,
     LLMProviderRegistry,
     RuntimeAISettingsManager,
+    SemanticAuditCacheAndTelemetryManager,
     UnsupportedAIProviderError,
     create_llm_runnable,
     decrypt_ai_settings_vault,
@@ -256,6 +261,7 @@ async def test_ai_connection(
                     "Vendor aggregate cumulative liability shall not exceed $500, and "
                     "Customer shall have uncapped liability for all consequential damages."
                 ),
+                bypass_cache=True,
             )
             audit_result = await auditor.audit_clause(probe_input, matched_rules=[])
             llm_ok = True
@@ -474,6 +480,93 @@ async def import_ai_settings_vault(
         embedding_api_key=validated.embedding_api_key,
     )
     return _build_settings_response(updated)
+
+
+@ai_settings_router.get(
+    "/telemetry",
+    response_model=AITelemetrySummaryDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def get_ai_telemetry(
+    current_user: Annotated[TokenPayloadDTO, Depends(get_current_user)],
+) -> AITelemetrySummaryDTO:
+    """Return live AI FinOps token telemetry and Semantic Clause Cache statistics."""
+    effective = RuntimeAISettingsManager.get_effective_settings()
+    snapshot = SemanticAuditCacheAndTelemetryManager.get_telemetry_snapshot(
+        org_id=current_user.org_id,
+        active_provider=effective.LLM_PROVIDER,
+        active_model=effective.LLM_MODEL_NAME,
+    )
+    return AITelemetrySummaryDTO(
+        active_provider=snapshot.active_provider,
+        active_model=snapshot.active_model,
+        semantic_cache_enabled=snapshot.semantic_cache_enabled,
+        cached_entries_count=snapshot.cached_entries_count,
+        total_requests=snapshot.total_requests,
+        cache_hits=snapshot.cache_hits,
+        cache_misses=snapshot.cache_misses,
+        cache_hit_rate_pct=snapshot.cache_hit_rate_pct,
+        prompt_tokens=snapshot.prompt_tokens,
+        completion_tokens=snapshot.completion_tokens,
+        total_tokens=snapshot.total_tokens,
+        estimated_tokens_saved=snapshot.estimated_tokens_saved,
+        estimated_cost_usd=snapshot.estimated_cost_usd,
+        estimated_cost_saved_usd=snapshot.estimated_cost_saved_usd,
+        avg_latency_ms=snapshot.avg_latency_ms,
+        operation_metrics=[
+            AIOperationMetricsDTO(
+                operation=op.operation,
+                total_calls=op.total_calls,
+                cache_hits=op.cache_hits,
+                total_tokens=op.total_tokens,
+                avg_latency_ms=op.avg_latency_ms,
+            )
+            for op in snapshot.operation_metrics
+        ],
+        recent_events=[
+            AITelemetryEventDTO(
+                event_id=evt.event_id,
+                timestamp=evt.timestamp,
+                operation=evt.operation,
+                provider=evt.provider,
+                model=evt.model,
+                cache_hit=evt.cache_hit,
+                prompt_tokens=evt.prompt_tokens,
+                completion_tokens=evt.completion_tokens,
+                tokens_saved=evt.tokens_saved,
+                latency_ms=evt.latency_ms,
+            )
+            for evt in snapshot.recent_events
+        ],
+    )
+
+
+@ai_settings_router.post(
+    "/telemetry/clear-cache",
+    response_model=ClearAICacheResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def clear_ai_semantic_cache(
+    current_user: Annotated[
+        TokenPayloadDTO,
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.LEGAL_COUNSEL,
+                UserRole.TECHNICAL_LEAD,
+            )
+        ),
+    ],
+) -> ClearAICacheResponseDTO:
+    """Purge all cached Semantic Clause Audit entries for the actor's organization."""
+    cleared = SemanticAuditCacheAndTelemetryManager.clear_cache(org_id=current_user.org_id)
+    return ClearAICacheResponseDTO(
+        cleared_entries=cleared,
+        message=(
+            f"Purged {cleared} cached clause audit "
+            f"{'entry' if cleared == 1 else 'entries'} for your organization."
+        ),
+    )
 
 
 __all__ = ["ai_settings_router"]

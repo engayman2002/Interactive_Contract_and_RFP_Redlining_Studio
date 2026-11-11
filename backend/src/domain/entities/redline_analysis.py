@@ -53,6 +53,7 @@ class ClauseAuditInput:
     heading: str | None
     clause_text: str
     stance: NegotiationStance = NegotiationStance.BALANCED
+    bypass_cache: bool = False
 
     def __post_init__(self) -> None:
         if self.clause_index < 0:

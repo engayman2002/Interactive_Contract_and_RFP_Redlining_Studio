@@ -5,8 +5,11 @@ import {
   DEMO_USER_ID,
   DEMO_WORKSPACE_DATA,
   VersionConflictError,
+  clearAISemanticCache,
   createClauseComment,
   exportDocumentDocx,
+  fetchAITelemetry,
+  recordOfflineAITelemetryEvent,
   refineRedlineSuggestion,
   resolveSuggestion,
   runCrossClauseCheck,
@@ -16,10 +19,12 @@ import {
   saveLocalDocumentWorkspace,
 } from "@/services/apiClient";
 import type {
+  AITelemetrySummaryDTO,
   AuditAction,
   AuditLogEntryDTO,
   ClauseCommentDTO,
   ClauseDTO,
+  ClearAICacheResponseDTO,
   CrossClauseAnalysisReportDTO,
   DocumentWorkspaceDTO,
   ExportMode,
@@ -68,6 +73,11 @@ export interface WorkspaceStoreState {
   crossClauseReport: CrossClauseAnalysisReportDTO | null;
   isRunningCrossClauseCheck: boolean;
   pushbackSimulations: Record<string, SimulatePushbackResponseDTO>;
+  aiTelemetry: AITelemetrySummaryDTO | null;
+  isLoadingTelemetry: boolean;
+  telemetryStatusMessage: string | null;
+  refreshAITelemetry: (token?: string) => Promise<void>;
+  purgeAISemanticCache: (token?: string) => Promise<ClearAICacheResponseDTO>;
   runDocumentCrossClauseCheck: (
     documentId?: string,
     token?: string
@@ -185,6 +195,9 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   crossClauseReport: null,
   isRunningCrossClauseCheck: false,
   pushbackSimulations: {},
+  aiTelemetry: null,
+  isLoadingTelemetry: false,
+  telemetryStatusMessage: null,
 
   setNegotiationStance: (stance) => set({ negotiationStance: stance }),
 
@@ -608,6 +621,16 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       auditLogs: [...s.auditLogs, auditEntry],
     }));
 
+    if (!token) {
+      recordOfflineAITelemetryEvent({
+        operation: "CRITIC_VERIFY",
+        promptTokens: 190,
+        completionTokens: 82,
+        latencyMs: 3.8,
+      });
+    }
+    void get().refreshAITelemetry(token);
+
     return res;
   },
 
@@ -644,6 +667,16 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       },
       auditLogs: [...s.auditLogs, auditEntry],
     }));
+
+    if (!token) {
+      recordOfflineAITelemetryEvent({
+        operation: "PUSHBACK_SIMULATION",
+        promptTokens: 320,
+        completionTokens: 165,
+        latencyMs: 6.1,
+      });
+    }
+    void get().refreshAITelemetry(token);
 
     return res;
   },
@@ -770,10 +803,47 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
         isRunningCrossClauseCheck: false,
         auditLogs: [...state.auditLogs, auditEntry],
       }));
+      if (!token) {
+        recordOfflineAITelemetryEvent({
+          operation: "CROSS_CLAUSE_RADAR",
+          promptTokens: 480,
+          completionTokens: 190,
+          latencyMs: 5.4,
+        });
+      }
+      void get().refreshAITelemetry(token);
     } catch (err) {
       set({ isRunningCrossClauseCheck: false });
       throw err;
     }
+  },
+
+  refreshAITelemetry: async (token) => {
+    set({ isLoadingTelemetry: true });
+    try {
+      const summary = await fetchAITelemetry(token);
+      set({
+        aiTelemetry: summary,
+        isLoadingTelemetry: false,
+      });
+    } catch {
+      set({ isLoadingTelemetry: false });
+    }
+  },
+
+  purgeAISemanticCache: async (token) => {
+    set({ telemetryStatusMessage: null });
+    const res = await clearAISemanticCache(token);
+    const updatedSummary = await fetchAITelemetry(token);
+    const auditEntry = buildOptimisticAuditEntry("AI_CACHE_CLEARED", null, {
+      cleared_entries: res.cleared_entries,
+    });
+    set((state) => ({
+      aiTelemetry: updatedSummary,
+      telemetryStatusMessage: res.message,
+      auditLogs: [...state.auditLogs, auditEntry],
+    }));
+    return res;
   },
 
   resetWorkspaceState: () =>
@@ -800,5 +870,8 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       crossClauseReport: null,
       isRunningCrossClauseCheck: false,
       pushbackSimulations: {},
+      aiTelemetry: null,
+      isLoadingTelemetry: false,
+      telemetryStatusMessage: null,
     }),
 }));

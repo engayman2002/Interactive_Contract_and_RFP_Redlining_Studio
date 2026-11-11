@@ -85,6 +85,7 @@ class PlaybookExtractorPort(Protocol):
         self,
         clauses_text: list[str],
         max_rules: int = 8,
+        org_id: UUID | None = None,
     ) -> list[ExtractedPlaybookRuleCandidate]:
         """Distill corporate standards, fallbacks, and deal-breakers from golden clauses."""
         ...

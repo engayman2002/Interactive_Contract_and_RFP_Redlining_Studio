@@ -137,6 +137,7 @@ export const RedliningStudioWorkspace: React.FC<
     hydrateWorkspace(updated);
     setCurrentTitle(updated.title);
     setCurrentStatus("ANALYZED");
+    void useWorkspaceStore.getState().refreshAITelemetry(token);
   }, [resolvedDocId, token, hydrateWorkspace]);
 
   const { startStream, streamProgress } = useDocumentStream({

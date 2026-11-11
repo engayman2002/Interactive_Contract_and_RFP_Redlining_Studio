@@ -1,6 +1,7 @@
 """Domain layer: Pure entities, enums, exceptions, and ports with zero external dependencies."""
 
 from src.domain.enums import (
+    AIOperationType,
     AuditAction,
     CrossClauseIssueType,
     DocumentStatus,
@@ -14,6 +15,7 @@ from src.domain.enums import (
 )
 
 __all__ = [
+    "AIOperationType",
     "AuditAction",
     "CrossClauseIssueType",
     "DocumentStatus",

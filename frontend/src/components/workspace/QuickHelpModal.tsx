@@ -23,7 +23,8 @@ type QuickHelpTab =
   | "stance"
   | "heatmap"
   | "export"
-  | "extractor";
+  | "extractor"
+  | "telemetry";
 
 export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
   isOpen,
@@ -183,6 +184,18 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
             }`}
           >
             9. ✨ Golden Extractor
+          </button>
+          <button
+            type="button"
+            data-testid="quick-help-tab-telemetry"
+            onClick={() => setActiveTab("telemetry")}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              activeTab === "telemetry"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            10. ⚡ AI Telemetry
           </button>
         </div>
 
@@ -607,6 +620,43 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
                     Uncheck auto-save to preview extracted candidates with confidence scores and source excerpts first, then selectively click <strong>Save Rule</strong>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "telemetry" && (
+            <div data-testid="quick-help-content-telemetry" className="space-y-3">
+              <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/50 p-4 dark:border-emerald-500/30 dark:bg-emerald-950/25">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                    Semantic Clause Audit Cache &amp; FinOps Telemetry (Feature #7)
+                  </span>
+                  <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-900/50 dark:text-emerald-200">
+                    &lt;1ms Cache Hit
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                  Open the <strong>⚡ AI Telemetry</strong> tab in the right Inspector to monitor real-time cache hit rates, tokens saved, average latency, avoided USD spend, and per-operation metrics.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 text-xs dark:border-slate-800 dark:bg-slate-950/70">
+                  <div className="font-semibold text-slate-900 dark:text-white">
+                    Automatic Freshness Keying
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    SHA-256 keys include <code className="font-mono text-[10px]">org_id</code>, clause text, Negotiation Stance, Playbook rules, and active provider/model — changing any input automatically triggers a fresh inference.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 text-xs dark:border-slate-800 dark:bg-slate-950/70">
+                  <div className="font-semibold text-slate-900 dark:text-white">
+                    Purge Semantic Cache
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Switching AI models clears cached entries automatically, or ADMIN / Legal / Tech Lead reviewers can click <strong>Purge Semantic Cache</strong> manually at any time.
                   </p>
                 </div>
               </div>

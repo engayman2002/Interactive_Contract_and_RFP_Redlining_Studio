@@ -364,6 +364,7 @@ class ExtractPlaybookRulesUseCase:
         candidates = await self._extractor.extract_rules_from_clauses(
             clauses_text=clauses_text,
             max_rules=request.max_rules,
+            org_id=actor.org_id,
         )
 
         saved_rules: list[PlaybookRuleResponseDTO] = []
@@ -429,6 +430,7 @@ class ExtractPlaybookRulesUseCase:
         candidates = await self._extractor.extract_rules_from_clauses(
             clauses_text=clauses_text,
             max_rules=max_rules,
+            org_id=actor.org_id,
         )
 
         saved_rules: list[PlaybookRuleResponseDTO] = []

@@ -23,6 +23,7 @@ from src.domain.entities import (
     MatchedPlaybookRule,
 )
 from src.domain.enums import (
+    AIOperationType,
     NegotiationStance,
     PushbackSeverity,
     RiskLevel,
@@ -30,6 +31,11 @@ from src.domain.enums import (
 )
 from src.domain.exceptions import ClauseAnalysisError, StructuredOutputValidationError
 from src.domain.ports import ClauseAuditorPort
+from src.infrastructure.ai.telemetry_and_cache import (
+    SemanticAuditCacheAndTelemetryManager,
+    build_semantic_cache_key,
+    estimate_token_count,
+)
 from src.infrastructure.vector.embedding_service import (
     stem_legal_token,
     tokenize_legal_text,
@@ -1418,15 +1424,32 @@ class LangChainClauseAuditor(ClauseAuditorPort):
         max_retries: int = 2,
         temperature: float = 0.0,
         enable_deterministic_fallback: bool = True,
+        provider_name: str | None = None,
+        model_name: str | None = None,
     ) -> None:
         self._llm_runnable = llm_runnable
         self._max_retries = max(0, max_retries)
         self._temperature = temperature
         self._enable_deterministic_fallback = enable_deterministic_fallback
+        self._provider_name = provider_name
+        self._model_name = model_name
         self._deterministic_fallback = PolicyAwareDeterministicChatModel(temperature=0.0)
         self._critic_agent = CriticVerificationAgent()
         self._chain = build_redline_chain(llm_runnable)
         self.last_trace_metadata: dict[str, Any] = {}
+
+    def _resolve_provider_and_model(self) -> tuple[str, str]:
+        if self._provider_name and self._model_name:
+            return self._provider_name.strip().lower(), self._model_name.strip()
+        if (
+            self._llm_runnable is None
+            or isinstance(self._llm_runnable, PolicyAwareDeterministicChatModel)
+        ):
+            return "deterministic", "policy-deterministic-v1"
+        from src.infrastructure.ai.runtime_settings import RuntimeAISettingsManager
+
+        effective = RuntimeAISettingsManager.get_effective_settings()
+        return effective.LLM_PROVIDER.strip().lower(), effective.LLM_MODEL_NAME.strip()
 
     @staticmethod
     def _resolve_matched_rule_id(
@@ -1448,6 +1471,57 @@ class LangChainClauseAuditor(ClauseAuditorPort):
         """Evaluate a contract clause via LCEL with retry recovery and observability metadata."""
         started_at = time.perf_counter()
         playbook_context = format_playbook_rules_context(matched_rules)
+        active_provider, active_model = self._resolve_provider_and_model()
+        cache_key = build_semantic_cache_key(
+            org_id=audit_input.org_id,
+            clause_text=audit_input.clause_text,
+            heading=audit_input.heading,
+            stance=audit_input.stance,
+            matched_rules=matched_rules,
+            provider=active_provider,
+            model=active_model,
+        )
+        est_prompt_tokens = estimate_token_count(
+            f"{SYSTEM_PROMPT}\n{playbook_context}\n"
+            f"{audit_input.heading or ''}\n{audit_input.clause_text}"
+        )
+
+        if not audit_input.bypass_cache and self._enable_deterministic_fallback:
+            cached_result = SemanticAuditCacheAndTelemetryManager.get_cached_clause_audit(
+                cache_key,
+                target_clause_id=audit_input.clause_id,
+                target_clause_index=audit_input.clause_index,
+            )
+            if cached_result is not None:
+                est_saved_comp = estimate_token_count(
+                    f"{cached_result.proposed_text}\n"
+                    f"{cached_result.rationale}\n"
+                    f"{cached_result.negotiation_talking_point}"
+                )
+                SemanticAuditCacheAndTelemetryManager.record_ai_event(
+                    org_id=audit_input.org_id,
+                    operation=AIOperationType.CLAUSE_AUDIT,
+                    provider=active_provider,
+                    model=active_model,
+                    cache_hit=True,
+                    prompt_tokens=0,
+                    completion_tokens=0,
+                    tokens_saved=est_prompt_tokens + est_saved_comp,
+                    saved_prompt_tokens=est_prompt_tokens,
+                    saved_completion_tokens=est_saved_comp,
+                    latency_ms=cached_result.latency_ms,
+                )
+                self.last_trace_metadata = {
+                    "org_id": str(audit_input.org_id),
+                    "document_id": str(audit_input.document_id),
+                    "clause_id": str(audit_input.clause_id),
+                    "clause_index": audit_input.clause_index,
+                    "latency_ms": cached_result.latency_ms,
+                    "temperature": self._temperature,
+                    "stance": audit_input.stance.value,
+                    "cache_hit": True,
+                }
+                return cached_result
 
         stance_instruction = STANCE_INSTRUCTIONS.get(
             audit_input.stance, STANCE_INSTRUCTIONS[NegotiationStance.BALANCED]
@@ -1503,8 +1577,10 @@ class LangChainClauseAuditor(ClauseAuditorPort):
                     exc,
                 )
 
+        used_fallback = False
         if validated_output is None:
             if self._enable_deterministic_fallback:
+                used_fallback = True
                 logger.info(
                     "Applying deterministic fallback for clause %s after %d failed attempts.",
                     audit_input.clause_id,
@@ -1548,7 +1624,7 @@ class LangChainClauseAuditor(ClauseAuditorPort):
             stance=audit_input.stance,
             is_compliant=validated_output.is_compliant,
         )
-        return ClauseAuditResult(
+        audit_result = ClauseAuditResult(
             clause_id=audit_input.clause_id,
             clause_index=audit_input.clause_index,
             is_compliant=validated_output.is_compliant,
@@ -1567,6 +1643,32 @@ class LangChainClauseAuditor(ClauseAuditorPort):
             hallucination_free_passed=critic_report.hallucination_free_passed,
             obligation_preservation_passed=critic_report.obligation_preservation_passed,
         )
+        est_comp_tokens = estimate_token_count(
+            f"{audit_result.proposed_text}\n"
+            f"{audit_result.rationale}\n"
+            f"{audit_result.negotiation_talking_point}"
+        )
+        if (
+            not audit_input.bypass_cache
+            and self._enable_deterministic_fallback
+            and not used_fallback
+        ):
+            SemanticAuditCacheAndTelemetryManager.set_cached_clause_audit(
+                cache_key,
+                org_id=audit_input.org_id,
+                result=audit_result,
+            )
+        SemanticAuditCacheAndTelemetryManager.record_ai_event(
+            org_id=audit_input.org_id,
+            operation=AIOperationType.CLAUSE_AUDIT,
+            provider=active_provider,
+            model=active_model,
+            cache_hit=False,
+            prompt_tokens=est_prompt_tokens,
+            completion_tokens=est_comp_tokens,
+            latency_ms=latency_ms,
+        )
+        return audit_result
 
     async def refine_clause_suggestion(
         self,
@@ -1627,6 +1729,25 @@ class LangChainClauseAuditor(ClauseAuditorPort):
         )
 
         latency_ms = round((time.perf_counter() - started_at) * 1000.0, 3)
+        active_provider, active_model = self._resolve_provider_and_model()
+        prompt_tokens = estimate_token_count(
+            f"{playbook_context}\n{refine_input.original_clause_text}\n"
+            f"{refine_input.current_proposed_text}\n{refine_input.user_instruction}"
+        )
+        completion_tokens = estimate_token_count(
+            f"{critic_report.refined_proposed_text}\n"
+            f"{validated_output.rationale}\n{validated_output.negotiation_talking_point}"
+        )
+        SemanticAuditCacheAndTelemetryManager.record_ai_event(
+            org_id=refine_input.org_id,
+            operation=AIOperationType.COPILOT_REFINE,
+            provider=active_provider,
+            model=active_model,
+            cache_hit=False,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            latency_ms=latency_ms,
+        )
         return ClauseCopilotRefineResult(
             suggestion_id=refine_input.suggestion_id,
             clause_id=refine_input.clause_id,
@@ -1651,9 +1772,11 @@ class LangChainClauseAuditor(ClauseAuditorPort):
         candidate_risk: RiskLevel,
         matched_rules: Sequence[MatchedPlaybookRule],
         stance: NegotiationStance = NegotiationStance.BALANCED,
+        org_id: UUID | None = None,
     ) -> CriticVerificationReport:
         """Audit candidate redline against Playbook grounding, hallucinations, and numbering."""
-        return self._critic_agent.verify_and_critique(
+        started_at = time.perf_counter()
+        report = self._critic_agent.verify_and_critique(
             original_clause_text=original_clause_text,
             heading=heading,
             candidate_proposed_text=candidate_proposed_text,
@@ -1662,6 +1785,25 @@ class LangChainClauseAuditor(ClauseAuditorPort):
             stance=stance,
             is_compliant=(candidate_risk == RiskLevel.LOW),
         )
+        latency_ms = round((time.perf_counter() - started_at) * 1000.0, 3)
+        active_provider, active_model = self._resolve_provider_and_model()
+        prompt_tokens = estimate_token_count(
+            f"{original_clause_text}\n{candidate_proposed_text}"
+        )
+        completion_tokens = estimate_token_count(
+            f"{report.critic_notes}\n{report.refined_proposed_text}"
+        )
+        SemanticAuditCacheAndTelemetryManager.record_ai_event(
+            org_id=org_id,
+            operation=AIOperationType.CRITIC_VERIFY,
+            provider=active_provider,
+            model=active_model,
+            cache_hit=False,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            latency_ms=latency_ms,
+        )
+        return report
 
     async def simulate_counterparty_pushback(
         self,
@@ -1715,6 +1857,25 @@ class LangChainClauseAuditor(ClauseAuditorPort):
             validated_output.acceptance_probability
         )
         latency_ms = round((time.perf_counter() - started_at) * 1000.0, 3)
+        active_provider, active_model = self._resolve_provider_and_model()
+        prompt_tokens = estimate_token_count(
+            f"{playbook_context}\n{pushback_input.original_clause_text}\n"
+            f"{pushback_input.proposed_text}"
+        )
+        completion_tokens = estimate_token_count(
+            f"{validated_output.expected_objection}\n"
+            f"{validated_output.rebuttal_talking_point}\n{preserved_fallback}"
+        )
+        SemanticAuditCacheAndTelemetryManager.record_ai_event(
+            org_id=pushback_input.org_id,
+            operation=AIOperationType.PUSHBACK_SIMULATION,
+            provider=active_provider,
+            model=active_model,
+            cache_hit=False,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            latency_ms=latency_ms,
+        )
 
         return CounterpartyPushbackSimulation(
             suggestion_id=pushback_input.suggestion_id,

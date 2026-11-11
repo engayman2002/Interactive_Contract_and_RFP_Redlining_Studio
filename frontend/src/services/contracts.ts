@@ -93,6 +93,7 @@ export const AuditActionSchema = z.enum([
   "SUGGESTION_VERIFIED",
   "PUSHBACK_SIMULATED",
   "PLAYBOOK_AUTO_EXTRACTED",
+  "AI_CACHE_CLEARED",
   "COMMENT_CREATED",
   "DOCUMENT_EXPORTED",
   "CROSS_CLAUSE_CHECKED",
@@ -542,6 +543,68 @@ export const ImportAIVaultRequestDTOSchema = z.object({
 });
 export type ImportAIVaultRequestDTO = z.infer<
   typeof ImportAIVaultRequestDTOSchema
+>;
+
+export const AIOperationTypeSchema = z.enum([
+  "CLAUSE_AUDIT",
+  "COPILOT_REFINE",
+  "CRITIC_VERIFY",
+  "PUSHBACK_SIMULATION",
+  "CROSS_CLAUSE_RADAR",
+  "PLAYBOOK_EXTRACTION",
+]);
+export type AIOperationType = z.infer<typeof AIOperationTypeSchema>;
+
+export const AITelemetryEventDTOSchema = z.object({
+  event_id: z.string(),
+  timestamp: z.string(),
+  operation: AIOperationTypeSchema,
+  provider: z.string(),
+  model: z.string(),
+  cache_hit: z.boolean(),
+  prompt_tokens: z.number().int().min(0),
+  completion_tokens: z.number().int().min(0),
+  tokens_saved: z.number().int().min(0),
+  latency_ms: z.number().min(0),
+});
+export type AITelemetryEventDTO = z.infer<typeof AITelemetryEventDTOSchema>;
+
+export const AIOperationMetricsDTOSchema = z.object({
+  operation: AIOperationTypeSchema,
+  total_calls: z.number().int().min(0),
+  cache_hits: z.number().int().min(0),
+  total_tokens: z.number().int().min(0),
+  avg_latency_ms: z.number().min(0),
+});
+export type AIOperationMetricsDTO = z.infer<typeof AIOperationMetricsDTOSchema>;
+
+export const AITelemetrySummaryDTOSchema = z.object({
+  active_provider: z.string(),
+  active_model: z.string(),
+  semantic_cache_enabled: z.boolean().default(true),
+  cached_entries_count: z.number().int().min(0),
+  total_requests: z.number().int().min(0),
+  cache_hits: z.number().int().min(0),
+  cache_misses: z.number().int().min(0),
+  cache_hit_rate_pct: z.number().min(0).max(100),
+  prompt_tokens: z.number().int().min(0),
+  completion_tokens: z.number().int().min(0),
+  total_tokens: z.number().int().min(0),
+  estimated_tokens_saved: z.number().int().min(0),
+  estimated_cost_usd: z.number().min(0),
+  estimated_cost_saved_usd: z.number().min(0),
+  avg_latency_ms: z.number().min(0),
+  operation_metrics: z.array(AIOperationMetricsDTOSchema).default([]),
+  recent_events: z.array(AITelemetryEventDTOSchema).default([]),
+});
+export type AITelemetrySummaryDTO = z.infer<typeof AITelemetrySummaryDTOSchema>;
+
+export const ClearAICacheResponseDTOSchema = z.object({
+  cleared_entries: z.number().int().min(0),
+  message: z.string(),
+});
+export type ClearAICacheResponseDTO = z.infer<
+  typeof ClearAICacheResponseDTOSchema
 >;
 
 

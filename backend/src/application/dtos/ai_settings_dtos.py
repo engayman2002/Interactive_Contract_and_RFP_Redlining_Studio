@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from pydantic import Field, field_validator
 
 from src.application.dtos import ImmutableDTO
+from src.domain.enums import AIOperationType
 
 _BLOCKED_METADATA_HOSTS: frozenset[str] = frozenset(
     {
@@ -189,8 +190,66 @@ class ImportAIVaultRequestDTO(ImmutableDTO):
     vault: EncryptedAIVaultEnvelopeDTO
 
 
+class AITelemetryEventDTO(ImmutableDTO):
+    """Telemetry record for a single AI inference call or Semantic Cache hit."""
+
+    event_id: str
+    timestamp: str
+    operation: AIOperationType
+    provider: str
+    model: str
+    cache_hit: bool
+    prompt_tokens: int = Field(ge=0)
+    completion_tokens: int = Field(ge=0)
+    tokens_saved: int = Field(ge=0)
+    latency_ms: float = Field(ge=0.0)
+
+
+class AIOperationMetricsDTO(ImmutableDTO):
+    """Aggregated FinOps breakdown for a single AI operation type."""
+
+    operation: AIOperationType
+    total_calls: int = Field(ge=0)
+    cache_hits: int = Field(ge=0)
+    total_tokens: int = Field(ge=0)
+    avg_latency_ms: float = Field(ge=0.0)
+
+
+class AITelemetrySummaryDTO(ImmutableDTO):
+    """FinOps AI Telemetry & Semantic Clause Cache dashboard snapshot."""
+
+    active_provider: str
+    active_model: str
+    semantic_cache_enabled: bool = True
+    cached_entries_count: int = Field(ge=0)
+    total_requests: int = Field(ge=0)
+    cache_hits: int = Field(ge=0)
+    cache_misses: int = Field(ge=0)
+    cache_hit_rate_pct: float = Field(ge=0.0, le=100.0)
+    prompt_tokens: int = Field(ge=0)
+    completion_tokens: int = Field(ge=0)
+    total_tokens: int = Field(ge=0)
+    estimated_tokens_saved: int = Field(ge=0)
+    estimated_cost_usd: float = Field(ge=0.0)
+    estimated_cost_saved_usd: float = Field(ge=0.0)
+    avg_latency_ms: float = Field(ge=0.0)
+    operation_metrics: list[AIOperationMetricsDTO] = Field(default_factory=list)
+    recent_events: list[AITelemetryEventDTO] = Field(default_factory=list)
+
+
+class ClearAICacheResponseDTO(ImmutableDTO):
+    """Response payload returned after purging the Semantic Clause Audit Cache."""
+
+    cleared_entries: int = Field(ge=0)
+    message: str
+
+
 __all__ = [
+    "AIOperationMetricsDTO",
     "AISettingsResponseDTO",
+    "AITelemetryEventDTO",
+    "AITelemetrySummaryDTO",
+    "ClearAICacheResponseDTO",
     "DiscoverModelsRequestDTO",
     "DiscoverModelsResponseDTO",
     "EncryptedAIVaultEnvelopeDTO",

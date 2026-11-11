@@ -7,6 +7,10 @@ from typing import Any, Final
 from src.domain.ports import ClauseAuditorPort, EmbeddingGeneratorPort
 from src.infrastructure.ai.provider_registry import LLMProviderRegistry, create_llm_runnable
 from src.infrastructure.ai.redline_chain import LangChainClauseAuditor
+from src.infrastructure.ai.telemetry_and_cache import (
+    SemanticAuditCacheAndTelemetryManager,
+    reset_ai_telemetry_and_cache,
+)
 from src.infrastructure.config import Settings, get_settings
 from src.infrastructure.vector.provider_registry import (
     EmbeddingProviderRegistry,
@@ -210,6 +214,7 @@ class RuntimeAISettingsManager:
             cls._overrides = None
             cls._cached_auditor = None
             cls._cached_embedder = None
+        reset_ai_telemetry_and_cache()
 
     @staticmethod
     def _resolve_provider_llm_key(
@@ -528,6 +533,7 @@ class RuntimeAISettingsManager:
             # Clear cached singleton instances so next request resolves the new provider/model
             cls._cached_auditor = None
             cls._cached_embedder = None
+            SemanticAuditCacheAndTelemetryManager.clear_cache()
 
             return cls.get_effective_settings()
 
@@ -725,6 +731,8 @@ class RuntimeAISettingsManager:
                     llm_runnable=llm_runnable,
                     max_retries=effective.REDLINE_MAX_RETRIES,
                     temperature=effective.LLM_TEMPERATURE,
+                    provider_name=effective.LLM_PROVIDER,
+                    model_name=effective.LLM_MODEL_NAME,
                 )
             return cls._cached_auditor
 

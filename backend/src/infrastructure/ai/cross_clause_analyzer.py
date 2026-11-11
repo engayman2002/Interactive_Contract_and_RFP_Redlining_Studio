@@ -9,8 +9,12 @@ from src.domain.entities import (
     CrossClauseFinding,
     DocumentClause,
 )
-from src.domain.enums import CrossClauseIssueType, RiskLevel
+from src.domain.enums import AIOperationType, CrossClauseIssueType, RiskLevel
 from src.domain.ports import CrossClauseAnalyzerPort
+from src.infrastructure.ai.telemetry_and_cache import (
+    SemanticAuditCacheAndTelemetryManager,
+    estimate_token_count,
+)
 
 # Pre-compiled regex patterns for cross-clause detection
 _RE_SECTION_REF = re.compile(
@@ -332,6 +336,21 @@ class LangChainCrossClauseAnalyzer(CrossClauseAnalyzerPort):
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
         score = _compute_integrity_score(unique_findings)
+
+        prompt_tokens = estimate_token_count("\n".join(c.current_text for c in clauses))
+        completion_tokens = estimate_token_count(
+            "\n".join(f"{f.title}: {f.description}" for f in unique_findings)
+        )
+        SemanticAuditCacheAndTelemetryManager.record_ai_event(
+            org_id=org_id,
+            operation=AIOperationType.CROSS_CLAUSE_RADAR,
+            provider="deterministic",
+            model="cross-clause-graph-v1",
+            cache_hit=False,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            latency_ms=elapsed_ms,
+        )
 
         contradictions = sum(
             1 for f in unique_findings if f.issue_type == CrossClauseIssueType.CONTRADICTION

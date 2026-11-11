@@ -3,16 +3,23 @@
 import json
 import logging
 import re
+import time
 from dataclasses import dataclass
 from typing import Any, Final
+from uuid import UUID
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable, RunnableConfig
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from src.domain.entities import ExtractedPlaybookRuleCandidate
+from src.domain.enums import AIOperationType
 from src.domain.ports import PlaybookExtractorPort
 from src.infrastructure.ai.redline_chain import PolicyAwareDeterministicChatModel
+from src.infrastructure.ai.telemetry_and_cache import (
+    SemanticAuditCacheAndTelemetryManager,
+    estimate_token_count,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -516,30 +523,57 @@ class LangChainPlaybookExtractor(PlaybookExtractorPort):
         self,
         llm_runnable: Runnable[Any, Any] | None = None,
         max_retries: int = 1,
+        provider_name: str = "deterministic",
+        model_name: str = "policy-deterministic-v1",
     ) -> None:
         self._llm_runnable = llm_runnable
         self._max_retries = max(0, max_retries)
+        self._provider_name = provider_name
+        self._model_name = model_name
 
     async def extract_rules_from_clauses(
         self,
         clauses_text: list[str],
         max_rules: int = 8,
+        org_id: UUID | None = None,
     ) -> list[ExtractedPlaybookRuleCandidate]:
         """Extract up to `max_rules` structured Playbook rules from golden contract clauses."""
+        started_at = time.perf_counter()
         cleaned_clauses = [c.strip() for c in clauses_text if c.strip()]
         if not cleaned_clauses:
             return []
 
         bounded_max = max(1, min(20, max_rules))
+        used_live = False
+        results: list[ExtractedPlaybookRuleCandidate] = []
         if (
             self._llm_runnable is not None
             and not isinstance(self._llm_runnable, PolicyAwareDeterministicChatModel)
         ):
-            llm_results = await self._try_extract_with_llm(cleaned_clauses, bounded_max)
-            if llm_results:
-                return llm_results
+            results = await self._try_extract_with_llm(cleaned_clauses, bounded_max)
+            used_live = bool(results)
 
-        return extract_rules_deterministically(cleaned_clauses, max_rules=bounded_max)
+        if not results:
+            results = extract_rules_deterministically(cleaned_clauses, max_rules=bounded_max)
+
+        latency_ms = round((time.perf_counter() - started_at) * 1000.0, 3)
+        prompt_tokens = estimate_token_count("\n\n".join(cleaned_clauses))
+        completion_tokens = estimate_token_count(
+            "\n".join(
+                f"{r.category} {r.standard_position} {r.fallback_position}" for r in results
+            )
+        )
+        SemanticAuditCacheAndTelemetryManager.record_ai_event(
+            org_id=org_id,
+            operation=AIOperationType.PLAYBOOK_EXTRACTION,
+            provider=self._provider_name if used_live else "deterministic",
+            model=self._model_name if used_live else "policy-deterministic-v1",
+            cache_hit=False,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            latency_ms=latency_ms,
+        )
+        return results
 
     async def _try_extract_with_llm(
         self,

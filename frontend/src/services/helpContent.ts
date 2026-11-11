@@ -594,6 +594,43 @@ export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
       },
     ],
   },
+  {
+    id: "ai-semantic-cache-telemetry",
+    number: 14,
+    title: "Semantic Clause Audit Cache & Live AI Telemetry (FinOps)",
+    badge: "AI FinOps",
+    summary:
+      "Eliminate redundant LLM token spend with tenant-isolated SHA-256 semantic caching (<1ms hits) and monitor live token consumption, avoided spend, latency, and per-operation metrics inside the Inspector ⚡ AI Telemetry dashboard.",
+    keywords: [
+      "telemetry",
+      "finops",
+      "semantic cache",
+      "cache hit",
+      "sha-256",
+      "tokens saved",
+      "cost",
+      "latency",
+      "purge cache",
+    ],
+    steps: [
+      {
+        title: "Context-Aware SHA-256 Semantic Clause Cache (<1ms)",
+        description:
+          "Every clause audit computes a SHA-256 fingerprint combining organization ID, normalized clause text, heading, negotiation stance, sorted matched Playbook rules, and active LLM provider/model. Unchanged clauses on repeat audits hit cache in <1ms with zero external LLM spend.",
+        tip: "Editing a clause, switching stance (STRICT -> COMMERCIAL), updating Playbook rules, or changing the LLM model automatically produces a fresh key so cached results are never stale.",
+      },
+      {
+        title: "Monitor Live FinOps Metrics in the '⚡ AI Telemetry' Tab",
+        description:
+          "Open the Inspector's ⚡ AI Telemetry tab to view real-time Cache Hit Rate %, Tokens Used & Tokens Saved, Avg AI Latency, Estimated Cost vs. Avoided Spend ($ USD), per-operation breakdowns, and recent event badges (⚡ CACHE HIT vs. 🤖 LIVE INFERENCE).",
+      },
+      {
+        title: "When to Purge the Semantic Cache",
+        description:
+          "Switching AI models in Settings automatically purges stale cache entries. ADMIN, LEGAL_COUNSEL, and TECHNICAL_LEAD users can also click 'Purge Semantic Cache' manually (POST /api/v1/ai-settings/telemetry/clear-cache) at any time to force fresh inferences.",
+      },
+    ],
+  },
 ];
 
 export const RISK_HEATMAP_LEGEND: HeatmapLegendItem[] = [
@@ -1002,6 +1039,39 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
       "preview mode",
       "admin",
       "playbook extractor",
+      "403",
+    ],
+  },
+  {
+    id: "faq-semantic-cache-freshness",
+    question:
+      "Will changing my Negotiation Stance or Playbook rules return stale cached redlines?",
+    answer:
+      "Never. The SHA-256 semantic cache key incorporates organization ID, normalized clause text, clause heading, active Negotiation Stance (STRICT/BALANCED/COMMERCIAL), sorted Playbook rule IDs and policy wording, plus the active LLM provider and model ID. Any change automatically generates a distinct key and triggers a fresh AI inference.",
+    category: "workflow",
+    keywords: [
+      "semantic cache",
+      "stale",
+      "stance",
+      "sha-256",
+      "cache key",
+      "telemetry",
+      "finops",
+    ],
+  },
+  {
+    id: "faq-telemetry-purge-cache",
+    question:
+      "Who can inspect AI FinOps Telemetry and purge the Semantic Clause Cache?",
+    answer:
+      "All authenticated workspace roles (including VIEWER) can read real-time token and cost telemetry via GET /api/v1/ai-settings/telemetry scoped to their organization. Purging cached entries via 'Purge Semantic Cache' (POST /api/v1/ai-settings/telemetry/clear-cache) requires ADMIN, LEGAL_COUNSEL, or TECHNICAL_LEAD permissions.",
+    category: "workflow",
+    keywords: [
+      "telemetry",
+      "purge",
+      "clear cache",
+      "finops",
+      "rbac",
       "403",
     ],
   },

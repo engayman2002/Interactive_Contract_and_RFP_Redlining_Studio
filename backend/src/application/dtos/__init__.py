@@ -189,7 +189,11 @@ class DocumentResponseDTO(ImmutableDTO):
 
 
 from src.application.dtos.ai_settings_dtos import (  # noqa: E402
+    AIOperationMetricsDTO,
     AISettingsResponseDTO,
+    AITelemetryEventDTO,
+    AITelemetrySummaryDTO,
+    ClearAICacheResponseDTO,
     DiscoverModelsRequestDTO,
     DiscoverModelsResponseDTO,
     EncryptedAIVaultEnvelopeDTO,
@@ -249,11 +253,15 @@ from src.application.dtos.redline_dtos import (  # noqa: E402
 
 __all__ = [
     "AISettingsResponseDTO",
+    "AIOperationMetricsDTO",
+    "AITelemetryEventDTO",
+    "AITelemetrySummaryDTO",
     "AnalyzeDocumentRequestDTO",
     "AuditLogEntryResponseDTO",
     "ClauseCommentResponseDTO",
     "ClauseResolutionStateDTO",
     "ClauseResponseDTO",
+    "ClearAICacheResponseDTO",
     "CreateClauseCommentCommand",
     "CreateClauseCommentRequestDTO",
     "CreateDocumentRequestDTO",

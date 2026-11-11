@@ -113,6 +113,8 @@ def get_playbook_extractor() -> PlaybookExtractorPort:
     return LangChainPlaybookExtractor(
         llm_runnable=llm_runnable,
         max_retries=1,
+        provider_name=effective.LLM_PROVIDER,
+        model_name=effective.LLM_MODEL_NAME,
     )
 
 

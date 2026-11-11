@@ -9,6 +9,7 @@ import type {
   RedlineSuggestionDTO,
 } from "@/services/contracts";
 import { RiskFilterMode, useWorkspaceStore } from "@/store/workspaceStore";
+import { AITelemetryPanel } from "./AITelemetryPanel";
 import { AuditTrailPanel } from "./AuditTrailPanel";
 import { ClauseCommentThread } from "./ClauseCommentThread";
 import { CrossClauseRadarPanel } from "./CrossClauseRadarPanel";
@@ -148,7 +149,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
 
   const resolvedAuditLogs = auditLogs ?? storeAuditLogs;
   const [activeViewTab, setActiveViewTab] = useState<
-    "redlines" | "radar" | "audit"
+    "redlines" | "radar" | "audit" | "telemetry"
   >("redlines");
 
   const cardContainerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -320,6 +321,18 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
           >
             Audit Trail ({resolvedAuditLogs.length})
           </button>
+          <button
+            type="button"
+            data-testid="inspector-tab-telemetry"
+            onClick={() => setActiveViewTab("telemetry")}
+            className={`flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
+              activeViewTab === "telemetry"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            ⚡ AI Telemetry
+          </button>
         </div>
 
         {/* Real-time SSE Audit Progress Bar */}
@@ -385,6 +398,8 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
         <AuditTrailPanel auditLogs={resolvedAuditLogs} />
       ) : activeViewTab === "radar" ? (
         <CrossClauseRadarPanel clauses={clauses} />
+      ) : activeViewTab === "telemetry" ? (
+        <AITelemetryPanel />
       ) : (
         <>
           {redlines.length === 0 ? (
