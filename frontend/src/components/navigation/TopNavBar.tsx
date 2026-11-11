@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Cpu, Scale, ShieldCheck, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Cpu, FlaskConical, LogOut, Scale, ShieldCheck, X } from "lucide-react";
 import {
   AISettingsModal,
   formatActiveAIBadge,
@@ -17,8 +17,12 @@ import { ThemeToggle } from "./ThemeToggle";
 
 export const TopNavBar: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useI18n();
   const { session, connectionStatus, login, logout } = useAuthSession();
+  const isDemoMode = useWorkspaceStore((state) => state.isDemoMode);
+  const setDemoMode = useWorkspaceStore((state) => state.setDemoMode);
+  const hydrateDemoMode = useWorkspaceStore((state) => state.hydrateDemoMode);
   const activeLLMProvider = useWorkspaceStore(
     (state) => state.activeLLMProvider
   );
@@ -35,6 +39,10 @@ export const TopNavBar: React.FC = () => {
   const [passInput, setPassInput] = useState<string>("RedlineStudio2026!");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
+
+  useEffect(() => {
+    hydrateDemoMode();
+  }, [hydrateDemoMode]);
 
   useEffect(() => {
     if (!session.token) {
@@ -70,10 +78,21 @@ export const TopNavBar: React.FC = () => {
 
   const navLinks = [
     { label: t.nav.dashboard, href: "/" },
-    { label: t.nav.sampleStudio, href: "/documents/demo" },
     { label: t.nav.companyPlaybook, href: "/playbooks" },
     { label: t.nav.helpGuide, href: "/help" },
   ];
+
+  const handleEnterDemoMode = () => {
+    setDemoMode(true);
+    router.push("/documents/demo");
+  };
+
+  const handleExitDemoMode = () => {
+    setDemoMode(false);
+    if (pathname.startsWith("/documents/demo")) {
+      router.push("/");
+    }
+  };
 
   const formattedRole =
     session.userRole === "ADMIN"
@@ -132,6 +151,29 @@ export const TopNavBar: React.FC = () => {
 
         {/* Right: Uniform h-8 Precision Controls */}
         <div className="flex shrink-0 items-center gap-2">
+          {/* Interactive Demo Sandbox Toggle */}
+          {isDemoMode ? (
+            <button
+              type="button"
+              data-testid="exit-demo-mode-btn"
+              onClick={handleExitDemoMode}
+              className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-amber-300/90 bg-amber-50 px-2.5 text-[11px] font-semibold text-amber-800 shadow-sm transition-all hover:border-amber-400 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-950/50 dark:text-amber-200 dark:hover:bg-amber-900/60"
+            >
+              <LogOut className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="whitespace-nowrap">{t.nav.exitDemoNavBtn}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              data-testid="toggle-demo-mode-btn"
+              onClick={handleEnterDemoMode}
+              className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-amber-200/90 bg-amber-50/70 px-2.5 text-[11px] font-semibold text-amber-700 shadow-sm transition-all hover:border-amber-300 hover:bg-amber-100/80 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:border-amber-500/50 dark:hover:bg-amber-900/40"
+            >
+              <FlaskConical className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="whitespace-nowrap">{t.nav.enterDemoBtn}</span>
+            </button>
+          )}
+
           {/* Active AI Engine Switcher Pill */}
           <button
             type="button"
@@ -158,13 +200,17 @@ export const TopNavBar: React.FC = () => {
               className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                 connectionStatus === "live"
                   ? "animate-pulse bg-emerald-500 dark:bg-emerald-400"
-                  : "bg-indigo-500 dark:bg-indigo-400"
+                  : isDemoMode
+                  ? "bg-amber-500 dark:bg-amber-400"
+                  : "bg-slate-400 dark:bg-slate-500"
               }`}
             />
             <span className="whitespace-nowrap">
               {connectionStatus === "live"
                 ? t.nav.liveBackend
-                : t.nav.demoWorkspace}
+                : isDemoMode
+                ? t.nav.demoWorkspace
+                : t.nav.localWorkspace}
             </span>
           </div>
 
@@ -195,6 +241,33 @@ export const TopNavBar: React.FC = () => {
           </div>
         </div>
       </nav>
+
+      {/* Isolated Demo Sandbox Banner */}
+      {isDemoMode ? (
+        <div
+          data-testid="demo-sandbox-banner"
+          className="border-b border-amber-200/80 bg-amber-50/90 px-4 py-2 text-xs text-amber-900 backdrop-blur-sm dark:border-amber-500/30 dark:bg-amber-950/50 dark:text-amber-200 sm:px-6"
+        >
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 font-medium">
+              <FlaskConical
+                className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400"
+                aria-hidden="true"
+              />
+              <span>{t.nav.demoBannerText}</span>
+            </div>
+            <button
+              type="button"
+              data-testid="exit-demo-sandbox-btn"
+              onClick={handleExitDemoMode}
+              className="inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-amber-900 shadow-sm transition-colors hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-900/60 dark:text-amber-100 dark:hover:bg-amber-900"
+            >
+              <LogOut className="h-3 w-3 shrink-0" aria-hidden="true" />
+              <span>{t.nav.exitDemoBannerBtn}</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/* AI Engine & Model Switcher Modal */}
       {isAISettingsOpen ? (

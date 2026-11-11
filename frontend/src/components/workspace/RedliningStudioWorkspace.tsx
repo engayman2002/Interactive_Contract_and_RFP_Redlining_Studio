@@ -9,8 +9,10 @@ import {
   Cpu,
   Download,
   FileCheck2,
+  FlaskConical,
   GraduationCap,
   HelpCircle,
+  LogOut,
   Plus,
   Sparkles,
   X,
@@ -38,6 +40,20 @@ import { AISettingsModal, formatActiveAIBadge } from "./AISettingsModal";
 import { QuickHelpModal } from "./QuickHelpModal";
 import { UploadModal } from "./UploadModal";
 
+const EMPTY_REAL_WORKSPACE: DocumentWorkspaceDTO = {
+  document_id: "",
+  org_id: "",
+  title: "",
+  status: "UPLOADED",
+  version: 1,
+  created_by: "",
+  created_at: "",
+  clauses: [],
+  redlines: [],
+  comments: [],
+  audit_logs: [],
+};
+
 export interface RedliningStudioWorkspaceProps {
   documentId?: string;
   initialWorkspace?: DocumentWorkspaceDTO;
@@ -46,8 +62,11 @@ export interface RedliningStudioWorkspaceProps {
 
 export const RedliningStudioWorkspace: React.FC<
   RedliningStudioWorkspaceProps
-> = ({ documentId, initialWorkspace = DEMO_WORKSPACE_DATA, token }) => {
+> = ({ documentId, initialWorkspace, token }) => {
   const { t, locale } = useI18n();
+  const isDemoMode = useWorkspaceStore((state) => state.isDemoMode);
+  const setDemoMode = useWorkspaceStore((state) => state.setDemoMode);
+  const hydrateDemoMode = useWorkspaceStore((state) => state.hydrateDemoMode);
   const clauses = useWorkspaceStore((state) => state.clauses);
   const redlines = useWorkspaceStore((state) => state.redlines);
   const comments = useWorkspaceStore((state) => state.comments);
@@ -87,18 +106,35 @@ export const RedliningStudioWorkspace: React.FC<
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef<boolean>(false);
-  const resolvedDocId = documentId ?? initialWorkspace.document_id;
+  const isDemoDocRoute =
+    documentId === DEMO_WORKSPACE_DATA.document_id || documentId === "demo";
+  const resolvedInitial =
+    initialWorkspace ??
+    (isDemoDocRoute || (!documentId && isDemoMode)
+      ? DEMO_WORKSPACE_DATA
+      : EMPTY_REAL_WORKSPACE);
+  const resolvedDocId = documentId ?? resolvedInitial.document_id;
 
   const [currentTitle, setCurrentTitle] = useState<string>(
-    initialWorkspace.title
+    resolvedInitial.title
   );
   const [currentStatus, setCurrentStatus] = useState<string>(
-    initialWorkspace.status
+    resolvedInitial.status
   );
   const [isGuideDismissed, setIsGuideDismissed] = useState<boolean>(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
   const [isQuickHelpOpen, setIsQuickHelpOpen] = useState<boolean>(false);
   const [isAISettingsOpen, setIsAISettingsOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    hydrateDemoMode();
+  }, [hydrateDemoMode]);
+
+  useEffect(() => {
+    if (isDemoDocRoute) {
+      setDemoMode(true);
+    }
+  }, [isDemoDocRoute, setDemoMode]);
 
   useEffect(() => {
     if (!effectiveToken) {
@@ -118,11 +154,7 @@ export const RedliningStudioWorkspace: React.FC<
   useEffect(() => {
     let isMounted = true;
 
-    if (
-      documentId &&
-      documentId !== DEMO_WORKSPACE_DATA.document_id &&
-      documentId !== "demo"
-    ) {
+    if (documentId && !isDemoDocRoute) {
       void fetchDocumentWorkspace(documentId, token).then((data) => {
         if (isMounted) {
           hydrateWorkspace(data);
@@ -130,16 +162,17 @@ export const RedliningStudioWorkspace: React.FC<
           setCurrentStatus(data.status);
         }
       });
-    } else {
-      hydrateWorkspace(initialWorkspace);
-      setCurrentTitle(initialWorkspace.title);
-      setCurrentStatus(initialWorkspace.status);
+    } else if (initialWorkspace || isDemoDocRoute || useWorkspaceStore.getState().isDemoMode) {
+      const target = initialWorkspace ?? DEMO_WORKSPACE_DATA;
+      hydrateWorkspace(target);
+      setCurrentTitle(target.title);
+      setCurrentStatus(target.status);
     }
 
     return () => {
       isMounted = false;
     };
-  }, [documentId, initialWorkspace, hydrateWorkspace, token]);
+  }, [documentId, initialWorkspace, isDemoDocRoute, hydrateWorkspace, token]);
 
   const handleStreamComplete = useCallback(async () => {
     const updated = await fetchDocumentWorkspace(resolvedDocId, token);
@@ -482,6 +515,28 @@ export const RedliningStudioWorkspace: React.FC<
 
         {/* Right side: Workspace Navigation, Language Switcher & Help Links */}
         <div className="flex shrink-0 items-center gap-1.5">
+          {isDemoMode ? (
+            <Link
+              href="/"
+              data-testid="exit-demo-mode-btn"
+              onClick={() => setDemoMode(false)}
+              className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-amber-300/90 bg-amber-50 px-2.5 text-[11px] font-semibold text-amber-800 shadow-sm transition-colors hover:border-amber-400 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-950/50 dark:text-amber-200 dark:hover:bg-amber-900/60"
+            >
+              <LogOut className="h-3 w-3 shrink-0" aria-hidden="true" />
+              <span>{t.nav.exitDemoNavBtn}</span>
+            </Link>
+          ) : (
+            <Link
+              href="/documents/demo"
+              data-testid="toggle-demo-mode-btn"
+              onClick={() => setDemoMode(true)}
+              className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-amber-200/90 bg-amber-50/70 px-2.5 text-[11px] font-semibold text-amber-700 shadow-sm transition-colors hover:border-amber-300 hover:bg-amber-100/80 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-900/40"
+            >
+              <FlaskConical className="h-3 w-3 shrink-0" aria-hidden="true" />
+              <span>{t.nav.enterDemoBtn}</span>
+            </Link>
+          )}
+
           <LanguageSwitcher compact />
 
           <Link
@@ -519,6 +574,31 @@ export const RedliningStudioWorkspace: React.FC<
           </button>
         </div>
       </div>
+
+      {/* Isolated Demo Sandbox Banner */}
+      {isDemoMode ? (
+        <div
+          data-testid="demo-sandbox-banner"
+          className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 bg-amber-50/90 px-6 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/50 dark:text-amber-200"
+        >
+          <div className="flex items-center gap-2 font-medium">
+            <FlaskConical
+              className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400"
+              aria-hidden="true"
+            />
+            <span>{t.nav.demoBannerText}</span>
+          </div>
+          <Link
+            href="/"
+            data-testid="exit-demo-sandbox-btn"
+            onClick={() => setDemoMode(false)}
+            className="inline-flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-amber-900 shadow-sm transition-colors hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-900/60 dark:text-amber-100 dark:hover:bg-amber-900"
+          >
+            <LogOut className="h-3 w-3 shrink-0" aria-hidden="true" />
+            <span>{t.nav.exitDemoBannerBtn}</span>
+          </Link>
+        </div>
+      ) : null}
 
       {/* Optimistic Concurrency Version Conflict (409) Banner */}
       {conflictError ? (

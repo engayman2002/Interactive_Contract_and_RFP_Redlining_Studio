@@ -49,6 +49,11 @@ export interface TranslationDictionary {
     helpGuide: string;
     liveBackend: string;
     demoWorkspace: string;
+    localWorkspace: string;
+    enterDemoBtn: string;
+    exitDemoNavBtn: string;
+    demoBannerText: string;
+    exitDemoBannerBtn: string;
     roleAdmin: string;
     authModalTitle: string;
     authModalSubtitle: string;
@@ -100,6 +105,10 @@ export interface TranslationDictionary {
     colWorkspace: string;
     clausesSuffix: string;
     openInStudioBtn: string;
+    cleanEmptyTitle: string;
+    cleanEmptyDesc: string;
+    launchDemoSandboxEmptyBtn: string;
+    realWorkspaceStandby: string;
   };
   upload: {
     maxSizeNote: string;
@@ -296,6 +305,8 @@ export interface TranslationDictionary {
     fallbackPosHeading: string;
     triggersHeading: string;
     vectorIndexed: string;
+    cleanEmptyDesc: string;
+    loadDemoPlaybookBtn: string;
   };
   extractor: {
     badge: string;
@@ -401,6 +412,11 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       helpGuide: "Help & Guide",
       liveBackend: "Live Backend",
       demoWorkspace: "Demo Workspace",
+      localWorkspace: "Local Workspace",
+      enterDemoBtn: "Demo Sandbox",
+      exitDemoNavBtn: "Exit Demo",
+      demoBannerText: "Demo Sandbox Active — Exploring sample contracts and playbook rules. Your real workspace remains untouched.",
+      exitDemoBannerBtn: "Exit Demo Mode",
       roleAdmin: "Legal Counsel • Admin",
       authModalTitle: "Workspace Authentication",
       authModalSubtitle: "Sign in or switch organization tenant credentials.",
@@ -459,6 +475,10 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       colWorkspace: "Workspace",
       clausesSuffix: "clauses",
       openInStudioBtn: "Open in Studio",
+      cleanEmptyTitle: "Your Real Legal Workspace Is Clean & Ready",
+      cleanEmptyDesc: "Upload your first real .docx or .pdf agreement above to launch AI risk auditing, or enter the isolated Demo Sandbox to explore pre-loaded sample contracts.",
+      launchDemoSandboxEmptyBtn: "Launch Interactive Demo Sandbox",
+      realWorkspaceStandby: "Clean Workspace Ready",
     },
     upload: {
       maxSizeNote: "Up to 25 MB · Encrypted Ingestion",
@@ -672,6 +692,8 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       fallbackPosHeading: "Fallback Position",
       triggersHeading: "Unacceptable Triggers",
       vectorIndexed: "1536-d Vector Indexed",
+      cleanEmptyDesc: "Create a playbook rule manually or extract company standards from a Golden Contract above. Want to preview sample legal rules? Launch the isolated Demo Sandbox.",
+      loadDemoPlaybookBtn: "Load Demo Sandbox Rules",
     },
     extractor: {
       badge: "AI Feature #6 — Golden Contract Auto-Extractor",
@@ -952,6 +974,11 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       helpGuide: "Ayuda y Guía",
       liveBackend: "Backend Activo",
       demoWorkspace: "Espacio Demo",
+      localWorkspace: "Espacio Local",
+      enterDemoBtn: "Sandbox Demo",
+      exitDemoNavBtn: "Salir de Demo",
+      demoBannerText: "Sandbox Demo Activo — Explorando contratos y reglas de ejemplo. Su espacio real permanece intacto.",
+      exitDemoBannerBtn: "Salir del Modo Demo",
       roleAdmin: "Asesor Legal • Admin",
       authModalTitle: "Autenticación del Espacio",
       authModalSubtitle:
@@ -1011,6 +1038,10 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       colWorkspace: "Espacio",
       clausesSuffix: "cláusulas",
       openInStudioBtn: "Abrir en Estudio",
+      cleanEmptyTitle: "Su Espacio Legal Real Está Limpio y Listo",
+      cleanEmptyDesc: "Suba su primer contrato real .docx o .pdf arriba para iniciar la auditoría de riesgos con IA, o entre al Sandbox Demo aislado para explorar contratos de ejemplo.",
+      launchDemoSandboxEmptyBtn: "Iniciar Sandbox Demo Interactivo",
+      realWorkspaceStandby: "Espacio Limpio Listo",
     },
     upload: {
       maxSizeNote: "Hasta 25 MB · Ingesta Cifrada",
@@ -1225,6 +1256,8 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       fallbackPosHeading: "Posición Alternativa",
       triggersHeading: "Activadores Inaceptables",
       vectorIndexed: "Índice Vectorial 1536-d",
+      cleanEmptyDesc: "Cree una regla manualmente o extraiga estándares de un Contrato Dorado arriba. ¿Desea ver reglas de ejemplo? Inicie el Sandbox Demo aislado.",
+      loadDemoPlaybookBtn: "Cargar Reglas del Sandbox Demo",
     },
     extractor: {
       badge: "Función IA #6 — Auto-Extractor de Contratos Modelo",
@@ -1511,6 +1544,11 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       helpGuide: "Aide & Guide",
       liveBackend: "Backend Actif",
       demoWorkspace: "Espace Démo",
+      localWorkspace: "Espace Local",
+      enterDemoBtn: "Bac à sable Démo",
+      exitDemoNavBtn: "Quitter Démo",
+      demoBannerText: "Bac à sable Démo Actif — Exploration des contrats et règles d'exemple. Votre espace réel reste intact.",
+      exitDemoBannerBtn: "Quitter le Mode Démo",
       roleAdmin: "Juriste • Admin",
       authModalTitle: "Authentification de l'Espace",
       authModalSubtitle:
@@ -1571,6 +1609,10 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       colWorkspace: "Espace",
       clausesSuffix: "clauses",
       openInStudioBtn: "Ouvrir dans Studio",
+      cleanEmptyTitle: "Votre Espace Juridique Réel Est Propre et Prêt",
+      cleanEmptyDesc: "Téléversez votre premier vrai contrat .docx ou .pdf ci-dessus pour lancer l'audit de risques par IA, ou entrez dans le Bac à sable Démo isolé pour explorer des contrats d'exemple.",
+      launchDemoSandboxEmptyBtn: "Lancer le Bac à sable Démo Interactif",
+      realWorkspaceStandby: "Espace Propre Prêt",
     },
     upload: {
       maxSizeNote: "Jusqu'à 25 Mo · Ingestion Chiffrée",
@@ -1786,6 +1828,8 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       fallbackPosHeading: "Position de Repli",
       triggersHeading: "Déclencheurs Bloquants",
       vectorIndexed: "Indexé Vecteur 1536-d",
+      cleanEmptyDesc: "Créez une règle manuellement ou extrayez des standards d'un Contrat Modèle ci-dessus. Vous voulez voir des exemples ? Lancez le Bac à sable Démo isolé.",
+      loadDemoPlaybookBtn: "Charger les Règles du Bac à sable Démo",
     },
     extractor: {
       badge: "Fonction IA #6 — Extracteur de Contrat Modèle",
@@ -2073,6 +2117,11 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       helpGuide: "المساعدة والدليل",
       liveBackend: "متصل بالخادم",
       demoWorkspace: "وضع العرض التجريبي",
+      localWorkspace: "مساحة العمل المحلية",
+      enterDemoBtn: "بيئة العرض التجريبي",
+      exitDemoNavBtn: "إنهاء العرض التجريبي",
+      demoBannerText: "وضع العرض التجريبي نشط — يتم استكشاف عقود وقواعد نموذجية. تبقى مساحة عملك الحقيقية كما هي.",
+      exitDemoBannerBtn: "الخروج من الوضع التجريبي",
       roleAdmin: "مستشار قانوني • مدير",
       authModalTitle: "مصادقة مساحة العمل",
       authModalSubtitle: "سجّل الدخول أو بدّل بيانات اعتماد المؤسسة.",
@@ -2131,6 +2180,10 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       colWorkspace: "مساحة العمل",
       clausesSuffix: "بنود",
       openInStudioBtn: "فتح في الاستوديو",
+      cleanEmptyTitle: "مساحة العمل القانونية الحقيقية نظيفة وجاهزة",
+      cleanEmptyDesc: "قم برفع أول عقد حقيقي بصيغة .docx أو .pdf أعلاه لبدء تدقيق المخاطر بالذكاء الاصطناعي، أو ادخل إلى بيئة العرض التجريبي المعزولة لاستكشاف العقود النموذجية.",
+      launchDemoSandboxEmptyBtn: "تشغيل بيئة العرض التجريبي التفاعلية",
+      realWorkspaceStandby: "مساحة العمل النظيفة جاهزة",
     },
     upload: {
       maxSizeNote: "حتى 25 ميجابايت · استيعاب مشفّر",
@@ -2342,6 +2395,8 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       fallbackPosHeading: "الموقف البديل",
       triggersHeading: "المحفزات المرفوضة",
       vectorIndexed: "مفهرس بمتجه 1536-d",
+      cleanEmptyDesc: "أنشئ قاعدة دليل عمل يدويًا أو استخلص معايير الشركة من عقد قياسي أعلاه. هل تريد معاينة قواعد نموذجية؟ شغّل بيئة العرض التجريبي المعزولة.",
+      loadDemoPlaybookBtn: "تحميل قواعد العرض التجريبي",
     },
     extractor: {
       badge: "الميزة الذكية #6 — المستخرج التلقائي من العقود القياسية",

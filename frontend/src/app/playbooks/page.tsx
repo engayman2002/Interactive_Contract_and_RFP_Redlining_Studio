@@ -2,7 +2,14 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  FlaskConical,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  X,
+} from "lucide-react";
 import { TopNavBar } from "@/components/navigation/TopNavBar";
 import {
   createPlaybookRule,
@@ -12,12 +19,16 @@ import {
 import { AIPlaybookExtractorPanel } from "@/components/playbooks/AIPlaybookExtractorPanel";
 import { useAuthSession } from "@/services/authSession";
 import type { PlaybookRuleDTO } from "@/services/contracts";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useI18n } from "@/i18n/useI18n";
 import { localizePlaybookRuleForDisplay } from "@/i18n/domainLocalization";
 
 export default function PlaybooksPage() {
   const { t, locale } = useI18n();
   const { token, isLoading: isAuthLoading } = useAuthSession();
+  const isDemoMode = useWorkspaceStore((state) => state.isDemoMode);
+  const setDemoMode = useWorkspaceStore((state) => state.setDemoMode);
+  const hydrateDemoMode = useWorkspaceStore((state) => state.hydrateDemoMode);
   const [rules, setRules] = useState<PlaybookRuleDTO[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAdding, setIsAdding] = useState<boolean>(false);
@@ -29,6 +40,10 @@ export default function PlaybooksPage() {
   const [unacceptableTriggers, setUnacceptableTriggers] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  useEffect(() => {
+    hydrateDemoMode();
+  }, [hydrateDemoMode]);
 
   const loadRules = useCallback(async () => {
     setIsLoading(true);
@@ -46,7 +61,7 @@ export default function PlaybooksPage() {
     if (!isAuthLoading) {
       void loadRules();
     }
-  }, [isAuthLoading, loadRules]);
+  }, [isAuthLoading, isDemoMode, loadRules]);
 
   const handleCreateRule = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,13 +295,32 @@ export default function PlaybooksPage() {
             {t.playbooks.loadingRules}
           </div>
         ) : rules.length === 0 ? (
-          <div className="surface-card rounded-2xl py-16 text-center">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          <div
+            data-testid="clean-playbooks-empty-state"
+            className="surface-card mx-auto rounded-2xl px-6 py-16 text-center"
+          >
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-indigo-100 bg-indigo-50/80 text-indigo-600 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400">
+              <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
               {t.playbooks.emptyTitle}
             </p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              {t.playbooks.emptyDesc}
+            <p className="mx-auto mt-1.5 max-w-lg text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              {isDemoMode ? t.playbooks.emptyDesc : t.playbooks.cleanEmptyDesc}
             </p>
+            {!isDemoMode ? (
+              <div className="mt-5 flex justify-center">
+                <button
+                  type="button"
+                  data-testid="load-demo-playbooks-btn"
+                  onClick={() => setDemoMode(true)}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-300/90 bg-amber-50 px-3.5 text-xs font-semibold text-amber-800 shadow-sm transition-colors hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-950/50 dark:text-amber-200 dark:hover:bg-amber-900/60"
+                >
+                  <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>{t.playbooks.loadDemoPlaybookBtn}</span>
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div

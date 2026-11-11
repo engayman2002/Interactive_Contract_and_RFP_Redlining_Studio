@@ -78,6 +78,74 @@ export const DEMO_DOCUMENT_ID = "d0000000-0000-4000-8000-000000000001";
 export const DEMO_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 export const DEMO_USER_ID = "b0000000-0000-4000-8000-000000000001";
 
+export const DEMO_MODE_STORAGE_KEY = "redline_studio_demo_mode";
+
+export const IS_TEST_ENV =
+  typeof process !== "undefined" &&
+  (process.env.NODE_ENV === "test" || Boolean(process.env.VITEST));
+
+export const DEFAULT_DEMO_MODE = IS_TEST_ENV
+  ? true
+  : process.env.NEXT_PUBLIC_DEFAULT_DEMO_MODE === "true";
+
+export function readStoredDemoMode(): boolean | null {
+  if (typeof window !== "undefined") {
+    try {
+      const stored = window.sessionStorage.getItem(DEMO_MODE_STORAGE_KEY);
+      if (stored === "true") {
+        return true;
+      }
+      if (stored === "false") {
+        return false;
+      }
+    } catch {
+      // Ignore sessionStorage restrictions
+    }
+  }
+  return null;
+}
+
+let activeDemoMode: boolean = IS_TEST_ENV
+  ? readStoredDemoMode() ?? DEFAULT_DEMO_MODE
+  : DEFAULT_DEMO_MODE;
+
+export function getIsDemoMode(): boolean {
+  return activeDemoMode;
+}
+
+export function setIsDemoMode(enabled: boolean): void {
+  activeDemoMode = enabled;
+  if (typeof window !== "undefined") {
+    try {
+      window.sessionStorage.setItem(
+        DEMO_MODE_STORAGE_KEY,
+        enabled ? "true" : "false"
+      );
+    } catch {
+      // Ignore sessionStorage restrictions
+    }
+  }
+}
+
+export const REAL_PLAYBOOK_STORAGE_KEY = "redline_real_playbook_rules";
+export const DEMO_PLAYBOOK_STORAGE_KEY = "redline_demo_playbook_rules";
+export const REAL_DOCUMENT_STORAGE_KEY = "redline_real_documents";
+export const DEMO_DOCUMENT_STORAGE_KEY = "redline_demo_documents";
+
+export function getLocalPlaybookStorageKey(): string {
+  if (getIsDemoMode()) {
+    return IS_TEST_ENV ? "redline_playbook_rules" : DEMO_PLAYBOOK_STORAGE_KEY;
+  }
+  return REAL_PLAYBOOK_STORAGE_KEY;
+}
+
+export function getLocalDocumentStorageKey(): string {
+  if (getIsDemoMode()) {
+    return IS_TEST_ENV ? "redline_local_documents" : DEMO_DOCUMENT_STORAGE_KEY;
+  }
+  return REAL_DOCUMENT_STORAGE_KEY;
+}
+
 export class VersionConflictError extends Error {
   public readonly status: number = 409;
   public readonly code: string = "CONCURRENCY_CONFLICT";
@@ -392,35 +460,42 @@ export function saveLocalDocumentWorkspace(
   }
 }
 
-export function getLocalDocuments(): DocumentListItemDTO[] {
-  const defaultList: DocumentListItemDTO[] = [
-    {
-      id: DEMO_DOCUMENT_ID,
-      org_id: DEMO_ORG_ID,
-      title: DEMO_WORKSPACE_DATA.title,
-      status: DEMO_WORKSPACE_DATA.status,
-      version: DEMO_WORKSPACE_DATA.version,
-      created_by: DEMO_USER_ID,
-      created_at: DEMO_WORKSPACE_DATA.created_at,
-      clause_count: DEMO_WORKSPACE_DATA.clauses.length,
-    },
-  ];
+function buildDemoDocumentListItem(): DocumentListItemDTO {
+  return {
+    id: DEMO_DOCUMENT_ID,
+    org_id: DEMO_ORG_ID,
+    title: DEMO_WORKSPACE_DATA.title,
+    status: DEMO_WORKSPACE_DATA.status,
+    version: DEMO_WORKSPACE_DATA.version,
+    created_by: DEMO_USER_ID,
+    created_at: DEMO_WORKSPACE_DATA.created_at,
+    clause_count: DEMO_WORKSPACE_DATA.clauses.length,
+  };
+}
 
+function readStoredUserDocuments(): DocumentListItemDTO[] {
   if (typeof window === "undefined") {
-    return defaultList;
+    return [];
   }
-
   try {
-    const raw = localStorage.getItem("redline_local_documents");
+    const raw = localStorage.getItem(getLocalDocumentStorageKey());
     if (raw) {
       const parsed = JSON.parse(raw) as DocumentListItemDTO[];
-      const hasDemo = parsed.some((d) => d.id === DEMO_DOCUMENT_ID);
-      return hasDemo ? parsed : [...defaultList, ...parsed];
+      return parsed.filter((d) => d.id !== DEMO_DOCUMENT_ID);
     }
   } catch {
     // ignore
   }
-  return defaultList;
+  return [];
+}
+
+export function getLocalDocuments(): DocumentListItemDTO[] {
+  const userDocs = readStoredUserDocuments();
+  if (!getIsDemoMode()) {
+    return userDocs;
+  }
+
+  return [buildDemoDocumentListItem(), ...userDocs];
 }
 
 export function saveLocalDocument(doc: DocumentListItemDTO): void {
@@ -428,15 +503,29 @@ export function saveLocalDocument(doc: DocumentListItemDTO): void {
     return;
   }
   try {
-    const current = getLocalDocuments();
-    const filtered = current.filter((d) => d.id !== doc.id);
-    localStorage.setItem(
-      "redline_local_documents",
-      JSON.stringify([doc, ...filtered])
-    );
+    const existing = readStoredUserDocuments();
+    const filtered = existing.filter((d) => d.id !== doc.id);
+    const updated = doc.id === DEMO_DOCUMENT_ID ? filtered : [doc, ...filtered];
+    localStorage.setItem(getLocalDocumentStorageKey(), JSON.stringify(updated));
   } catch {
     // ignore
   }
+}
+
+function buildEmptyRealWorkspace(documentId: string): DocumentWorkspaceDTO {
+  return DocumentWorkspaceDTOSchema.parse({
+    document_id: documentId,
+    org_id: DEMO_ORG_ID,
+    title: "Untitled Document",
+    status: "READY",
+    version: 1,
+    created_by: DEMO_USER_ID,
+    created_at: new Date().toISOString(),
+    clauses: [],
+    redlines: [],
+    comments: [],
+    audit_logs: [],
+  });
 }
 
 function buildHeaders(token?: string, jsonBody: boolean = false): HeadersInit {
@@ -456,18 +545,29 @@ export async function fetchDocumentWorkspace(
   documentId?: string,
   token?: string
 ): Promise<DocumentWorkspaceDTO> {
-  if (!documentId || documentId === DEMO_DOCUMENT_ID || documentId === "demo") {
-    return DocumentWorkspaceDTOSchema.parse(DEMO_WORKSPACE_DATA);
+  if (documentId === DEMO_DOCUMENT_ID || documentId === "demo") {
+    return (
+      getLocalDocumentWorkspace(DEMO_DOCUMENT_ID) ??
+      DocumentWorkspaceDTOSchema.parse(DEMO_WORKSPACE_DATA)
+    );
   }
 
-  // Check if saved in local client workspace (e.g. demo mode upload)
+  if (!documentId) {
+    return getIsDemoMode()
+      ? DocumentWorkspaceDTOSchema.parse(DEMO_WORKSPACE_DATA)
+      : buildEmptyRealWorkspace("real-workspace");
+  }
+
+  // Check if saved in local client workspace (e.g. uploaded real doc)
   const localWorkspace = getLocalDocumentWorkspace(documentId);
   if (localWorkspace) {
     return localWorkspace;
   }
 
   if (!token) {
-    return DocumentWorkspaceDTOSchema.parse(DEMO_WORKSPACE_DATA);
+    return getIsDemoMode()
+      ? DocumentWorkspaceDTOSchema.parse(DEMO_WORKSPACE_DATA)
+      : buildEmptyRealWorkspace(documentId);
   }
 
   try {
@@ -482,7 +582,9 @@ export async function fetchDocumentWorkspace(
       if (localWorkspace) {
         return localWorkspace;
       }
-      return DocumentWorkspaceDTOSchema.parse(DEMO_WORKSPACE_DATA);
+      return getIsDemoMode()
+        ? DocumentWorkspaceDTOSchema.parse(DEMO_WORKSPACE_DATA)
+        : buildEmptyRealWorkspace(documentId);
     }
     const raw = await response.json();
     return DocumentWorkspaceDTOSchema.parse(raw);
@@ -490,7 +592,9 @@ export async function fetchDocumentWorkspace(
     if (localWorkspace) {
       return localWorkspace;
     }
-    return DocumentWorkspaceDTOSchema.parse(DEMO_WORKSPACE_DATA);
+    return getIsDemoMode()
+      ? DocumentWorkspaceDTOSchema.parse(DEMO_WORKSPACE_DATA)
+      : buildEmptyRealWorkspace(documentId);
   }
 }
 
@@ -2024,8 +2128,15 @@ export async function fetchDocumentAuditTrail(
   documentId: string,
   token?: string
 ): Promise<AuditLogEntryDTO[]> {
-  if (!documentId || documentId === DEMO_DOCUMENT_ID || !token) {
+  if (documentId === DEMO_DOCUMENT_ID || documentId === "demo") {
     return DEMO_WORKSPACE_DATA.audit_logs;
+  }
+
+  if (!documentId || !token) {
+    if (getIsDemoMode()) {
+      return DEMO_WORKSPACE_DATA.audit_logs;
+    }
+    return getLocalDocumentWorkspace(documentId)?.audit_logs ?? [];
   }
 
   const response = await fetch(
@@ -2067,7 +2178,8 @@ export async function runCrossClauseCheck(
 
   // Offline / Demo Simulation
   const local = getLocalDocumentWorkspace(documentId);
-  const clauses = local?.clauses ?? DEMO_WORKSPACE_DATA.clauses;
+  const clauses =
+    local?.clauses ?? (getIsDemoMode() ? DEMO_WORKSPACE_DATA.clauses : []);
   const findings: CrossClauseFindingDTO[] = [];
 
   // Pass 1: Build known sections
@@ -2348,7 +2460,7 @@ export async function listDocuments(
 ): Promise<DocumentListItemDTO[]> {
   const localDocs = getLocalDocuments();
 
-  if (!token) {
+  if (getIsDemoMode() || !token) {
     return localDocs;
   }
 
@@ -2361,9 +2473,9 @@ export async function listDocuments(
       return localDocs;
     }
     const raw = (await response.json()) as unknown[];
-    const backendDocs = raw.map((item) =>
-      DocumentListItemDTOSchema.parse(item)
-    );
+    const backendDocs = raw
+      .map((item) => DocumentListItemDTOSchema.parse(item))
+      .filter((d) => getIsDemoMode() || d.id !== DEMO_DOCUMENT_ID);
 
     const backendIds = new Set(backendDocs.map((d) => d.id));
     const extraLocal = localDocs.filter((d) => !backendIds.has(d.id));
@@ -2373,21 +2485,30 @@ export async function listDocuments(
   }
 }
 
+function readStoredPlaybookRules(): PlaybookRuleDTO[] | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const local = localStorage.getItem(getLocalPlaybookStorageKey());
+  if (local) {
+    try {
+      return JSON.parse(local) as PlaybookRuleDTO[];
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export async function listPlaybookRules(
   token?: string
 ): Promise<PlaybookRuleDTO[]> {
-  if (!token) {
-    if (typeof window !== "undefined") {
-      const local = localStorage.getItem("redline_playbook_rules");
-      if (local) {
-        try {
-          return JSON.parse(local) as PlaybookRuleDTO[];
-        } catch {
-          // ignore
-        }
-      }
+  if (getIsDemoMode() || !token) {
+    const stored = readStoredPlaybookRules();
+    if (stored) {
+      return stored;
     }
-    return DEFAULT_PLAYBOOK_RULES;
+    return getIsDemoMode() ? DEFAULT_PLAYBOOK_RULES : [];
   }
 
   try {
@@ -2396,12 +2517,20 @@ export async function listPlaybookRules(
       headers: buildHeaders(token),
     });
     if (!response.ok) {
-      return DEFAULT_PLAYBOOK_RULES;
+      const stored = readStoredPlaybookRules();
+      if (stored) {
+        return stored;
+      }
+      return getIsDemoMode() ? DEFAULT_PLAYBOOK_RULES : [];
     }
     const raw = (await response.json()) as unknown[];
     return raw.map((item) => PlaybookRuleDTOSchema.parse(item));
   } catch {
-    return DEFAULT_PLAYBOOK_RULES;
+    const stored = readStoredPlaybookRules();
+    if (stored) {
+      return stored;
+    }
+    return getIsDemoMode() ? DEFAULT_PLAYBOOK_RULES : [];
   }
 }
 
@@ -2409,7 +2538,7 @@ export async function createPlaybookRule(
   rule: CreatePlaybookRuleRequestDTO,
   token?: string
 ): Promise<PlaybookRuleDTO> {
-  if (!token) {
+  if (getIsDemoMode() || !token) {
     const newRule: PlaybookRuleDTO = {
       id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       org_id: DEMO_ORG_ID,
@@ -2422,7 +2551,7 @@ export async function createPlaybookRule(
     if (typeof window !== "undefined") {
       const current = await listPlaybookRules();
       const updated = [newRule, ...current];
-      localStorage.setItem("redline_playbook_rules", JSON.stringify(updated));
+      localStorage.setItem(getLocalPlaybookStorageKey(), JSON.stringify(updated));
     }
     return newRule;
   }
@@ -2443,11 +2572,11 @@ export async function deletePlaybookRule(
   ruleId: string,
   token?: string
 ): Promise<void> {
-  if (!token) {
+  if (getIsDemoMode() || !token) {
     if (typeof window !== "undefined") {
       const current = await listPlaybookRules();
       const updated = current.filter((r) => r.id !== ruleId);
-      localStorage.setItem("redline_playbook_rules", JSON.stringify(updated));
+      localStorage.setItem(getLocalPlaybookStorageKey(), JSON.stringify(updated));
     }
     return;
   }
@@ -2707,7 +2836,7 @@ async function runOfflinePlaybookExtraction(
       try {
         const current = await listPlaybookRules();
         localStorage.setItem(
-          "redline_playbook_rules",
+          getLocalPlaybookStorageKey(),
           JSON.stringify([...savedRules, ...current])
         );
       } catch {

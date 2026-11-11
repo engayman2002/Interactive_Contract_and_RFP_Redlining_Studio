@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import {
+  DEFAULT_DEMO_MODE,
   DEMO_DOCUMENT_ID,
   DEMO_ORG_ID,
   DEMO_USER_ID,
@@ -9,10 +10,13 @@ import {
   createClauseComment,
   exportDocumentDocx,
   fetchAITelemetry,
+  getIsDemoMode,
+  readStoredDemoMode,
   recordOfflineAITelemetryEvent,
   refineRedlineSuggestion,
   resolveSuggestion,
   runCrossClauseCheck,
+  setIsDemoMode,
   simulateCounterpartyPushback,
   verifyRedlineSuggestion,
   getLocalDocumentWorkspace,
@@ -89,6 +93,10 @@ export interface WorkspaceStoreState {
     embeddingProvider: string;
     embeddingModel: string;
   }) => void;
+  isDemoMode: boolean;
+  hasDemoHydrated: boolean;
+  setDemoMode: (enabled: boolean) => void;
+  hydrateDemoMode: () => void;
   selectClause: (clauseId: string | null, source: SelectionSource) => void;
   setHoveredSuggestion: (suggestionId: string | null) => void;
   setRiskFilter: (filter: RiskFilterMode) => void;
@@ -179,11 +187,13 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   riskFilter: "ALL",
   splitRatio: 55,
   streamProgress: INITIAL_STREAM_PROGRESS,
-  clauses: DEMO_WORKSPACE_DATA.clauses,
-  redlines: DEMO_WORKSPACE_DATA.redlines,
-  comments: DEMO_WORKSPACE_DATA.comments,
-  auditLogs: DEMO_WORKSPACE_DATA.audit_logs,
-  documentVersion: DEMO_WORKSPACE_DATA.version,
+  isDemoMode: getIsDemoMode(),
+  hasDemoHydrated: false,
+  clauses: getIsDemoMode() ? DEMO_WORKSPACE_DATA.clauses : [],
+  redlines: getIsDemoMode() ? DEMO_WORKSPACE_DATA.redlines : [],
+  comments: getIsDemoMode() ? DEMO_WORKSPACE_DATA.comments : [],
+  auditLogs: getIsDemoMode() ? DEMO_WORKSPACE_DATA.audit_logs : [],
+  documentVersion: getIsDemoMode() ? DEMO_WORKSPACE_DATA.version : 1,
   conflictError: null,
   isExporting: false,
   lastExportedFilename: null,
@@ -846,7 +856,62 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
     return res;
   },
 
-  resetWorkspaceState: () =>
+  setDemoMode: (enabled) => {
+    setIsDemoMode(enabled);
+    if (enabled) {
+      set({
+        isDemoMode: true,
+        hasDemoHydrated: true,
+        activeClauseId: null,
+        selectionSource: null,
+        hoveredSuggestionId: null,
+        clauses: DEMO_WORKSPACE_DATA.clauses,
+        redlines: DEMO_WORKSPACE_DATA.redlines,
+        comments: DEMO_WORKSPACE_DATA.comments,
+        auditLogs: DEMO_WORKSPACE_DATA.audit_logs,
+        documentVersion: DEMO_WORKSPACE_DATA.version,
+        conflictError: null,
+        crossClauseReport: null,
+        pushbackSimulations: {},
+      });
+    } else {
+      set({
+        isDemoMode: false,
+        hasDemoHydrated: true,
+        activeClauseId: null,
+        selectionSource: null,
+        hoveredSuggestionId: null,
+        clauses: [],
+        redlines: [],
+        comments: [],
+        auditLogs: [],
+        documentVersion: 1,
+        conflictError: null,
+        crossClauseReport: null,
+        pushbackSimulations: {},
+        lastExportedFilename: null,
+      });
+    }
+  },
+
+  hydrateDemoMode: () => {
+    if (get().hasDemoHydrated) {
+      return;
+    }
+    const stored = readStoredDemoMode();
+    if (stored === true && !get().isDemoMode) {
+      get().setDemoMode(true);
+      return;
+    }
+    if (stored === false && get().isDemoMode) {
+      get().setDemoMode(false);
+      return;
+    }
+    set({ hasDemoHydrated: true });
+  },
+
+  resetWorkspaceState: () => {
+    setIsDemoMode(DEFAULT_DEMO_MODE);
     set({
       activeClauseId: null,
       selectionSource: null,
@@ -854,11 +919,13 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       riskFilter: "ALL",
       splitRatio: 55,
       streamProgress: INITIAL_STREAM_PROGRESS,
-      clauses: DEMO_WORKSPACE_DATA.clauses,
-      redlines: DEMO_WORKSPACE_DATA.redlines,
-      comments: DEMO_WORKSPACE_DATA.comments,
-      auditLogs: DEMO_WORKSPACE_DATA.audit_logs,
-      documentVersion: DEMO_WORKSPACE_DATA.version,
+      isDemoMode: DEFAULT_DEMO_MODE,
+      hasDemoHydrated: false,
+      clauses: DEFAULT_DEMO_MODE ? DEMO_WORKSPACE_DATA.clauses : [],
+      redlines: DEFAULT_DEMO_MODE ? DEMO_WORKSPACE_DATA.redlines : [],
+      comments: DEFAULT_DEMO_MODE ? DEMO_WORKSPACE_DATA.comments : [],
+      auditLogs: DEFAULT_DEMO_MODE ? DEMO_WORKSPACE_DATA.audit_logs : [],
+      documentVersion: DEFAULT_DEMO_MODE ? DEMO_WORKSPACE_DATA.version : 1,
       conflictError: null,
       isExporting: false,
       lastExportedFilename: null,
@@ -873,5 +940,6 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       aiTelemetry: null,
       isLoadingTelemetry: false,
       telemetryStatusMessage: null,
-    }),
+    });
+  },
 }));

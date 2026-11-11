@@ -8,6 +8,7 @@ import {
   BookOpen,
   Clock,
   FileText,
+  FlaskConical,
   GraduationCap,
   HelpCircle,
   Rocket,
@@ -24,13 +25,21 @@ import {
 import { listDocuments, listPlaybookRules } from "@/services/apiClient";
 import { useAuthSession } from "@/services/authSession";
 import type { DocumentListItemDTO } from "@/services/contracts";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 export default function DashboardPage() {
   const { t, locale } = useI18n();
   const { token, isLoading: isAuthLoading } = useAuthSession();
+  const isDemoMode = useWorkspaceStore((state) => state.isDemoMode);
+  const setDemoMode = useWorkspaceStore((state) => state.setDemoMode);
+  const hydrateDemoMode = useWorkspaceStore((state) => state.hydrateDemoMode);
   const [documents, setDocuments] = useState<DocumentListItemDTO[]>([]);
-  const [playbookCount, setPlaybookCount] = useState<number>(5);
+  const [playbookCount, setPlaybookCount] = useState<number>(0);
   const [isLoadingDocs, setIsLoadingDocs] = useState<boolean>(true);
+
+  useEffect(() => {
+    hydrateDemoMode();
+  }, [hydrateDemoMode]);
 
   const loadDashboardData = useCallback(async () => {
     setIsLoadingDocs(true);
@@ -40,9 +49,7 @@ export default function DashboardPage() {
         listPlaybookRules(token).catch(() => []),
       ]);
       setDocuments(docs);
-      if (rules.length > 0) {
-        setPlaybookCount(rules.length);
-      }
+      setPlaybookCount(rules.length);
     } catch {
       // Fallback handled gracefully by apiClient
     } finally {
@@ -54,7 +61,7 @@ export default function DashboardPage() {
     if (!isAuthLoading) {
       void loadDashboardData();
     }
-  }, [isAuthLoading, loadDashboardData]);
+  }, [isAuthLoading, isDemoMode, loadDashboardData]);
 
   const analyzedCount = documents.filter((d) => d.status === "ANALYZED").length;
 
@@ -130,6 +137,7 @@ export default function DashboardPage() {
             <Link
               href="/documents/demo"
               data-testid="dashboard-guided-demo-btn"
+              onClick={() => setDemoMode(true)}
               className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-indigo-200/90 bg-white px-3.5 text-xs font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50 dark:border-indigo-500/30 dark:bg-slate-800 dark:text-indigo-300 dark:hover:bg-slate-700"
             >
               <Rocket className="h-3.5 w-3.5" aria-hidden="true" />
@@ -155,7 +163,7 @@ export default function DashboardPage() {
               </div>
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="font-mono text-2xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white sm:text-3xl">
-                  {Math.max(documents.length, 1)}
+                  {documents.length}
                 </span>
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   ({analyzedCount} {t.dashboard.kpiAuditedWord})
@@ -166,10 +174,14 @@ export default function DashboardPage() {
               <div
                 className="h-full rounded-full bg-indigo-500 transition-all"
                 style={{
-                  width: `${Math.min(
-                    100,
-                    Math.max(25, Math.round((analyzedCount / Math.max(documents.length, 1)) * 100))
-                  )}%`,
+                  width: `${
+                    documents.length > 0
+                      ? Math.min(
+                          100,
+                          Math.round((analyzedCount / documents.length) * 100)
+                        )
+                      : 0
+                  }%`,
                 }}
               />
             </div>
@@ -195,7 +207,11 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-4 h-1 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800/90">
-              <div className="h-full w-4/5 rounded-full bg-emerald-500" />
+              <div
+                className={`h-full rounded-full bg-emerald-500 transition-all ${
+                  playbookCount > 0 ? "w-4/5" : "w-0"
+                }`}
+              />
             </div>
           </div>
 
@@ -211,7 +227,7 @@ export default function DashboardPage() {
               </div>
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="font-mono text-2xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white sm:text-3xl">
-                  2
+                  {isDemoMode ? 2 : 0}
                 </span>
                 <span className="micro-badge border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
                   <span className="micro-badge-dot bg-rose-500" aria-hidden="true" />
@@ -220,8 +236,16 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-4 flex h-1 w-full gap-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800/90">
-              <div className="h-full w-2/5 rounded-full bg-rose-500" />
-              <div className="h-full w-1/4 rounded-full bg-amber-400" />
+              <div
+                className={`h-full rounded-full bg-rose-500 transition-all ${
+                  isDemoMode ? "w-2/5" : "w-0"
+                }`}
+              />
+              <div
+                className={`h-full rounded-full bg-amber-400 transition-all ${
+                  isDemoMode ? "w-1/4" : "w-0"
+                }`}
+              />
             </div>
           </div>
 
@@ -237,15 +261,21 @@ export default function DashboardPage() {
               </div>
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="font-mono text-2xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white sm:text-3xl">
-                  &lt;150ms
+                  {documents.length > 0 || isDemoMode ? "<150ms" : "0ms"}
                 </span>
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  {t.dashboard.kpiSpeedSub}
+                  {documents.length > 0 || isDemoMode
+                    ? t.dashboard.kpiSpeedSub
+                    : t.dashboard.realWorkspaceStandby}
                 </span>
               </div>
             </div>
             <div className="mt-4 h-1 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800/90">
-              <div className="h-full w-11/12 rounded-full bg-sky-500" />
+              <div
+                className={`h-full rounded-full bg-sky-500 transition-all ${
+                  documents.length > 0 || isDemoMode ? "w-11/12" : "w-0"
+                }`}
+              />
             </div>
           </div>
         </section>
@@ -298,6 +328,7 @@ export default function DashboardPage() {
               <Link
                 href="/documents/demo"
                 data-testid="try-demo-contract-btn"
+                onClick={() => setDemoMode(true)}
                 className="flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-4 text-xs font-semibold text-white shadow-md ring-1 ring-inset ring-white/25 transition-all hover:from-indigo-400 hover:to-indigo-500"
               >
                 <span>{t.dashboard.launchSampleStudioBtn}</span>
@@ -331,13 +362,32 @@ export default function DashboardPage() {
               {t.dashboard.loadingDocs}
             </div>
           ) : documents.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                {t.dashboard.emptyTitle}
+            <div
+              data-testid="clean-workspace-empty-state"
+              className="mx-auto max-w-xl px-6 py-12 text-center"
+            >
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-indigo-100 bg-indigo-50/80 text-indigo-600 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400">
+                <FileText className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                {isDemoMode ? t.dashboard.emptyTitle : t.dashboard.cleanEmptyTitle}
               </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {t.dashboard.emptyDesc}
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                {isDemoMode ? t.dashboard.emptyDesc : t.dashboard.cleanEmptyDesc}
               </p>
+              {!isDemoMode ? (
+                <div className="mt-5 flex justify-center">
+                  <button
+                    type="button"
+                    data-testid="enter-demo-from-empty-btn"
+                    onClick={() => setDemoMode(true)}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-300/90 bg-amber-50 px-3.5 text-xs font-semibold text-amber-800 shadow-sm transition-colors hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-950/50 dark:text-amber-200 dark:hover:bg-amber-900/60"
+                  >
+                    <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>{t.dashboard.launchDemoSandboxEmptyBtn}</span>
+                  </button>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="overflow-x-auto">

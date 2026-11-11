@@ -3,6 +3,7 @@ import {
   DEFAULT_PLAYBOOK_RULES,
   checkBackendHealth,
   createPlaybookRule,
+  getIsDemoMode,
   listPlaybookRules,
   login as apiLogin,
   registerOrganization as apiRegisterOrg,
@@ -120,24 +121,26 @@ export async function ensureWorkspaceSession(): Promise<WorkspaceSession> {
     localStorage.setItem(STORAGE_KEY_EMAIL, defaultEmail);
     localStorage.setItem(STORAGE_KEY_ROLE, "ADMIN");
 
-    // Seed default playbook rules if org playbook is empty
-    try {
-      const rules = await listPlaybookRules(activeToken);
-      if (rules.length === 0) {
-        for (const rule of DEFAULT_PLAYBOOK_RULES) {
-          await createPlaybookRule(
-            {
-              category: rule.category,
-              standard_position: rule.standard_position,
-              fallback_position: rule.fallback_position,
-              unacceptable_triggers: rule.unacceptable_triggers,
-            },
-            activeToken
-          );
+    // Seed default playbook rules only when Demo Sandbox Mode is explicitly active
+    if (getIsDemoMode()) {
+      try {
+        const rules = await listPlaybookRules(activeToken);
+        if (rules.length === 0) {
+          for (const rule of DEFAULT_PLAYBOOK_RULES) {
+            await createPlaybookRule(
+              {
+                category: rule.category,
+                standard_position: rule.standard_position,
+                fallback_position: rule.fallback_position,
+                unacceptable_triggers: rule.unacceptable_triggers,
+              },
+              activeToken
+            );
+          }
         }
+      } catch {
+        // Non-fatal if seeding has minor issue
       }
-    } catch {
-      // Non-fatal if seeding has minor issue
     }
 
     const liveSession: WorkspaceSession = {
