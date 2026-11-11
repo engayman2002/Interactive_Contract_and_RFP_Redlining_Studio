@@ -307,6 +307,8 @@ export interface TranslationDictionary {
     vectorIndexed: string;
     cleanEmptyDesc: string;
     loadDemoPlaybookBtn: string;
+    deleteRuleBtn: string;
+    clearAllBtn: string;
   };
   extractor: {
     badge: string;
@@ -694,6 +696,8 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       vectorIndexed: "1536-d Vector Indexed",
       cleanEmptyDesc: "Create a playbook rule manually or extract company standards from a Golden Contract above. Want to preview sample legal rules? Launch the isolated Demo Sandbox.",
       loadDemoPlaybookBtn: "Load Demo Sandbox Rules",
+      deleteRuleBtn: "Delete Rule",
+      clearAllBtn: "Clear All Rules",
     },
     extractor: {
       badge: "AI Feature #6 — Golden Contract Auto-Extractor",
@@ -1258,6 +1262,8 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       vectorIndexed: "Índice Vectorial 1536-d",
       cleanEmptyDesc: "Cree una regla manualmente o extraiga estándares de un Contrato Dorado arriba. ¿Desea ver reglas de ejemplo? Inicie el Sandbox Demo aislado.",
       loadDemoPlaybookBtn: "Cargar Reglas del Sandbox Demo",
+      deleteRuleBtn: "Eliminar Regla",
+      clearAllBtn: "Borrar Todas las Reglas",
     },
     extractor: {
       badge: "Función IA #6 — Auto-Extractor de Contratos Modelo",
@@ -1830,6 +1836,8 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       vectorIndexed: "Indexé Vecteur 1536-d",
       cleanEmptyDesc: "Créez une règle manuellement ou extrayez des standards d'un Contrat Modèle ci-dessus. Vous voulez voir des exemples ? Lancez le Bac à sable Démo isolé.",
       loadDemoPlaybookBtn: "Charger les Règles du Bac à sable Démo",
+      deleteRuleBtn: "Supprimer la Règle",
+      clearAllBtn: "Tout Effacer",
     },
     extractor: {
       badge: "Fonction IA #6 — Extracteur de Contrat Modèle",
@@ -2397,6 +2405,8 @@ export const TRANSLATIONS: Record<SupportedLocale, TranslationDictionary> = {
       vectorIndexed: "مفهرس بمتجه 1536-d",
       cleanEmptyDesc: "أنشئ قاعدة دليل عمل يدويًا أو استخلص معايير الشركة من عقد قياسي أعلاه. هل تريد معاينة قواعد نموذجية؟ شغّل بيئة العرض التجريبي المعزولة.",
       loadDemoPlaybookBtn: "تحميل قواعد العرض التجريبي",
+      deleteRuleBtn: "حذف القاعدة",
+      clearAllBtn: "مسح جميع القواعد",
     },
     extractor: {
       badge: "الميزة الذكية #6 — المستخرج التلقائي من العقود القياسية",

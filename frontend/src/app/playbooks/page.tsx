@@ -12,7 +12,9 @@ import {
 } from "lucide-react";
 import { TopNavBar } from "@/components/navigation/TopNavBar";
 import {
+  clearAllPlaybookRules,
   createPlaybookRule,
+  deduplicatePlaybookRules,
   deletePlaybookRule,
   listPlaybookRules,
 } from "@/services/apiClient";
@@ -49,7 +51,7 @@ export default function PlaybooksPage() {
     setIsLoading(true);
     try {
       const data = await listPlaybookRules(token);
-      setRules(data);
+      setRules(deduplicatePlaybookRules(data));
     } catch {
       // ignore
     } finally {
@@ -89,7 +91,7 @@ export default function PlaybooksPage() {
         },
         token
       );
-      setRules((prev) => [created, ...prev]);
+      setRules((prev) => deduplicatePlaybookRules([created, ...prev]));
       setCategory("");
       setStandardPosition("");
       setFallbackPosition("");
@@ -108,6 +110,15 @@ export default function PlaybooksPage() {
     try {
       await deletePlaybookRule(ruleId, token);
       setRules((prev) => prev.filter((r) => r.id !== ruleId));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleClearAllRules = async () => {
+    try {
+      await clearAllPlaybookRules(token);
+      setRules([]);
     } catch {
       // ignore
     }
@@ -139,40 +150,48 @@ export default function PlaybooksPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            data-testid="add-rule-toggle-btn"
-            onClick={() => setIsAdding((prev) => !prev)}
-            className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-semibold shadow-sm transition-all ${
-              isAdding
-                ? "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                : "bg-gradient-to-b from-indigo-500 to-indigo-600 text-white ring-1 ring-inset ring-white/20 hover:from-indigo-400 hover:to-indigo-600"
-            }`}
-          >
-            {isAdding ? (
-              <>
-                <X className="h-3.5 w-3.5" />
-                <span>{t.playbooks.cancelBtn}</span>
-              </>
-            ) : (
-              <>
-                <Plus className="h-3.5 w-3.5" />
-                <span>{t.playbooks.addRuleBtn}</span>
-              </>
-            )}
-          </button>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {rules.length > 0 ? (
+              <button
+                type="button"
+                data-testid="clear-all-playbook-rules-btn"
+                onClick={() => void handleClearAllRules()}
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-rose-200/90 bg-white px-3.5 text-xs font-semibold text-rose-700 shadow-sm transition-colors hover:bg-rose-50 dark:border-rose-500/30 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
+              >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>{t.playbooks.clearAllBtn}</span>
+              </button>
+            ) : null}
+
+            <button
+              type="button"
+              data-testid="add-rule-toggle-btn"
+              onClick={() => setIsAdding((prev) => !prev)}
+              className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-semibold shadow-sm transition-all ${
+                isAdding
+                  ? "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  : "bg-gradient-to-b from-indigo-500 to-indigo-600 text-white ring-1 ring-inset ring-white/20 hover:from-indigo-400 hover:to-indigo-600"
+              }`}
+            >
+              {isAdding ? (
+                <>
+                  <X className="h-3.5 w-3.5" />
+                  <span>{t.playbooks.cancelBtn}</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>{t.playbooks.addRuleBtn}</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* AI Playbook Auto-Extractor (Feature #6) */}
         <AIPlaybookExtractorPanel
           onRulesSaved={(savedRules) =>
-            setRules((prev) => {
-              const savedIds = new Set(savedRules.map((r) => r.id));
-              return [
-                ...savedRules,
-                ...prev.filter((r) => !savedIds.has(r.id)),
-              ];
-            })
+            setRules((prev) => deduplicatePlaybookRules([...savedRules, ...prev]))
           }
         />
 
@@ -343,12 +362,14 @@ export default function PlaybooksPage() {
                     </span>
                     <button
                       type="button"
-                      data-testid={`delete-rule-btn-${rule.id}`}
+                      data-testid={`delete-playbook-rule-${rule.id}`}
                       onClick={() => void handleDeleteRule(rule.id)}
-                      className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50 dark:hover:text-rose-400"
-                      title="Delete Rule"
+                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-950/50 dark:hover:text-rose-400"
+                      title={t.playbooks.deleteRuleBtn}
+                      aria-label={t.playbooks.deleteRuleBtn}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>{t.playbooks.deleteRuleBtn}</span>
                     </button>
                   </div>
 
@@ -384,7 +405,7 @@ export default function PlaybooksPage() {
                 </div>
 
                 <div className="flex items-center justify-between border-t border-slate-100 pt-3 font-mono text-[11px] text-slate-400 dark:border-slate-800 dark:text-slate-500">
-                  <span>ID: {rule.id.slice(0, 10)}</span>
+                  <span>ID: {rule.id.slice(0, 12)}</span>
                   <span>{t.playbooks.vectorIndexed}</span>
                 </div>
               </div>
