@@ -3,15 +3,15 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  ArrowLeft,
+  BookOpen,
   CheckCircle2,
-  ChevronRight,
   Cpu,
   Download,
   FileCheck2,
   GraduationCap,
   HelpCircle,
   Plus,
-  Scale,
   Sparkles,
   X,
 } from "lucide-react";
@@ -225,236 +225,218 @@ export const RedliningStudioWorkspace: React.FC<
       data-testid="redlining-studio-workspace"
       className="bg-enterprise-canvas flex h-screen w-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100"
     >
-      {/* Executive Glassmorphic Studio Command Header */}
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/85 px-4 backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#070B14]/85 md:px-6">
-        {/* Left Zone: Dashboard Link + Title/Status + Learning Triggers */}
-        <div className="flex min-w-0 items-center gap-2.5">
+      {/* Clean, Non-Wrapping 3-Zone Executive Command Bar */}
+      <header className="flex min-h-[56px] shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-slate-200/80 bg-white/90 px-4 py-2 backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#070B14]/90 xl:overflow-visible">
+        {/* Zone 1: Left — Document Context Only */}
+        <div className="flex min-w-0 shrink-0 items-center gap-2.5">
           <Link
             href="/"
             data-testid="back-to-dashboard-btn"
-            className="inline-flex h-8 shrink-0 items-center gap-2 rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-b from-indigo-500 to-indigo-600 text-white ring-1 ring-inset ring-white/20">
-              <Scale className="h-3 w-3" aria-hidden="true" />
-            </span>
+            <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden="true" />
             <span>Dashboard</span>
           </Link>
 
-          <ChevronRight
-            className="hidden h-3.5 w-3.5 shrink-0 text-slate-400 sm:inline-block"
+          <div
+            className="h-4 w-px shrink-0 bg-slate-200 dark:bg-slate-800"
             aria-hidden="true"
           />
 
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="truncate text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
-                {currentTitle}
-              </h1>
-              <span className="shrink-0 rounded-md border border-slate-200/90 bg-slate-100/80 px-1.5 py-0.5 font-mono text-[11px] font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                v{documentVersion}
-              </span>
-              <span
-                className={`micro-badge hidden shrink-0 md:inline-flex ${
-                  currentStatus === "ANALYZED"
-                    ? "border-emerald-200/90 bg-emerald-50/80 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
-                    : "border-sky-200/90 bg-sky-50/80 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300"
-                }`}
-              >
-                <span
-                  className={`micro-badge-dot ${
-                    currentStatus === "ANALYZED"
-                      ? "bg-emerald-500"
-                      : "bg-sky-500"
-                  }`}
-                />
-                <span>{currentStatus}</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-              <span className="font-mono">{clauses.length} Clauses</span>
-              <span>·</span>
-              <Link
-                href="/playbooks"
-                data-testid="header-playbook-link"
-                className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-              >
-                Playbook Policies
-              </Link>
-            </div>
-          </div>
-
-          <div className="hidden items-center gap-1.5 pl-2 xl:flex">
-            <Link
-              href="/help"
-              data-testid="open-interactive-tutorial-btn"
-              className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
+          <div className="flex min-w-0 items-center gap-2">
+            <h1 className="max-w-[140px] truncate whitespace-nowrap text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100 lg:max-w-[200px] xl:max-w-[260px] 2xl:max-w-[340px]">
+              {currentTitle}
+            </h1>
+            <span
+              className={`micro-badge shrink-0 whitespace-nowrap font-mono ${
+                currentStatus === "ANALYZED"
+                  ? "border-emerald-200/90 bg-emerald-50/80 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
+                  : "border-sky-200/90 bg-sky-50/80 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300"
+              }`}
             >
-              <GraduationCap
-                className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400"
+              <span
+                className={`micro-badge-dot ${
+                  currentStatus === "ANALYZED" ? "bg-emerald-500" : "bg-sky-500"
+                }`}
                 aria-hidden="true"
               />
-              <span>🎓 Tutorial</span>
-            </Link>
-            <button
-              type="button"
-              data-testid="open-quick-help-btn"
-              onClick={() => setIsQuickHelpOpen(true)}
-              className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
-            >
-              <HelpCircle className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-              <span>? Quick Help</span>
-            </button>
+              <span>
+                v{documentVersion} • {currentStatus}
+              </span>
+            </span>
           </div>
         </div>
 
-        {/* Right Zone: Group 1 (AI Audit Controls) | Group 2 (Document Actions) */}
-        <div className="flex shrink-0 items-center gap-2">
+        {/* Zone 2: Center — Unified AI Control Pod */}
+        <div className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 dark:border-slate-800 dark:bg-slate-900/90">
+          <div
+            data-testid="negotiation-stance-selector"
+            className="inline-flex h-7 shrink-0 items-center rounded-lg border border-slate-200/80 bg-white p-0.5 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
+            role="group"
+            aria-label="AI Negotiation Stance"
+          >
+            <button
+              type="button"
+              data-testid="stance-option-strict"
+              onClick={() => setNegotiationStance("strict")}
+              className={`inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-md px-2 text-xs font-medium transition-all ${
+                negotiationStance === "strict"
+                  ? "bg-rose-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              }`}
+              title="Strict / Protective Posture: Zero-compromise standard playbook enforcement"
+            >
+              Strict
+            </button>
+            <button
+              type="button"
+              data-testid="stance-option-balanced"
+              onClick={() => setNegotiationStance("balanced")}
+              className={`inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-md px-2 text-xs font-medium transition-all ${
+                negotiationStance === "balanced"
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              }`}
+              title="Balanced / Mutual Posture (Default): Bilateral terms protecting core boundaries"
+            >
+              Balanced
+            </button>
+            <button
+              type="button"
+              data-testid="stance-option-commercial"
+              onClick={() => setNegotiationStance("commercial")}
+              className={`inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-md px-2 text-xs font-medium transition-all ${
+                negotiationStance === "commercial"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              }`}
+              title="Commercial / Fast-Close Posture: Pre-approved fallback positions for rapid deal velocity"
+            >
+              Commercial
+            </button>
+          </div>
+
           <button
             type="button"
-            onClick={() => setIsQuickHelpOpen(true)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200/90 bg-white text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 xl:hidden"
-            title="Quick Help Guide"
+            data-testid="trigger-sse-audit-btn"
+            onClick={handleTriggerAiAnalysis}
+            disabled={streamProgress.isStreaming}
+            className="inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-2.5 text-xs font-semibold text-white shadow-[0_1px_2px_rgba(79,70,229,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] transition-all hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50"
           >
-            <HelpCircle className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+            <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>
+              {streamProgress.isStreaming ? "Auditing..." : "Analyze Contract"}
+            </span>
           </button>
 
-          {/* Group 1: AI Audit Controls */}
-          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-100/75 p-1 dark:border-slate-800 dark:bg-slate-900/90">
-            <div
-              data-testid="negotiation-stance-selector"
-              className="inline-flex h-7 items-center rounded-lg border border-slate-200/80 bg-white p-0.5 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
-              role="group"
-              aria-label="AI Negotiation Stance"
+          <button
+            type="button"
+            data-testid="open-ai-settings-btn"
+            onClick={() => setIsAISettingsOpen(true)}
+            className="inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-indigo-200/80 bg-white px-2.5 font-mono text-xs font-semibold text-indigo-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+          >
+            <Cpu className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="max-w-[96px] truncate">
+              {formatActiveAIBadge(activeLLMProvider, activeLLMModel)}
+            </span>
+          </button>
+        </div>
+
+        {/* Zone 3: Right — Compact Document & Help Utilities */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            data-testid="studio-upload-new-btn"
+            onClick={() => setIsUploadModalOpen(true)}
+            className="inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
+          >
+            <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>Upload</span>
+          </button>
+
+          {lastExportedFilename ? (
+            <span
+              data-testid="export-status-badge"
+              className="hidden h-8 shrink-0 items-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 font-mono text-[11px] font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300 2xl:inline-flex"
             >
-              <button
-                type="button"
-                data-testid="stance-option-strict"
-                onClick={() => setNegotiationStance("strict")}
-                className={`h-6 rounded-md px-2 text-[11px] font-medium transition-all ${
-                  negotiationStance === "strict"
-                    ? "bg-rose-600 text-white shadow-sm"
-                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-                }`}
-                title="Strict / Protective Posture: Zero-compromise standard playbook enforcement"
-              >
-                Strict
-              </button>
-              <button
-                type="button"
-                data-testid="stance-option-balanced"
-                onClick={() => setNegotiationStance("balanced")}
-                className={`h-6 rounded-md px-2 text-[11px] font-medium transition-all ${
-                  negotiationStance === "balanced"
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-                }`}
-                title="Balanced / Mutual Posture (Default): Bilateral terms protecting core boundaries"
-              >
-                Balanced
-              </button>
-              <button
-                type="button"
-                data-testid="stance-option-commercial"
-                onClick={() => setNegotiationStance("commercial")}
-                className={`h-6 rounded-md px-2 text-[11px] font-medium transition-all ${
-                  negotiationStance === "commercial"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-                }`}
-                title="Commercial / Fast-Close Posture: Pre-approved fallback positions for rapid deal velocity"
-              >
-                Commercial
-              </button>
-            </div>
+              Exported: {lastExportedFilename}
+            </span>
+          ) : null}
 
-            <button
-              type="button"
-              data-testid="trigger-sse-audit-btn"
-              onClick={handleTriggerAiAnalysis}
-              disabled={streamProgress.isStreaming}
-              className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3 text-xs font-semibold text-white shadow-[0_1px_2px_rgba(79,70,229,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] transition-all hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50"
-            >
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>
-                {streamProgress.isStreaming
-                  ? "Auditing Clauses..."
-                  : "Analyze Contract with AI"}
-              </span>
-            </button>
+          <button
+            type="button"
+            data-testid="export-track-changes-btn"
+            aria-label="Export Track Changes (.docx)"
+            onClick={() => void handleExport("track_changes")}
+            disabled={isExporting}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-300/80 bg-emerald-50/70 px-2.5 text-[11px] font-semibold text-emerald-800 shadow-sm transition-colors hover:border-emerald-400 hover:bg-emerald-100/70 disabled:opacity-50 dark:border-emerald-500/35 dark:bg-emerald-950/35 dark:text-emerald-300 dark:hover:bg-emerald-900/45"
+          >
+            <Download className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>
+              <span className="hidden 2xl:inline">Export </span>Track Changes
+              (.docx)
+            </span>
+          </button>
 
-            <button
-              type="button"
-              data-testid="open-ai-settings-btn"
-              onClick={() => setIsAISettingsOpen(true)}
-              className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-indigo-200/80 bg-white px-2.5 font-mono text-[11px] font-semibold text-indigo-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
-            >
-              <Cpu className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">
-                {formatActiveAIBadge(activeLLMProvider, activeLLMModel)}
-              </span>
-            </button>
-          </div>
+          <button
+            type="button"
+            data-testid="export-clean-btn"
+            aria-label="Export Clean (.docx)"
+            onClick={() => void handleExport("clean")}
+            disabled={isExporting}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-[11px] font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
+          >
+            <FileCheck2 className="h-3.5 w-3.5 shrink-0 text-slate-500 dark:text-slate-400" />
+            <span>
+              <span className="hidden 2xl:inline">Export </span>Clean (.docx)
+            </span>
+          </button>
 
-          <div
-            className="hidden h-5 w-px bg-slate-200/90 dark:bg-slate-800 sm:block"
-            aria-hidden="true"
-          />
+          <Link
+            href="/playbooks"
+            data-testid="header-playbook-link"
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
+          >
+            <BookOpen
+              className="h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-400"
+              aria-hidden="true"
+            />
+            <span>Playbooks</span>
+          </Link>
 
-          {/* Group 2: Document Actions */}
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              data-testid="studio-upload-new-btn"
-              onClick={() => setIsUploadModalOpen(true)}
-              className="hidden h-8 items-center gap-1 rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80 lg:inline-flex"
-            >
-              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Upload</span>
-            </button>
+          <Link
+            href="/help"
+            data-testid="open-interactive-tutorial-btn"
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
+          >
+            <GraduationCap
+              className="h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-400"
+              aria-hidden="true"
+            />
+            <span>Tutorial</span>
+          </Link>
 
-            {lastExportedFilename ? (
-              <span
-                data-testid="export-status-badge"
-                className="hidden h-8 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 font-mono text-[11px] font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300 xl:inline-flex"
-              >
-                Exported: {lastExportedFilename}
-              </span>
-            ) : null}
+          <button
+            type="button"
+            data-testid="open-quick-help-btn"
+            onClick={() => setIsQuickHelpOpen(true)}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
+          >
+            <HelpCircle className="h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+            <span>Help</span>
+          </button>
 
-            <button
-              type="button"
-              data-testid="export-track-changes-btn"
-              onClick={() => void handleExport("track_changes")}
-              disabled={isExporting}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-emerald-300/80 bg-emerald-50/70 px-3 text-xs font-semibold text-emerald-800 shadow-sm transition-colors hover:border-emerald-400 hover:bg-emerald-100/70 disabled:opacity-50 dark:border-emerald-500/35 dark:bg-emerald-950/35 dark:text-emerald-300 dark:hover:bg-emerald-900/45"
-            >
-              <Download className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Export Track Changes (.docx)</span>
-            </button>
-
-            <button
-              type="button"
-              data-testid="export-clean-btn"
-              onClick={() => void handleExport("clean")}
-              disabled={isExporting}
-              className="hidden h-8 items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80 md:inline-flex"
-            >
-              <FileCheck2 className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
-              <span>Export Clean (.docx)</span>
-            </button>
-
-            <ThemeToggle />
-          </div>
+          <ThemeToggle />
         </div>
       </header>
 
-      {/* Precision Horizontal 4-Step Lifecycle Breadcrumb Stepper */}
+      {/* Ultra-Slim Executive Workflow Progress Strip */}
       {!isGuideDismissed ? (
         <div
           data-testid="studio-quick-guide-banner"
-          className="flex items-center justify-between border-b border-slate-200/80 bg-white/90 px-6 py-2 text-xs text-slate-700 backdrop-blur-md dark:border-slate-800/80 dark:bg-[#070B14]/90 dark:text-slate-200"
+          className="flex h-8 shrink-0 items-center justify-between border-b border-slate-200/70 bg-slate-50/90 px-4 text-[11px] text-slate-600 dark:border-slate-800/70 dark:bg-[#080C16] dark:text-slate-400"
         >
-          <div className="flex flex-1 items-center gap-2 overflow-x-auto py-0.5">
+          <div className="flex flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap">
             {[
               {
                 num: 1,
@@ -464,13 +446,13 @@ export const RedliningStudioWorkspace: React.FC<
               },
               {
                 num: 2,
-                label: "2. Choose Stance & Analyze",
+                label: "2. Select Stance & Audit",
                 done: isAnalyzedStage,
                 active: hasClauses && !isAnalyzedStage,
               },
               {
                 num: 3,
-                label: "3. Review Diffs, Copilot & Radar",
+                label: "3. Review & Refine Clauses",
                 done: hasResolvedRedlines,
                 active: isAnalyzedStage && !hasResolvedRedlines,
               },
@@ -483,34 +465,34 @@ export const RedliningStudioWorkspace: React.FC<
             ].map((step, idx, arr) => (
               <React.Fragment key={step.num}>
                 <div
-                  className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-all ${
+                  className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap transition-colors ${
                     step.done
-                      ? "border-emerald-200/90 bg-emerald-50/80 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
+                      ? "font-medium text-slate-700 dark:text-slate-300"
                       : step.active
-                      ? "border-indigo-500 bg-indigo-600 font-semibold text-white shadow-sm"
-                      : "border-slate-200/80 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                      ? "font-semibold text-slate-900 dark:text-white"
+                      : "font-normal text-slate-400 dark:text-slate-500"
                   }`}
                 >
                   {step.done ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                  ) : (
+                    <CheckCircle2
+                      className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400"
+                      aria-hidden="true"
+                    />
+                  ) : step.active ? (
                     <span
-                      className={`flex h-4 w-4 items-center justify-center rounded-full font-mono text-[10px] font-bold ${
-                        step.active
-                          ? "bg-white/20 text-white"
-                          : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                      }`}
-                    >
-                      {step.num}
-                    </span>
-                  )}
+                      className="h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500"
+                      aria-hidden="true"
+                    />
+                  ) : null}
                   <span>{step.label}</span>
                 </div>
                 {idx < arr.length - 1 ? (
-                  <div
-                    className="h-px w-4 shrink-0 bg-slate-200 dark:bg-slate-800 sm:w-6"
+                  <span
+                    className="shrink-0 text-slate-300 dark:text-slate-700"
                     aria-hidden="true"
-                  />
+                  >
+                    →
+                  </span>
                 ) : null}
               </React.Fragment>
             ))}
@@ -519,10 +501,10 @@ export const RedliningStudioWorkspace: React.FC<
             type="button"
             data-testid="dismiss-quick-guide-btn"
             onClick={() => setIsGuideDismissed(true)}
-            className="ml-4 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
+            className="ml-3 shrink-0 whitespace-nowrap rounded p-1 text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white"
             title="Dismiss Workflow Bar"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3 w-3" />
           </button>
         </div>
       ) : null}

@@ -225,75 +225,70 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
         {editor ? <EditorContent editor={editor} /> : null}
 
         {/* Elevated Legal Document Sheet */}
-        <div className="legal-document-sheet mx-auto my-7 max-w-4xl rounded-2xl p-8 sm:p-11">
-          {/* Formal Legal Sheet Header & 4-Column Metadata Block */}
-          <div className="mb-7 border-b border-slate-200/80 pb-6 dark:border-slate-800/80">
+        <div className="legal-document-sheet mx-auto my-5 max-w-4xl rounded-2xl p-6 sm:p-8">
+          {/* Formal Legal Sheet Header & Compact Single-Row Summary Strip */}
+          <div className="mb-5 border-b border-slate-200/80 pb-4 dark:border-slate-800/80">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-400">
                 Confidential Legal Review Instrument
               </span>
-              <span className="rounded-md border border-slate-200/90 bg-slate-50 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-300">
+              <span className="whitespace-nowrap rounded-md border border-slate-200/90 bg-slate-50 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-300">
                 Revision v{documentVersion}
               </span>
             </div>
 
-            <h2 className="mt-2.5 font-serif text-2xl font-medium tracking-tight text-slate-900 dark:text-white sm:text-[26px]">
+            <h2 className="mt-2 font-serif text-xl font-medium tracking-tight text-slate-900 dark:text-white sm:text-2xl">
               {documentTitle}
             </h2>
 
-            {/* 4-Column Legal Instrument Metadata Grid */}
-            <dl className="mt-5 grid grid-cols-2 divide-y divide-slate-200/70 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/70 dark:divide-slate-800/80 dark:border-slate-800 dark:bg-slate-950/60 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-              <div className="px-3.5 py-2.5">
-                <dt className="font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Document Classification
-                </dt>
-                <dd className="mt-1 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            {/* Compact Single-Row Executive Instrument Summary Strip */}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/75 px-3.5 py-2 text-[11px] dark:border-slate-800 dark:bg-slate-950/60">
+              <div className="flex flex-wrap items-center gap-2.5 text-slate-600 dark:text-slate-400">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
                   Commercial Agreement
-                </dd>
-              </div>
-              <div className="px-3.5 py-2.5">
-                <dt className="font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Review Posture
-                </dt>
-                <dd className="mt-1 font-mono text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                  {negotiationStance}
-                </dd>
-              </div>
-              <div className="px-3.5 py-2.5">
-                <dt className="font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Clause Count
-                </dt>
-                <dd className="mt-1 font-mono text-xs font-semibold tabular-nums text-slate-800 dark:text-slate-200">
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="text-slate-300 dark:text-slate-700"
+                >
+                  ·
+                </span>
+                <span className="font-mono">
+                  Posture:{" "}
+                  <strong className="font-semibold uppercase text-indigo-700 dark:text-indigo-300">
+                    {negotiationStance}
+                  </strong>
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="text-slate-300 dark:text-slate-700"
+                >
+                  ·
+                </span>
+                <span className="font-mono tabular-nums">
                   {clauses.length} Provisions
-                </dd>
+                </span>
               </div>
-              <div className="px-3.5 py-2.5">
-                <dt className="font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Integrity Status
-                </dt>
-                <dd className="mt-1 flex items-center gap-1.5 text-xs font-semibold">
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      pendingRedlineCount > 0
-                        ? "bg-amber-500"
-                        : "bg-emerald-500"
-                    }`}
-                    aria-hidden="true"
-                  />
-                  <span
-                    className={
-                      pendingRedlineCount > 0
-                        ? "text-amber-700 dark:text-amber-300"
-                        : "text-emerald-700 dark:text-emerald-300"
-                    }
-                  >
-                    {pendingRedlineCount > 0
-                      ? `${pendingRedlineCount} Flagged`
-                      : "Verified"}
-                  </span>
-                </dd>
-              </div>
-            </dl>
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-[11px] font-semibold">
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    pendingRedlineCount > 0 ? "bg-amber-500" : "bg-emerald-500"
+                  }`}
+                  aria-hidden="true"
+                />
+                <span
+                  className={
+                    pendingRedlineCount > 0
+                      ? "text-amber-700 dark:text-amber-300"
+                      : "text-emerald-700 dark:text-emerald-300"
+                  }
+                >
+                  {pendingRedlineCount > 0
+                    ? `${pendingRedlineCount} Flagged`
+                    : "Verified"}
+                </span>
+              </span>
+            </div>
           </div>
 
           {/* Cohesive Clause Sections */}

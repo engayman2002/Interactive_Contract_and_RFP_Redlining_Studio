@@ -33,19 +33,19 @@ export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
           aria-label={`Threaded Comments for Clause #${clause.clause_index + 1}`}
           data-testid="clause-comment-thread"
           data-clause-id={clause.id}
-          className="border-t border-slate-200/80 bg-white px-4 py-3 transition-all dark:border-slate-800 dark:bg-slate-900"
+          className="shrink-0 border-t border-slate-200/80 bg-white/95 px-4 py-2 backdrop-blur-md transition-all dark:border-slate-800/80 dark:bg-[#070B14]/95"
         >
           {/* Collapsible Header */}
           <div
-            className="flex cursor-pointer items-center justify-between"
+            className="flex cursor-pointer items-center justify-between gap-2"
             onClick={() => setIsExpanded((prev) => !prev)}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <MessageSquare
-                className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400"
+                className="h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-400"
                 aria-hidden="true"
               />
-              <h3 className="text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+              <h3 className="whitespace-nowrap text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                 Clause #{clause.clause_index + 1} Discussion
               </h3>
               {clause.heading ? (
@@ -54,10 +54,10 @@ export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
                 </span>
               ) : null}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <span
                 data-testid={`comment-count-${clause.id}`}
-                className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[11px] font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                className="shrink-0 whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[11px] font-medium tabular-nums text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
               >
                 {comments.length} {comments.length === 1 ? "comment" : "comments"}
               </span>
@@ -69,7 +69,7 @@ export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
                   e.stopPropagation();
                   setIsExpanded((prev) => !prev);
                 }}
-                className="flex items-center gap-1 rounded-md border border-slate-200/90 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
+                className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-slate-200/90 bg-white px-2 text-[11px] font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
               >
                 {isExpanded ? "▲ Collapse" : "▼ Expand"}
               </button>
