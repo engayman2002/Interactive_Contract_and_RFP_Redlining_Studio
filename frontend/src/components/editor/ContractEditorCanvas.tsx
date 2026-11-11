@@ -30,13 +30,21 @@ const CLAUSE_ACCENT_BAR_MAP: Record<ClauseRiskBadge, string> = {
 
 const RISK_PILL_STYLE_MAP: Record<ClauseRiskBadge, string> = {
   CRITICAL:
-    "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300",
-  HIGH: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300",
+    "border-rose-200/90 bg-rose-50/90 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300",
+  HIGH: "border-amber-200/90 bg-amber-50/90 text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300",
   MEDIUM:
-    "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300",
-  LOW: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300",
+    "border-sky-200/90 bg-sky-50/90 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300",
+  LOW: "border-sky-200/90 bg-sky-50/90 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300",
   COMPLIANT:
-    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300",
+    "border-emerald-200/90 bg-emerald-50/90 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300",
+};
+
+const RISK_DOT_STYLE_MAP: Record<ClauseRiskBadge, string> = {
+  CRITICAL: "bg-rose-500",
+  HIGH: "bg-amber-500",
+  MEDIUM: "bg-sky-500",
+  LOW: "bg-sky-400",
+  COMPLIANT: "bg-emerald-500",
 };
 
 const EditorClauseItem = React.memo(
@@ -79,32 +87,42 @@ const EditorClauseItem = React.memo(
             onSelect(clause.id);
           }
         }}
-        className={`cursor-pointer border-b border-slate-100 py-5 pl-5 pr-4 transition-all last:border-b-0 dark:border-slate-800/60 ${
+        className={`cursor-pointer border-b border-slate-100/90 py-5 pl-5 pr-4 transition-all last:border-b-0 dark:border-slate-800/60 ${
           CLAUSE_ACCENT_BAR_MAP[riskBadge]
         } ${
           isSelected
-            ? "rounded-lg bg-indigo-50/50 ring-1 ring-indigo-500/20 dark:bg-indigo-950/25 dark:ring-indigo-500/30"
-            : "hover:bg-slate-50/80 dark:hover:bg-slate-800/30"
+            ? "rounded-xl bg-indigo-50/55 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-950/30 dark:ring-indigo-500/30"
+            : "hover:bg-slate-50/75 dark:hover:bg-slate-800/30"
         }`}
       >
-        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
-            <span className="rounded-md border border-slate-200/90 bg-slate-100/80 px-2 py-0.5 font-mono text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-              #{clause.clause_index + 1}
+            <span className="inline-flex items-center gap-1 rounded-md border border-slate-200/90 bg-slate-100/80 px-2 py-0.5 font-mono text-xs font-medium tabular-nums text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <span
+                aria-hidden="true"
+                className="text-slate-400 dark:text-slate-500"
+              >
+                §
+              </span>
+              <span>#{clause.clause_index + 1}</span>
             </span>
             {clause.heading ? (
-              <h3 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+              <h3 className="text-[14.5px] font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                 {clause.heading}
               </h3>
             ) : null}
           </div>
           <div className="flex items-center gap-2">
             <span
-              className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wider ${RISK_PILL_STYLE_MAP[riskBadge]}`}
+              className={`micro-badge ${RISK_PILL_STYLE_MAP[riskBadge]}`}
             >
+              <span
+                className={`micro-badge-dot ${RISK_DOT_STYLE_MAP[riskBadge]}`}
+                aria-hidden="true"
+              />
               {riskBadge}
             </span>
-            <span className="rounded border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-400">
+            <span className="rounded-md border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-slate-500 dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-400">
               v{clause.version}
             </span>
           </div>
@@ -134,7 +152,16 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
   documentTitle = "Master Commercial Agreement — Review Copy",
 }) => {
   const selectClause = useWorkspaceStore((state) => state.selectClause);
+  const negotiationStance = useWorkspaceStore(
+    (state) => state.negotiationStance
+  );
+  const documentVersion = useWorkspaceStore((state) => state.documentVersion);
   const clauseElementRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const pendingRedlineCount = useMemo(
+    () => redlines.filter((r) => r.status === "PENDING").length,
+    [redlines]
+  );
 
   const redlinesByClauseId = useMemo(() => {
     const map = new Map<string, RedlineSuggestionDTO>();
@@ -186,7 +213,7 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
   return (
     <div
       data-testid="contract-editor-canvas"
-      className="flex h-full w-full overflow-hidden bg-slate-100/70 dark:bg-[#0B0F19]"
+      className="bg-enterprise-canvas flex h-full w-full overflow-hidden"
     >
       <RiskHeatmapGutter
         clauses={clauses}
@@ -198,24 +225,79 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
         {editor ? <EditorContent editor={editor} /> : null}
 
         {/* Elevated Legal Document Sheet */}
-        <div className="mx-auto my-6 max-w-4xl rounded-2xl border border-slate-200/90 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-10">
-          {/* Formal Legal Sheet Header */}
-          <div className="mb-6 border-b border-slate-200/80 pb-6 dark:border-slate-800">
+        <div className="legal-document-sheet mx-auto my-7 max-w-4xl rounded-2xl p-8 sm:p-11">
+          {/* Formal Legal Sheet Header & 4-Column Metadata Block */}
+          <div className="mb-7 border-b border-slate-200/80 pb-6 dark:border-slate-800/80">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-400">
                 Confidential Legal Review Instrument
               </span>
-              <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                {clauses.length} Segmented Provisions
+              <span className="rounded-md border border-slate-200/90 bg-slate-50 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-300">
+                Revision v{documentVersion}
               </span>
             </div>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
+
+            <h2 className="mt-2.5 font-serif text-2xl font-medium tracking-tight text-slate-900 dark:text-white sm:text-[26px]">
               {documentTitle}
             </h2>
+
+            {/* 4-Column Legal Instrument Metadata Grid */}
+            <dl className="mt-5 grid grid-cols-2 divide-y divide-slate-200/70 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/70 dark:divide-slate-800/80 dark:border-slate-800 dark:bg-slate-950/60 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+              <div className="px-3.5 py-2.5">
+                <dt className="font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Document Classification
+                </dt>
+                <dd className="mt-1 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Commercial Agreement
+                </dd>
+              </div>
+              <div className="px-3.5 py-2.5">
+                <dt className="font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Review Posture
+                </dt>
+                <dd className="mt-1 font-mono text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                  {negotiationStance}
+                </dd>
+              </div>
+              <div className="px-3.5 py-2.5">
+                <dt className="font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Clause Count
+                </dt>
+                <dd className="mt-1 font-mono text-xs font-semibold tabular-nums text-slate-800 dark:text-slate-200">
+                  {clauses.length} Provisions
+                </dd>
+              </div>
+              <div className="px-3.5 py-2.5">
+                <dt className="font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Integrity Status
+                </dt>
+                <dd className="mt-1 flex items-center gap-1.5 text-xs font-semibold">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      pendingRedlineCount > 0
+                        ? "bg-amber-500"
+                        : "bg-emerald-500"
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <span
+                    className={
+                      pendingRedlineCount > 0
+                        ? "text-amber-700 dark:text-amber-300"
+                        : "text-emerald-700 dark:text-emerald-300"
+                    }
+                  >
+                    {pendingRedlineCount > 0
+                      ? `${pendingRedlineCount} Flagged`
+                      : "Verified"}
+                  </span>
+                </dd>
+              </div>
+            </dl>
           </div>
 
           {/* Cohesive Clause Sections */}
-          <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="divide-y divide-slate-100/90 dark:divide-slate-800/60">
             {clauses.map((clause) => (
               <EditorClauseItem
                 key={clause.id}

@@ -223,18 +223,18 @@ export const RedliningStudioWorkspace: React.FC<
   return (
     <div
       data-testid="redlining-studio-workspace"
-      className="flex h-screen w-screen flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#0B0F19] dark:text-slate-100"
+      className="bg-enterprise-canvas flex h-screen w-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100"
     >
-      {/* Structured Two-Zone Executive Document Toolbar */}
-      <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 md:px-6">
+      {/* Executive Glassmorphic Studio Command Header */}
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/85 px-4 backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#070B14]/85 md:px-6">
         {/* Left Zone: Dashboard Link + Title/Status + Learning Triggers */}
         <div className="flex min-w-0 items-center gap-2.5">
           <Link
             href="/"
             data-testid="back-to-dashboard-btn"
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-200/90 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="inline-flex h-8 shrink-0 items-center gap-2 rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-indigo-600 to-violet-600 text-white">
+            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-b from-indigo-500 to-indigo-600 text-white ring-1 ring-inset ring-white/20">
               <Scale className="h-3 w-3" aria-hidden="true" />
             </span>
             <span>Dashboard</span>
@@ -250,21 +250,28 @@ export const RedliningStudioWorkspace: React.FC<
               <h1 className="truncate text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
                 {currentTitle}
               </h1>
-              <span className="shrink-0 rounded-md border border-slate-200 bg-slate-100/80 px-1.5 py-0.5 font-mono text-[11px] font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <span className="shrink-0 rounded-md border border-slate-200/90 bg-slate-100/80 px-1.5 py-0.5 font-mono text-[11px] font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 v{documentVersion}
               </span>
               <span
-                className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold md:inline-block ${
+                className={`micro-badge hidden shrink-0 md:inline-flex ${
                   currentStatus === "ANALYZED"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
-                    : "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300"
+                    ? "border-emerald-200/90 bg-emerald-50/80 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
+                    : "border-sky-200/90 bg-sky-50/80 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300"
                 }`}
               >
-                {currentStatus}
+                <span
+                  className={`micro-badge-dot ${
+                    currentStatus === "ANALYZED"
+                      ? "bg-emerald-500"
+                      : "bg-sky-500"
+                  }`}
+                />
+                <span>{currentStatus}</span>
               </span>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-              <span>{clauses.length} Clauses</span>
+              <span className="font-mono">{clauses.length} Clauses</span>
               <span>·</span>
               <Link
                 href="/playbooks"
@@ -280,16 +287,19 @@ export const RedliningStudioWorkspace: React.FC<
             <Link
               href="/help"
               data-testid="open-interactive-tutorial-btn"
-              className="inline-flex items-center gap-1 rounded-lg border border-indigo-200/80 bg-indigo-50/70 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+              className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
             >
-              <GraduationCap className="h-3.5 w-3.5" aria-hidden="true" />
+              <GraduationCap
+                className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400"
+                aria-hidden="true"
+              />
               <span>🎓 Tutorial</span>
             </Link>
             <button
               type="button"
               data-testid="open-quick-help-btn"
               onClick={() => setIsQuickHelpOpen(true)}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
             >
               <HelpCircle className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>? Quick Help</span>
@@ -299,21 +309,20 @@ export const RedliningStudioWorkspace: React.FC<
 
         {/* Right Zone: Group 1 (AI Audit Controls) | Group 2 (Document Actions) */}
         <div className="flex shrink-0 items-center gap-2">
-          {/* Compact mobile/tablet Quick Help trigger when xl left controls hide */}
           <button
             type="button"
             onClick={() => setIsQuickHelpOpen(true)}
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200/90 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 xl:hidden"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200/90 bg-white text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 xl:hidden"
             title="Quick Help Guide"
           >
             <HelpCircle className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
           </button>
 
           {/* Group 1: AI Audit Controls */}
-          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/70 p-1 dark:border-slate-800 dark:bg-slate-950/60">
+          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-100/75 p-1 dark:border-slate-800 dark:bg-slate-900/90">
             <div
               data-testid="negotiation-stance-selector"
-              className="inline-flex items-center rounded-lg border border-slate-200/90 bg-white p-0.5 text-xs shadow-2xs dark:border-slate-800 dark:bg-slate-900"
+              className="inline-flex h-7 items-center rounded-lg border border-slate-200/80 bg-white p-0.5 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
               role="group"
               aria-label="AI Negotiation Stance"
             >
@@ -321,7 +330,7 @@ export const RedliningStudioWorkspace: React.FC<
                 type="button"
                 data-testid="stance-option-strict"
                 onClick={() => setNegotiationStance("strict")}
-                className={`rounded-md px-2 py-1 text-[11px] font-medium transition-all ${
+                className={`h-6 rounded-md px-2 text-[11px] font-medium transition-all ${
                   negotiationStance === "strict"
                     ? "bg-rose-600 text-white shadow-sm"
                     : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
@@ -334,7 +343,7 @@ export const RedliningStudioWorkspace: React.FC<
                 type="button"
                 data-testid="stance-option-balanced"
                 onClick={() => setNegotiationStance("balanced")}
-                className={`rounded-md px-2 py-1 text-[11px] font-medium transition-all ${
+                className={`h-6 rounded-md px-2 text-[11px] font-medium transition-all ${
                   negotiationStance === "balanced"
                     ? "bg-indigo-600 text-white shadow-sm"
                     : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
@@ -347,7 +356,7 @@ export const RedliningStudioWorkspace: React.FC<
                 type="button"
                 data-testid="stance-option-commercial"
                 onClick={() => setNegotiationStance("commercial")}
-                className={`rounded-md px-2 py-1 text-[11px] font-medium transition-all ${
+                className={`h-6 rounded-md px-2 text-[11px] font-medium transition-all ${
                   negotiationStance === "commercial"
                     ? "bg-emerald-600 text-white shadow-sm"
                     : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
@@ -363,7 +372,7 @@ export const RedliningStudioWorkspace: React.FC<
               data-testid="trigger-sse-audit-btn"
               onClick={handleTriggerAiAnalysis}
               disabled={streamProgress.isStreaming}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:opacity-50"
+              className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3 text-xs font-semibold text-white shadow-[0_1px_2px_rgba(79,70,229,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] transition-all hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50"
             >
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               <span>
@@ -377,7 +386,7 @@ export const RedliningStudioWorkspace: React.FC<
               type="button"
               data-testid="open-ai-settings-btn"
               onClick={() => setIsAISettingsOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200/90 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-indigo-700 shadow-2xs transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+              className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-indigo-200/80 bg-white px-2.5 font-mono text-[11px] font-semibold text-indigo-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
             >
               <Cpu className="h-3.5 w-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">
@@ -387,7 +396,7 @@ export const RedliningStudioWorkspace: React.FC<
           </div>
 
           <div
-            className="hidden h-5 w-px bg-slate-200 dark:bg-slate-800 sm:block"
+            className="hidden h-5 w-px bg-slate-200/90 dark:bg-slate-800 sm:block"
             aria-hidden="true"
           />
 
@@ -397,7 +406,7 @@ export const RedliningStudioWorkspace: React.FC<
               type="button"
               data-testid="studio-upload-new-btn"
               onClick={() => setIsUploadModalOpen(true)}
-              className="hidden items-center gap-1 rounded-lg border border-slate-200/90 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 lg:inline-flex"
+              className="hidden h-8 items-center gap-1 rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80 lg:inline-flex"
             >
               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Upload</span>
@@ -406,7 +415,7 @@ export const RedliningStudioWorkspace: React.FC<
             {lastExportedFilename ? (
               <span
                 data-testid="export-status-badge"
-                className="hidden rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-mono text-[11px] font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300 xl:inline-block"
+                className="hidden h-8 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 font-mono text-[11px] font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300 xl:inline-flex"
               >
                 Exported: {lastExportedFilename}
               </span>
@@ -417,9 +426,9 @@ export const RedliningStudioWorkspace: React.FC<
               data-testid="export-track-changes-btn"
               onClick={() => void handleExport("track_changes")}
               disabled={isExporting}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-emerald-300/80 bg-emerald-50/70 px-3 text-xs font-semibold text-emerald-800 shadow-sm transition-colors hover:border-emerald-400 hover:bg-emerald-100/70 disabled:opacity-50 dark:border-emerald-500/35 dark:bg-emerald-950/35 dark:text-emerald-300 dark:hover:bg-emerald-900/45"
             >
-              <Download className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+              <Download className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>Export Track Changes (.docx)</span>
             </button>
 
@@ -428,9 +437,9 @@ export const RedliningStudioWorkspace: React.FC<
               data-testid="export-clean-btn"
               onClick={() => void handleExport("clean")}
               disabled={isExporting}
-              className="hidden items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 md:inline-flex"
+              className="hidden h-8 items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80 md:inline-flex"
             >
-              <FileCheck2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <FileCheck2 className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
               <span>Export Clean (.docx)</span>
             </button>
 
@@ -439,13 +448,13 @@ export const RedliningStudioWorkspace: React.FC<
         </div>
       </header>
 
-      {/* Interactive 4-Step Workflow Progress Stepper */}
+      {/* Precision Horizontal 4-Step Lifecycle Breadcrumb Stepper */}
       {!isGuideDismissed ? (
         <div
           data-testid="studio-quick-guide-banner"
-          className="flex items-center justify-between border-b border-indigo-100 bg-gradient-to-r from-indigo-50/80 via-slate-50 to-emerald-50/60 px-6 py-2 text-xs text-slate-700 dark:border-indigo-500/20 dark:from-indigo-950/35 dark:via-slate-900 dark:to-emerald-950/20 dark:text-indigo-200"
+          className="flex items-center justify-between border-b border-slate-200/80 bg-white/90 px-6 py-2 text-xs text-slate-700 backdrop-blur-md dark:border-slate-800/80 dark:bg-[#070B14]/90 dark:text-slate-200"
         >
-          <div className="flex items-center gap-3 overflow-x-auto py-0.5">
+          <div className="flex flex-1 items-center gap-2 overflow-x-auto py-0.5">
             {[
               {
                 num: 1,
@@ -474,19 +483,19 @@ export const RedliningStudioWorkspace: React.FC<
             ].map((step, idx, arr) => (
               <React.Fragment key={step.num}>
                 <div
-                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                  className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-all ${
                     step.done
-                      ? "bg-emerald-100/80 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300"
+                      ? "border-emerald-200/90 bg-emerald-50/80 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
                       : step.active
-                      ? "bg-indigo-600 font-semibold text-white shadow-2xs"
-                      : "text-slate-500 dark:text-slate-400"
+                      ? "border-indigo-500 bg-indigo-600 font-semibold text-white shadow-sm"
+                      : "border-slate-200/80 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                   }`}
                 >
                   {step.done ? (
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   ) : (
                     <span
-                      className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${
+                      className={`flex h-4 w-4 items-center justify-center rounded-full font-mono text-[10px] font-bold ${
                         step.active
                           ? "bg-white/20 text-white"
                           : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
@@ -498,7 +507,10 @@ export const RedliningStudioWorkspace: React.FC<
                   <span>{step.label}</span>
                 </div>
                 {idx < arr.length - 1 ? (
-                  <span className="text-slate-300 dark:text-slate-700">→</span>
+                  <div
+                    className="h-px w-4 shrink-0 bg-slate-200 dark:bg-slate-800 sm:w-6"
+                    aria-hidden="true"
+                  />
                 ) : null}
               </React.Fragment>
             ))}
@@ -507,7 +519,7 @@ export const RedliningStudioWorkspace: React.FC<
             type="button"
             data-testid="dismiss-quick-guide-btn"
             onClick={() => setIsGuideDismissed(true)}
-            className="ml-4 rounded-md p-1 text-slate-500 transition-colors hover:bg-indigo-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+            className="ml-4 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
             title="Dismiss Workflow Bar"
           >
             <X className="h-3.5 w-3.5" />

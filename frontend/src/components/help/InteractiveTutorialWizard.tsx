@@ -24,13 +24,13 @@ export const InteractiveTutorialWizard: React.FC = () => {
     <section
       data-testid="interactive-tutorial-wizard"
       aria-label="Interactive 5-Stage Masterclass Tutorial"
-      className="overflow-hidden rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/75 via-white to-violet-50/40 shadow-sm dark:border-indigo-500/30 dark:from-indigo-950/30 dark:via-slate-900 dark:to-violet-950/20"
+      className="surface-card overflow-hidden rounded-2xl border-indigo-200/80 bg-gradient-to-br from-indigo-50/55 via-white to-violet-50/35 dark:border-indigo-500/25 dark:from-indigo-950/30 dark:via-[#0D1322] dark:to-violet-950/20"
     >
       {/* Wizard Header + Progress Bar */}
       <div className="border-b border-indigo-100/90 px-6 py-5 dark:border-indigo-500/20">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-white px-3 py-0.5 text-[11px] font-semibold text-indigo-700 shadow-2xs dark:border-indigo-500/30 dark:bg-indigo-950/60 dark:text-indigo-300">
+            <span className="micro-badge border-indigo-200 bg-white text-indigo-700 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-950/60 dark:text-indigo-300">
               <GraduationCap className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Interactive 5-Stage Product Masterclass</span>
             </span>
@@ -107,7 +107,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
           {/* Left: What You Will Do Checklist */}
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900/90 lg:col-span-6">
+          <div className="surface-card rounded-xl p-4 lg:col-span-6">
             <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
               <CheckCircle2 className="h-3.5 w-3.5" />
               <span>What You Will Do</span>
@@ -128,7 +128,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
           </div>
 
           {/* Right: Interactive Visual Preview Example */}
-          <div className="flex flex-col justify-between space-y-3 rounded-xl border border-indigo-200/80 bg-slate-900 p-4 text-slate-100 shadow-2xs dark:border-indigo-500/30 dark:bg-slate-950 lg:col-span-6">
+          <div className="flex flex-col justify-between space-y-3 rounded-xl border border-indigo-200/80 bg-slate-900 p-4 text-slate-100 shadow-sm dark:border-indigo-500/30 dark:bg-slate-950 lg:col-span-6">
             <div className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-300">
                 <Sparkles className="h-3.5 w-3.5" />
@@ -180,7 +180,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
           data-testid="tutorial-prev-btn"
           disabled={activeStageIdx === 0}
           onClick={() => setActiveStageIdx((prev) => Math.max(0, prev - 1))}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>Previous Step</span>
@@ -189,7 +189,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
         <Link
           href={currentStage.ctaHref}
           data-testid="tutorial-try-live-btn"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-gradient-to-b from-emerald-500 to-emerald-600 px-4 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-emerald-400 hover:to-emerald-600"
         >
           <Play className="h-3.5 w-3.5" />
           <span>{currentStage.ctaLabel}</span>
@@ -203,7 +203,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
           onClick={() =>
             setActiveStageIdx((prev) => Math.min(totalStages - 1, prev + 1))
           }
-          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span>Next Step</span>
           <ArrowRight className="h-3.5 w-3.5" />

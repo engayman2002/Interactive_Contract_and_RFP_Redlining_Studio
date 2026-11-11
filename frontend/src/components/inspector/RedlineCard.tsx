@@ -38,11 +38,25 @@ export interface RedlineCardProps {
 
 const RISK_BADGE_STYLES: Record<RiskLevel, string> = {
   CRITICAL:
-    "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/20",
-  HIGH: "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20",
+    "bg-rose-50/90 text-rose-700 border-rose-200/90 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/25",
+  HIGH: "bg-amber-50/90 text-amber-800 border-amber-200/90 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/25",
   MEDIUM:
-    "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/20",
-  LOW: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20",
+    "bg-sky-50/90 text-sky-700 border-sky-200/90 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/25",
+  LOW: "bg-emerald-50/90 text-emerald-700 border-emerald-200/90 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/25",
+};
+
+const RISK_BORDER_ACCENT: Record<RiskLevel, string> = {
+  CRITICAL: "border-l-[3px] border-l-rose-500",
+  HIGH: "border-l-[3px] border-l-amber-500",
+  MEDIUM: "border-l-[3px] border-l-sky-500",
+  LOW: "border-l-[3px] border-l-emerald-500",
+};
+
+const RISK_DOT_COLORS: Record<RiskLevel, string> = {
+  CRITICAL: "bg-rose-500",
+  HIGH: "bg-amber-500",
+  MEDIUM: "bg-sky-500",
+  LOW: "bg-emerald-500",
 };
 
 const VERIFICATION_BADGE_CONFIG: Record<
@@ -339,16 +353,18 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
         data-risk-level={suggestion.risk}
         data-active={isSelected ? "true" : "false"}
         onClick={() => selectClause(clause.id, "inspector")}
-        className={`cursor-pointer rounded-xl border p-5 transition-all ${
+        className={`surface-card cursor-pointer rounded-xl p-5 transition-all ${
+          RISK_BORDER_ACCENT[suggestion.risk]
+        } ${
           isSelected
-            ? "border-indigo-500 bg-white shadow-md ring-2 ring-indigo-500/20 dark:border-indigo-500 dark:bg-slate-900 dark:ring-indigo-500/35"
-            : "border-slate-200/90 bg-white shadow-sm hover:border-slate-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+            ? "border-indigo-400/90 shadow-md ring-2 ring-indigo-500/20 dark:border-indigo-500/80 dark:ring-indigo-500/35"
+            : "hover:border-slate-300/90 hover:shadow-md dark:hover:border-slate-700"
         }`}
       >
         {/* Top Row: Clause Badge + Title + Semantic Risk Pill */}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="rounded-md border border-slate-200/90 bg-slate-100/80 px-2 py-0.5 font-mono text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="rounded-md border border-slate-200/90 bg-slate-100/80 px-2 py-0.5 font-mono text-xs font-medium tabular-nums text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
               Clause #{clause.clause_index + 1}
             </span>
             <h4 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
@@ -357,13 +373,13 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             {commentCount > 0 ? (
-              <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
+              <span className="micro-badge border-indigo-200 bg-indigo-50 font-mono text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
                 {commentCount} {commentCount === 1 ? "Comment" : "Comments"}
               </span>
             ) : null}
             <span
               data-testid={`critic-confidence-badge-${suggestion.id}`}
-              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-semibold ${verificationCfg.style}`}
+              className={`micro-badge font-mono ${verificationCfg.style}`}
             >
               <span>{verificationCfg.emoji}</span>
               <span>
@@ -371,10 +387,16 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
               </span>
             </span>
             <span
-              className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wider ${
+              className={`micro-badge tracking-wider ${
                 RISK_BADGE_STYLES[suggestion.risk]
               }`}
             >
+              <span
+                className={`micro-badge-dot ${
+                  RISK_DOT_COLORS[suggestion.risk]
+                }`}
+                aria-hidden="true"
+              />
               {suggestion.risk}
             </span>
           </div>
@@ -387,9 +409,9 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
 
         {/* Negotiation Talking Point Executive Callout */}
         {talkingPoint ? (
-          <div className="mb-3.5 rounded-r-lg border-l-2 border-indigo-500 bg-slate-50 p-3 dark:bg-slate-800/60">
+          <div className="mb-3.5 rounded-r-lg border-l-2 border-indigo-500 bg-slate-50/90 p-3 dark:bg-slate-800/55">
             <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
                 Negotiation Talking Point
               </span>
               <button
@@ -417,10 +439,10 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
           </div>
         ) : null}
 
-        {/* Proposed Playbook Wording Box */}
-        <div className="mb-4 rounded-xl border border-emerald-200/80 bg-emerald-50/40 p-4 dark:border-emerald-500/20 dark:bg-emerald-950/20">
-          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+        {/* Proposed Playbook Wording Legal Diff Block */}
+        <div className="mb-4 overflow-hidden rounded-xl border border-emerald-200/80 bg-emerald-50/35 dark:border-emerald-500/20 dark:bg-emerald-950/15">
+          <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-emerald-200/70 bg-emerald-50/80 px-3.5 py-2 dark:border-emerald-500/20 dark:bg-emerald-950/45">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
               Proposed Playbook Wording
             </span>
             <span className="text-[10px] font-medium text-emerald-700/80 dark:text-emerald-400/80">
@@ -428,50 +450,52 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
             </span>
           </div>
 
-          {isEditingModify ? (
-            <div
-              className="mt-2 space-y-2.5"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <textarea
-                aria-label="Modify proposed redline wording"
-                data-testid={`modify-redline-textarea-${clause.id}`}
-                rows={3}
-                value={modifiedDraft}
-                onChange={(e) => setModifiedDraft(e.target.value)}
-                className="w-full rounded-lg border border-emerald-300 bg-white p-2.5 text-xs leading-relaxed text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-500/40 dark:bg-slate-950 dark:text-emerald-100"
-              />
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  data-testid={`cancel-modify-redline-btn-${clause.id}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsEditingModify(false);
-                    setModifiedDraft(suggestion.proposed_text);
-                  }}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  data-testid={`save-modified-redline-btn-${clause.id}`}
-                  onClick={handleSaveModified}
-                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500"
-                >
-                  Save Modified Redline
-                </button>
+          <div className="p-3.5">
+            {isEditingModify ? (
+              <div
+                className="space-y-2.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <textarea
+                  aria-label="Modify proposed redline wording"
+                  data-testid={`modify-redline-textarea-${clause.id}`}
+                  rows={3}
+                  value={modifiedDraft}
+                  onChange={(e) => setModifiedDraft(e.target.value)}
+                  className="w-full rounded-lg border border-emerald-300 bg-white p-2.5 font-serif text-[14px] leading-relaxed text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-500/40 dark:bg-slate-950 dark:text-emerald-100"
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    data-testid={`cancel-modify-redline-btn-${clause.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEditingModify(false);
+                      setModifiedDraft(suggestion.proposed_text);
+                    }}
+                    className="h-7 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    data-testid={`save-modified-redline-btn-${clause.id}`}
+                    onClick={handleSaveModified}
+                    className="h-7 rounded-lg bg-gradient-to-b from-emerald-500 to-emerald-600 px-3 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 hover:from-emerald-400 hover:to-emerald-600"
+                  >
+                    Save Modified Redline
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <p
-              data-testid={`proposed-text-${suggestion.id}`}
-              className="text-xs leading-relaxed text-slate-800 dark:text-emerald-100"
-            >
-              {suggestion.proposed_text}
-            </p>
-          )}
+            ) : (
+              <p
+                data-testid={`proposed-text-${suggestion.id}`}
+                className="font-serif text-[14.5px] leading-[1.7] text-slate-800 dark:text-emerald-100"
+              >
+                {suggestion.proposed_text}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Agent 2: Compact Critic Verification Gates Strip */}
@@ -531,7 +555,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
               data-testid={`verify-critic-btn-${suggestion.id}`}
               disabled={isVerifyingCritic}
               onClick={handleVerifyWithCritic}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-200/90 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-700 shadow-2xs transition-colors hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-slate-200/90 bg-white px-2.5 text-[10px] font-semibold text-slate-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
             >
               {isVerifyingCritic ? (
                 <>
@@ -595,10 +619,8 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                   onLocalApplyPreview?.(clause.id, suggestion.proposed_text);
                 }
               }}
-              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all ${
-                isHoveringApply
-                  ? "bg-emerald-500 ring-2 ring-emerald-500/30"
-                  : "bg-emerald-600 hover:bg-emerald-500"
+              className={`inline-flex h-8 items-center rounded-lg bg-gradient-to-b from-emerald-500 to-emerald-600 px-3.5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-emerald-400 hover:to-emerald-600 ${
+                isHoveringApply ? "ring-2 ring-emerald-500/40" : ""
               }`}
             >
               Apply Redline
@@ -612,7 +634,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 selectClause(clause.id, "inspector");
                 setIsEditingModify((prev) => !prev);
               }}
-              className="rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="inline-flex h-8 items-center rounded-lg border border-slate-200/90 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
               Modify
             </button>
@@ -628,22 +650,22 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                   onLocalRejectPreview?.(suggestion.id);
                 }
               }}
-              className="rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:text-slate-400 dark:hover:border-rose-500/30 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
+              className="inline-flex h-8 items-center rounded-lg border border-transparent px-2.5 text-xs font-medium text-slate-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:text-slate-400 dark:hover:border-rose-500/30 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
             >
               Reject
             </button>
           </div>
         </div>
 
-        {/* AI Power Tools Segmented Bar (Progressive Disclosure / Mutual Exclusion) */}
+        {/* AI Power Tools Segmented Pill Dock (Progressive Disclosure / Mutual Exclusion) */}
         <div
           onClick={(e) => e.stopPropagation()}
-          className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/80 p-1.5 dark:border-slate-800 dark:bg-slate-950/60"
+          className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 dark:border-slate-800 dark:bg-slate-800/70"
         >
-          <span className="px-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          <span className="px-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             AI Power Tools
           </span>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1">
             <button
               type="button"
               data-testid={`toggle-copilot-btn-${suggestion.id}`}
@@ -654,10 +676,10 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                   prev === "copilot" ? null : "copilot"
                 );
               }}
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all ${
+              className={`inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold transition-all ${
                 isCopilotOpen
-                  ? "border-indigo-400 bg-indigo-600 text-white shadow-sm dark:border-indigo-500"
-                  : "border-slate-200/80 bg-white text-indigo-700 hover:border-indigo-300 hover:bg-indigo-50/70 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
+                  ? "bg-indigo-600 text-white shadow-sm ring-1 ring-inset ring-white/20"
+                  : "bg-white/95 text-indigo-700 shadow-sm hover:bg-white dark:bg-slate-900/90 dark:text-indigo-300 dark:hover:bg-slate-900"
               }`}
             >
               <Sparkles className="h-3 w-3" />
@@ -669,10 +691,10 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
               data-testid={`simulate-pushback-btn-${suggestion.id}`}
               onClick={handleSimulatePushback}
               disabled={isSimulatingPushback}
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all disabled:opacity-60 ${
+              className={`inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold transition-all disabled:opacity-60 ${
                 isPushbackOpen
-                  ? "border-orange-400 bg-orange-600 text-white shadow-sm dark:border-orange-500"
-                  : "border-slate-200/80 bg-white text-orange-700 hover:border-orange-300 hover:bg-orange-50/70 dark:border-slate-700 dark:bg-slate-900 dark:text-orange-300 dark:hover:bg-orange-950/40"
+                  ? "bg-orange-600 text-white shadow-sm ring-1 ring-inset ring-white/20"
+                  : "bg-white/95 text-orange-700 shadow-sm hover:bg-white dark:bg-slate-900/90 dark:text-orange-300 dark:hover:bg-slate-900"
               }`}
             >
               {isSimulatingPushback ? (
@@ -692,16 +714,22 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
               type="button"
               data-testid={`toggle-critic-btn-${suggestion.id}`}
               onClick={() => setIsCriticExpanded((prev) => !prev)}
-              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all ${
+              className={`inline-flex h-7 items-center gap-1 rounded-lg px-2.5 text-[11px] font-semibold transition-all ${
                 isCriticExpanded
-                  ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-950/50 dark:text-emerald-200"
-                  : "border-slate-200/80 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-emerald-950/30"
+                  ? "bg-emerald-600 text-white shadow-sm ring-1 ring-inset ring-white/20"
+                  : "bg-white/95 text-slate-700 shadow-sm hover:bg-white dark:bg-slate-900/90 dark:text-slate-300 dark:hover:bg-slate-900"
               }`}
             >
-              <ShieldCheck className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+              <ShieldCheck
+                className={`h-3 w-3 ${
+                  isCriticExpanded
+                    ? "text-white"
+                    : "text-emerald-600 dark:text-emerald-400"
+                }`}
+              />
               <span>🛡️ Critic Guard</span>
               {isCriticExpanded ? (
-                <ChevronUp className="h-3 w-3 opacity-70" />
+                <ChevronUp className="h-3 w-3 opacity-80" />
               ) : (
                 <ChevronDown className="h-3 w-3 opacity-70" />
               )}
@@ -861,7 +889,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                   <>
                     <span
                       data-testid={`pushback-probability-badge-${suggestion.id}`}
-                      className="rounded-full border border-slate-200 bg-white px-2.5 py-0.5 font-mono text-[10px] font-semibold text-slate-800 shadow-2xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                      className="rounded-full border border-slate-200 bg-white px-2.5 py-0.5 font-mono text-[10px] font-semibold text-slate-800 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                     >
                       Acceptance Likelihood: {pushbackSim.acceptance_probability}%
                     </span>
@@ -921,7 +949,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                           pushbackSim.rebuttal_talking_point
                         )
                       }
-                      className="inline-flex items-center gap-1 rounded-md border border-slate-200/90 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 shadow-2xs transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-200/90 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
                     >
                       {copiedRebuttal ? (
                         <>
@@ -954,7 +982,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                       type="button"
                       data-testid={`apply-compromise-btn-${suggestion.id}`}
                       onClick={handleApplyCompromise}
-                      className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-2xs transition-colors hover:bg-emerald-500"
+                      className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500"
                     >
                       <Check className="h-3 w-3" />
                       <span>Use Compromise Wording</span>

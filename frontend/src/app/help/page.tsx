@@ -130,16 +130,16 @@ export default function HelpCenterPage() {
   return (
     <div
       data-testid="help-center-page"
-      className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-[#0B0F19] dark:text-slate-100"
+      className="bg-enterprise-canvas flex min-h-screen flex-col text-slate-900 dark:text-slate-100"
     >
       <TopNavBar />
 
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-6 py-8">
         {/* Executive Hero Banner & Search Bar */}
-        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/90 md:p-8">
+        <section className="surface-card rounded-2xl p-6 md:p-8">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
             <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
+              <span className="micro-badge border-indigo-200/90 bg-indigo-50/90 text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
                 <BookOpen className="h-3.5 w-3.5" />
                 <span>Interactive User Guide &amp; LegalTech Manual</span>
               </span>
@@ -154,11 +154,11 @@ export default function HelpCenterPage() {
             </div>
 
             {/* Quick Action CTAs */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
               <Link
                 href="/"
                 data-testid="help-cta-dashboard"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-4 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600"
               >
                 <span>Go to Upload Dashboard</span>
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -166,14 +166,14 @@ export default function HelpCenterPage() {
               <Link
                 href="/playbooks"
                 data-testid="help-cta-playbooks"
-                className="rounded-xl border border-slate-200/90 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="inline-flex h-9 items-center rounded-xl border border-slate-200/90 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 Manage Company Playbook
               </Link>
               <Link
                 href="/documents/demo"
                 data-testid="help-cta-sample-studio"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/70 px-4 py-2.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/70 px-4 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 <span>Launch Sample Studio</span>
@@ -218,7 +218,7 @@ export default function HelpCenterPage() {
         <section
           data-testid="help-learning-tracks"
           aria-label="Reference Guide Learning Tracks"
-          className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90"
+          className="surface-card rounded-2xl p-4"
         >
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
             <div>

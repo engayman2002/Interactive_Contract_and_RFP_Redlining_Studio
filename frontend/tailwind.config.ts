@@ -12,6 +12,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: [
+          "var(--font-sans)",
           '"Plus Jakarta Sans"',
           '"Inter"',
           "ui-sans-serif",
@@ -22,7 +23,17 @@ const config: Config = {
           "Roboto",
           "sans-serif",
         ],
+        serif: [
+          "var(--font-serif)",
+          '"Newsreader"',
+          "Georgia",
+          "Cambria",
+          '"Times New Roman"',
+          "Times",
+          "serif",
+        ],
         mono: [
+          "var(--font-mono)",
           '"JetBrains Mono"',
           "ui-monospace",
           "SFMono-Regular",

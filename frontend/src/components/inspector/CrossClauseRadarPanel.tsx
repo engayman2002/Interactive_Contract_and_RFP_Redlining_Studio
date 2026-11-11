@@ -146,41 +146,41 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
         {/* Score & Metric Counters */}
         {report && (
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div className="rounded-lg border border-slate-200/90 bg-white/90 p-2.5 text-center shadow-xs dark:border-slate-800 dark:bg-slate-900/90">
+            <div className="surface-card rounded-lg p-2.5 text-center">
               <div
                 data-testid="cross-clause-integrity-score"
-                className={`text-xl font-bold font-mono ${scoreColor}`}
+                className={`text-xl font-bold font-mono tabular-nums ${scoreColor}`}
               >
                 {report.integrity_score}%
               </div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Integrity Score
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200/90 bg-white/90 p-2.5 text-center shadow-xs dark:border-slate-800 dark:bg-slate-900/90">
-              <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400">
+            <div className="surface-card rounded-lg p-2.5 text-center">
+              <div className="text-xl font-bold font-mono tabular-nums text-rose-600 dark:text-rose-400">
                 {report.contradiction_count}
               </div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Contradictions
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200/90 bg-white/90 p-2.5 text-center shadow-xs dark:border-slate-800 dark:bg-slate-900/90">
-              <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
+            <div className="surface-card rounded-lg p-2.5 text-center">
+              <div className="text-xl font-bold font-mono tabular-nums text-amber-600 dark:text-amber-400">
                 {report.broken_reference_count}
               </div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Broken Refs
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200/90 bg-white/90 p-2.5 text-center shadow-xs dark:border-slate-800 dark:bg-slate-900/90">
-              <div className="text-xl font-bold font-mono text-indigo-600 dark:text-indigo-400">
+            <div className="surface-card rounded-lg p-2.5 text-center">
+              <div className="text-xl font-bold font-mono tabular-nums text-indigo-600 dark:text-indigo-400">
                 {report.undefined_term_count}
               </div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Undefined Terms
               </div>
             </div>
@@ -197,7 +197,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
             onClick={() => setActiveFilter("ALL")}
             className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
               activeFilter === "ALL"
-                ? "bg-indigo-600 text-white shadow-xs"
+                ? "bg-indigo-600 text-white shadow-sm"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
@@ -209,7 +209,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
             onClick={() => setActiveFilter("CONTRADICTION")}
             className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
               activeFilter === "CONTRADICTION"
-                ? "bg-rose-600 text-white shadow-xs"
+                ? "bg-rose-600 text-white shadow-sm"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
@@ -221,7 +221,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
             onClick={() => setActiveFilter("BROKEN_REFERENCE")}
             className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
               activeFilter === "BROKEN_REFERENCE"
-                ? "bg-amber-600 text-white shadow-xs"
+                ? "bg-amber-600 text-white shadow-sm"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
@@ -233,7 +233,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
             onClick={() => setActiveFilter("UNDEFINED_TERM")}
             className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
               activeFilter === "UNDEFINED_TERM"
-                ? "bg-indigo-600 text-white shadow-xs"
+                ? "bg-indigo-600 text-white shadow-sm"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
@@ -276,7 +276,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
           <article
             key={finding.id}
             data-testid={`cross-clause-finding-${finding.id}`}
-            className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-xs transition-all hover:border-slate-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+            className="surface-card rounded-xl p-4 transition-all hover:border-slate-300/90 hover:shadow-md dark:hover:border-slate-700"
           >
             {/* Top Row: Type Pill + Severity Pill */}
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -309,7 +309,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 type="button"
                 data-testid={`jump-source-clause-${finding.id}`}
                 onClick={() => selectClause(finding.source_clause_id, "inspector")}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200/90 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-2xs transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200/90 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
               >
                 <span>Source: Clause #{finding.source_clause_index + 1}</span>
                 <ArrowRight className="h-3 w-3" />
@@ -322,7 +322,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                   type="button"
                   data-testid={`jump-target-clause-${finding.id}`}
                   onClick={() => selectClause(finding.target_clause_id ?? null, "inspector")}
-                  className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50/70 px-2.5 py-1 text-[11px] font-semibold text-rose-700 shadow-2xs transition-colors hover:border-rose-400 hover:bg-rose-100 hover:text-rose-800 dark:border-rose-500/30 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60"
+                  className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50/70 px-2.5 py-1 text-[11px] font-semibold text-rose-700 shadow-sm transition-colors hover:border-rose-400 hover:bg-rose-100 hover:text-rose-800 dark:border-rose-500/30 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60"
                 >
                   <span>Conflicts with: Clause #{finding.target_clause_index + 1}</span>
                   <ArrowRight className="h-3 w-3" />

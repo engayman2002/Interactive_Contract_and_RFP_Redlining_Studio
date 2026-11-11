@@ -98,13 +98,13 @@ export default function PlaybooksPage() {
   return (
     <div
       data-testid="playbooks-manager-page"
-      className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-[#0B0F19] dark:text-slate-100"
+      className="bg-enterprise-canvas flex min-h-screen flex-col text-slate-900 dark:text-slate-100"
     >
       <TopNavBar />
 
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-6 py-8">
         {/* Executive Header */}
-        <div className="flex flex-col justify-between gap-4 border-b border-slate-200/80 pb-6 dark:border-slate-800 md:flex-row md:items-end">
+        <div className="flex flex-col justify-between gap-4 border-b border-slate-200/80 pb-6 dark:border-slate-800/80 md:flex-row md:items-end">
           <div>
             <Link
               href="/"
@@ -119,7 +119,7 @@ export default function PlaybooksPage() {
             <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
               Define corporate baseline standards, pre-approved fallback
               boundaries, and deal-breaker triggers. Every rule is automatically
-              vector-indexed (`1536-d` cosine + BM25 lexical search) for
+              vector-indexed (<code className="font-mono text-xs">1536-d</code> cosine + BM25 lexical search) for
               real-time clause auditing.
             </p>
           </div>
@@ -128,10 +128,10 @@ export default function PlaybooksPage() {
             type="button"
             data-testid="add-rule-toggle-btn"
             onClick={() => setIsAdding((prev) => !prev)}
-            className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold shadow-sm transition-all ${
+            className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-semibold shadow-sm transition-all ${
               isAdding
-                ? "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                : "bg-indigo-600 text-white hover:bg-indigo-500"
+                ? "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                : "bg-gradient-to-b from-indigo-500 to-indigo-600 text-white ring-1 ring-inset ring-white/20 hover:from-indigo-400 hover:to-indigo-600"
             }`}
           >
             {isAdding ? (
@@ -166,7 +166,7 @@ export default function PlaybooksPage() {
           <form
             onSubmit={handleCreateRule}
             data-testid="create-rule-form"
-            className="space-y-5 rounded-2xl border border-indigo-200/90 bg-white p-6 shadow-md dark:border-indigo-500/30 dark:bg-slate-900"
+            className="surface-card space-y-5 rounded-2xl border-indigo-200/80 p-6 shadow-md dark:border-indigo-500/30"
           >
             <div className="border-b border-slate-100 pb-3 dark:border-slate-800">
               <h2 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
@@ -280,7 +280,7 @@ export default function PlaybooksPage() {
             Loading corporate playbook knowledge base...
           </div>
         ) : rules.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white py-16 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="surface-card rounded-2xl py-16 text-center">
             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
               No playbook rules configured yet
             </p>
@@ -298,11 +298,11 @@ export default function PlaybooksPage() {
               <div
                 key={rule.id}
                 data-testid={`playbook-rule-card-${rule.id}`}
-                className="flex flex-col justify-between space-y-4 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm transition-all hover:border-slate-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/90 dark:hover:border-slate-700"
+                className="surface-card flex flex-col justify-between space-y-4 rounded-2xl p-6 transition-all hover:border-slate-300/90 hover:shadow-md dark:hover:border-slate-700"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
+                    <span className="micro-badge border-indigo-200/90 bg-indigo-50/90 text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
                       <ShieldCheck className="h-3.5 w-3.5" />
                       <span>{rule.category}</span>
                     </span>
@@ -319,17 +319,17 @@ export default function PlaybooksPage() {
 
                   {/* Standard Position */}
                   <div className="mt-4 space-y-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                    <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
                       Standard Position
                     </span>
-                    <p className="text-xs leading-relaxed text-slate-800 dark:text-slate-200">
+                    <p className="font-serif text-[14.5px] leading-[1.65] text-slate-800 dark:text-slate-200">
                       {rule.standard_position}
                     </p>
                   </div>
 
                   {/* Fallback Position */}
                   <div className="mt-3.5 space-y-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-400">
+                    <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-400">
                       Fallback Position
                     </span>
                     <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">

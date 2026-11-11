@@ -106,7 +106,7 @@ export const RiskHeatmapGutter: React.FC<RiskHeatmapGutterProps> = ({
     <aside
       aria-label="Risk Heatmap Gutter"
       data-testid="risk-heatmap-gutter"
-      className="flex w-11 shrink-0 flex-col items-center gap-2 border-r border-slate-200/80 bg-white/90 py-5 dark:border-slate-800 dark:bg-slate-900/80"
+      className="flex w-11 shrink-0 flex-col items-center gap-2 border-r border-slate-200/80 bg-white/80 py-5 backdrop-blur-md dark:border-slate-800/80 dark:bg-[#070B14]/85"
     >
       <span className="mb-1 font-mono text-[9px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
         Map

@@ -66,7 +66,7 @@ export const AITelemetryPanel: React.FC = () => {
       className="flex flex-1 flex-col space-y-4 overflow-y-auto p-4"
     >
       {/* Header & Controls */}
-      <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="surface-card rounded-xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -146,15 +146,15 @@ export const AITelemetryPanel: React.FC = () => {
         {/* Card 1: Semantic Cache Hit Rate */}
         <div
           data-testid="telemetry-cache-hit-rate"
-          className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+          className="surface-card rounded-xl p-3.5"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Semantic Cache Hit Rate
             </span>
             <Zap className="h-4 w-4 text-emerald-500" />
           </div>
-          <div className="mt-1.5 text-xl font-bold text-slate-900 dark:text-white">
+          <div className="mt-1.5 font-mono text-xl font-bold tabular-nums text-slate-900 dark:text-white">
             {(aiTelemetry?.cache_hit_rate_pct ?? 0).toFixed(1)}%
           </div>
           <div className="mt-1 flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400">
@@ -171,15 +171,15 @@ export const AITelemetryPanel: React.FC = () => {
         {/* Card 2: Total Tokens & Savings */}
         <div
           data-testid="telemetry-tokens-saved"
-          className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+          className="surface-card rounded-xl p-3.5"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Tokens Used &amp; Saved
             </span>
             <Cpu className="h-4 w-4 text-indigo-500" />
           </div>
-          <div className="mt-1.5 text-xl font-bold text-slate-900 dark:text-white">
+          <div className="mt-1.5 font-mono text-xl font-bold tabular-nums text-slate-900 dark:text-white">
             {(aiTelemetry?.total_tokens ?? 0).toLocaleString()}
           </div>
           <div className="mt-1 flex items-center justify-between gap-2 text-[11px]">
@@ -197,15 +197,15 @@ export const AITelemetryPanel: React.FC = () => {
         {/* Card 3: Avg AI Latency */}
         <div
           data-testid="telemetry-avg-latency"
-          className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+          className="surface-card rounded-xl p-3.5"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Avg AI Latency
             </span>
             <Activity className="h-4 w-4 text-sky-500" />
           </div>
-          <div className="mt-1.5 text-xl font-bold text-slate-900 dark:text-white">
+          <div className="mt-1.5 font-mono text-xl font-bold tabular-nums text-slate-900 dark:text-white">
             {(aiTelemetry?.avg_latency_ms ?? 0).toFixed(2)} ms
           </div>
           <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
@@ -216,15 +216,15 @@ export const AITelemetryPanel: React.FC = () => {
         {/* Card 4: Estimated FinOps Cost & Savings */}
         <div
           data-testid="telemetry-cost-saved"
-          className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+          className="surface-card rounded-xl p-3.5"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Est. FinOps Spend
             </span>
             <DollarSign className="h-4 w-4 text-emerald-600" />
           </div>
-          <div className="mt-1.5 text-xl font-bold text-slate-900 dark:text-white">
+          <div className="mt-1.5 font-mono text-xl font-bold tabular-nums text-slate-900 dark:text-white">
             ${(aiTelemetry?.estimated_cost_usd ?? 0).toFixed(4)}
           </div>
           <div className="mt-1 flex items-center justify-between text-[11px]">
@@ -240,7 +240,7 @@ export const AITelemetryPanel: React.FC = () => {
 
       {/* Per-Operation Breakdown */}
       {aiTelemetry && aiTelemetry.operation_metrics.length > 0 ? (
-        <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="surface-card rounded-xl p-3.5">
           <h4 className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Operation FinOps Breakdown
           </h4>
@@ -266,7 +266,7 @@ export const AITelemetryPanel: React.FC = () => {
       {/* Recent AI Telemetry Events */}
       <div
         data-testid="telemetry-recent-events"
-        className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+        className="surface-card rounded-xl p-3.5"
       >
         <h4 className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           Recent AI Invocations &amp; Cache Stream

@@ -46,7 +46,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
       data-testid="quick-help-modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm dark:bg-black/75"
     >
-      <div className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+      <div className="surface-card flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200/80 px-6 py-4 dark:border-slate-800">
           <div className="flex items-center gap-3">
@@ -86,7 +86,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
             href="/help"
             data-testid="quick-help-launch-tutorial-btn"
             onClick={onClose}
-            className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1 text-[11px] font-semibold text-white shadow-xs transition-colors hover:bg-indigo-500"
+            className="inline-flex h-7 items-center gap-1 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3 text-[11px] font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600"
           >
             <span>Launch Full Interactive Tutorial (/help)</span>
             <ArrowRight className="h-3 w-3" />

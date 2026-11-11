@@ -150,15 +150,15 @@ export function AIPlaybookExtractorPanel({
   return (
     <section
       data-testid="ai-playbook-extractor-panel"
-      className="rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/70 via-white to-violet-50/40 p-6 shadow-sm dark:border-indigo-500/25 dark:from-indigo-950/25 dark:via-slate-900 dark:to-violet-950/20"
+      className="surface-card rounded-2xl border-indigo-200/80 bg-gradient-to-br from-indigo-50/55 via-white to-violet-50/35 p-6 dark:border-indigo-500/25 dark:from-indigo-950/25 dark:via-[#0D1322] dark:to-violet-950/20"
     >
-      <div className="flex flex-col justify-between gap-4 border-b border-indigo-100 pb-4 dark:border-indigo-500/20 sm:flex-row sm:items-center">
+      <div className="flex flex-col justify-between gap-4 border-b border-indigo-100/90 pb-4 dark:border-indigo-500/20 sm:flex-row sm:items-center">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-3 py-1 text-[11px] font-semibold text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-950/50 dark:text-indigo-300">
+          <div className="micro-badge border-indigo-200/90 bg-white/95 text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-950/50 dark:text-indigo-300">
             <Sparkles className="h-3.5 w-3.5" />
             <span>AI Feature #6 — Golden Contract Auto-Extractor</span>
           </div>
-          <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
+          <h2 className="mt-2.5 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
             Generate Playbook Rules from a Golden Contract
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
@@ -171,7 +171,7 @@ export function AIPlaybookExtractorPanel({
         </div>
 
         {/* Mode Switcher */}
-        <div className="inline-flex shrink-0 rounded-xl border border-slate-200 bg-white p-1 shadow-xs dark:border-slate-700 dark:bg-slate-800">
+        <div className="inline-flex shrink-0 rounded-xl border border-slate-200/90 bg-slate-100/90 p-1 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <button
             type="button"
             data-testid="extractor-mode-text"
@@ -179,9 +179,9 @@ export function AIPlaybookExtractorPanel({
               setMode("text");
               setErrorMsg(null);
             }}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`inline-flex h-7 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all ${
               mode === "text"
-                ? "bg-indigo-600 text-white shadow-xs"
+                ? "bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-sm ring-1 ring-inset ring-white/20"
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
             }`}
           >
@@ -195,9 +195,9 @@ export function AIPlaybookExtractorPanel({
               setMode("file");
               setErrorMsg(null);
             }}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`inline-flex h-7 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all ${
               mode === "file"
-                ? "bg-indigo-600 text-white shadow-xs"
+                ? "bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-sm ring-1 ring-inset ring-white/20"
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
             }`}
           >
@@ -354,7 +354,7 @@ export function AIPlaybookExtractorPanel({
                 <div
                   key={`${candidate.category}-${idx}`}
                   data-testid={`extracted-candidate-card-${idx}`}
-                  className="flex flex-col justify-between space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-700 dark:bg-slate-900/90"
+                  className="surface-card flex flex-col justify-between space-y-3 rounded-xl p-4"
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2">

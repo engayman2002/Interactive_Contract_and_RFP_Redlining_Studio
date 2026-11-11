@@ -731,9 +731,9 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({
       data-testid="ai-settings-modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm dark:bg-black/75"
     >
-      <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+      <div className="surface-card flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl shadow-2xl">
         {/* Modal Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-200/80 bg-slate-50/70 px-6 py-4 dark:border-slate-800 dark:bg-slate-950/60">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200/80 bg-slate-50/75 px-6 py-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/75">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-sm">
               <Cpu className="h-5 w-5" aria-hidden="true" />
