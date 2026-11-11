@@ -14,6 +14,11 @@ import {
 import { useAuthSession } from "@/services/authSession";
 import { useI18n } from "@/i18n/useI18n";
 import {
+  localizeExtractedCandidateForDisplay,
+  SAMPLE_GOLDEN_CONTRACT_TEXT_BY_LOCALE,
+  STUDIO_DRAWER_UI_COPY,
+} from "@/i18n/domainLocalization";
+import {
   createPlaybookRule,
   extractPlaybookFromFile,
   extractPlaybookFromText,
@@ -24,14 +29,6 @@ import {
   PlaybookRuleDTO,
 } from "@/services/contracts";
 
-const SAMPLE_GOLDEN_CONTRACT_TEXT = `1. Limitation of Liability. Except for confidentiality and IP indemnification breaches, neither party's aggregate cumulative liability shall exceed the total fees paid by Customer in the twelve (12) months immediately preceding the claim, and neither party shall be liable for indirect, special, or consequential damages.
-
-2. Data Privacy & AI Safeguards. Vendor shall maintain strict GDPR and CCPA data processing safeguards, shall never use Customer Data or Customer Confidential Information to train public or third-party AI foundation models, and shall notify Customer within 24 hours of any confirmed security breach.
-
-3. Service Level Agreement (SLA). Vendor guarantees a minimum 99.9% monthly production uptime availability excluding scheduled maintenance, backed by tiered monthly service credits up to 25% and termination rights for chronic SLA misses.
-
-4. Term and Termination Notice. Either party may terminate for material breach only after providing at least 30 days prior written notice specifying the breach with a full 30-day opportunity to cure, and Vendor shall refund any prepaid unused subscription fees on a pro-rata basis.`;
-
 interface AIPlaybookExtractorPanelProps {
   onRulesSaved: (savedRules: PlaybookRuleDTO[]) => void;
 }
@@ -39,7 +36,8 @@ interface AIPlaybookExtractorPanelProps {
 export function AIPlaybookExtractorPanel({
   onRulesSaved,
 }: AIPlaybookExtractorPanelProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const drawerCopy = STUDIO_DRAWER_UI_COPY[locale];
   const { session, token } = useAuthSession();
   const isViewer = session?.userRole === "VIEWER";
 
@@ -58,7 +56,7 @@ export function AIPlaybookExtractorPanel({
 
   const handleLoadSample = () => {
     setMode("text");
-    setReferenceText(SAMPLE_GOLDEN_CONTRACT_TEXT);
+    setReferenceText(SAMPLE_GOLDEN_CONTRACT_TEXT_BY_LOCALE[locale]);
     setErrorMsg(null);
   };
 
@@ -69,13 +67,11 @@ export function AIPlaybookExtractorPanel({
     setSavedIndices(new Set());
 
     if (mode === "text" && referenceText.trim().length < 20) {
-      setErrorMsg(
-        "Please paste at least 20 characters of golden contract text or load the sample MSA."
-      );
+      setErrorMsg(drawerCopy.extractorMinCharsError);
       return;
     }
     if (mode === "file" && !selectedFile) {
-      setErrorMsg("Please select a .docx or .pdf golden contract file.");
+      setErrorMsg(drawerCopy.extractorNoFileError);
       return;
     }
 
@@ -296,7 +292,7 @@ export function AIPlaybookExtractorPanel({
             data-testid="run-playbook-extractor-btn"
             title={
               isViewer
-                ? "Viewer role cannot run Playbook Auto-Extractor"
+                ? drawerCopy.extractorViewerTitle
                 : undefined
             }
             className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
@@ -352,6 +348,10 @@ export function AIPlaybookExtractorPanel({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {result.candidates.map((candidate, idx) => {
               const isSaved = savedIndices.has(idx);
+              const displayCandidate = localizeExtractedCandidateForDisplay(
+                candidate,
+                locale
+              );
               return (
                 <div
                   key={`${candidate.category}-${idx}`}
@@ -362,10 +362,10 @@ export function AIPlaybookExtractorPanel({
                     <div className="flex items-center justify-between gap-2">
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300">
                         <ShieldCheck className="h-3 w-3" />
-                        <span>{candidate.category}</span>
+                        <span>{displayCandidate.category}</span>
                       </span>
                       <span className="font-mono text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-                        {candidate.confidence_score}
+                        {displayCandidate.confidence_score}
                         {t.extractor.confidenceSuffix}
                       </span>
                     </div>
@@ -375,7 +375,7 @@ export function AIPlaybookExtractorPanel({
                         {t.playbooks.standardPosHeading}
                       </span>
                       <p className="text-xs leading-relaxed text-slate-800 dark:text-slate-200">
-                        {candidate.standard_position}
+                        {displayCandidate.standard_position}
                       </p>
                     </div>
 
@@ -384,23 +384,25 @@ export function AIPlaybookExtractorPanel({
                         {t.playbooks.fallbackPosHeading}
                       </span>
                       <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                        {candidate.fallback_position}
+                        {displayCandidate.fallback_position}
                       </p>
                     </div>
 
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
-                      {candidate.unacceptable_triggers.map((trigger, tIdx) => (
-                        <span
-                          key={tIdx}
-                          className="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 font-mono text-[10px] text-rose-700 dark:border-rose-500/20 dark:bg-rose-950/30 dark:text-rose-300"
-                        >
-                          {trigger}
-                        </span>
-                      ))}
+                      {displayCandidate.unacceptable_triggers.map(
+                        (trigger, tIdx) => (
+                          <span
+                            key={tIdx}
+                            className="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 font-mono text-[10px] text-rose-700 dark:border-rose-500/20 dark:bg-rose-950/30 dark:text-rose-300"
+                          >
+                            {trigger}
+                          </span>
+                        )
+                      )}
                     </div>
 
                     <p className="mt-2.5 border-l-2 border-indigo-200 pl-2.5 text-[11px] italic text-slate-500 dark:border-indigo-500/30 dark:text-slate-400">
-                      &ldquo;{candidate.source_clause_excerpt}&rdquo;
+                      &ldquo;{displayCandidate.source_clause_excerpt}&rdquo;
                     </p>
                   </div>
 

@@ -12,12 +12,13 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useI18n } from "@/i18n/useI18n";
+import { getLocalizedHelpContent } from "@/services/helpContent";
 
 export const InteractiveTutorialWizard: React.FC = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [activeStageIdx, setActiveStageIdx] = useState<number>(0);
 
-  const stages = t.help.tutorialStages;
+  const stages = getLocalizedHelpContent(locale).tutorialStages;
   const totalStages = stages.length;
   const currentStage = stages[activeStageIdx] ?? stages[0];
   const progressPct = Math.round(((activeStageIdx + 1) / totalStages) * 100);

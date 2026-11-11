@@ -16,6 +16,12 @@ import type {
 } from "@/services/contracts";
 import { RiskFilterMode, useWorkspaceStore } from "@/store/workspaceStore";
 import { useI18n } from "@/i18n/useI18n";
+import {
+  localizeClauseForDisplay,
+  localizeNegotiationStance,
+  localizeRiskLabel,
+  STUDIO_DRAWER_UI_COPY,
+} from "@/i18n/domainLocalization";
 import { AITelemetryPanel } from "./AITelemetryPanel";
 import { AuditTrailPanel } from "./AuditTrailPanel";
 import { ClauseCommentThread } from "./ClauseCommentThread";
@@ -59,7 +65,9 @@ const CompliantClauseCard = React.memo(
     onSelect: (clauseId: string) => void;
     onRef: (el: HTMLDivElement | null) => void;
   }) => {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
+    const drawerCopy = STUDIO_DRAWER_UI_COPY[locale];
+    const localizedClause = localizeClauseForDisplay(clause, locale);
     const isSelected = useWorkspaceStore(
       (state) => state.activeClauseId === clause.id
     );
@@ -86,12 +94,12 @@ const CompliantClauseCard = React.memo(
             />
             <span className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">
               {t.redlineCard.clausePrefix} #{clause.clause_index + 1}:{" "}
-              {clause.heading ?? "Provision"}
+              {localizedClause.heading ?? drawerCopy.compliantFallbackHeading}
             </span>
           </div>
           <span className="micro-badge shrink-0 whitespace-nowrap border-emerald-200/90 bg-emerald-50/90 tracking-wider text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
             <span className="micro-badge-dot bg-emerald-500" aria-hidden="true" />
-            COMPLIANT
+            {localizeRiskLabel("COMPLIANT", locale)}
           </span>
         </div>
         <p className="mt-1.5 pl-6 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
@@ -149,7 +157,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
   onLocalRejectPreview,
   onTriggerAudit,
 }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const riskFilter = useWorkspaceStore((state) => state.riskFilter);
   const setRiskFilter = useWorkspaceStore((state) => state.setRiskFilter);
   const streamProgress = useWorkspaceStore((state) => state.streamProgress);
@@ -273,7 +281,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
     CRITICAL: t.inspector.filterCritical,
     HIGH: t.inspector.filterHigh,
     MEDIUM: t.inspector.filterMedium,
-    LOW: "Low",
+    LOW: locale === "en" ? "Low" : localizeRiskLabel("LOW", locale),
     COMPLIANT: t.inspector.filterCompliant,
   };
 
@@ -310,7 +318,8 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
               }`}
               aria-hidden="true"
             />
-            {t.inspector.stancePrefix} {negotiationStance}
+            {t.inspector.stancePrefix}{" "}
+            {localizeNegotiationStance(negotiationStance, locale)}
           </span>
         </div>
 

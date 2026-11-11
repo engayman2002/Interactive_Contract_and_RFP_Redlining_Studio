@@ -20,6 +20,10 @@ import { AiInspectorPanel } from "@/components/inspector/AiInspectorPanel";
 import { LanguageSwitcher } from "@/components/navigation/LanguageSwitcher";
 import { ThemeToggle } from "@/components/navigation/ThemeToggle";
 import { useI18n } from "@/i18n/useI18n";
+import {
+  localizeDemoDocumentTitle,
+  localizeDocumentStatus,
+} from "@/i18n/domainLocalization";
 import { useDocumentStream } from "@/hooks/useDocumentStream";
 import {
   DEMO_WORKSPACE_DATA,
@@ -43,7 +47,7 @@ export interface RedliningStudioWorkspaceProps {
 export const RedliningStudioWorkspace: React.FC<
   RedliningStudioWorkspaceProps
 > = ({ documentId, initialWorkspace = DEMO_WORKSPACE_DATA, token }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const clauses = useWorkspaceStore((state) => state.clauses);
   const redlines = useWorkspaceStore((state) => state.redlines);
   const comments = useWorkspaceStore((state) => state.comments);
@@ -247,7 +251,7 @@ export const RedliningStudioWorkspace: React.FC<
           />
 
           <h1 className="min-w-0 max-w-[320px] truncate whitespace-nowrap text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-            {currentTitle}
+            {localizeDemoDocumentTitle(currentTitle, locale)}
           </h1>
 
           <span
@@ -264,7 +268,7 @@ export const RedliningStudioWorkspace: React.FC<
               aria-hidden="true"
             />
             <span>
-              v{documentVersion} • {currentStatus}
+              v{documentVersion} • {localizeDocumentStatus(currentStatus, locale)}
             </span>
           </span>
         </div>

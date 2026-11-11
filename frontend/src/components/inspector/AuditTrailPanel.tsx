@@ -3,6 +3,7 @@
 import React from "react";
 import type { AuditAction, AuditLogEntryDTO } from "@/services/contracts";
 import { useI18n } from "@/i18n/useI18n";
+import { localizeAuditAction } from "@/i18n/domainLocalization";
 
 export interface AuditTrailPanelProps {
   auditLogs: AuditLogEntryDTO[];
@@ -40,7 +41,7 @@ const ACTION_BADGE_STYLES: Record<AuditAction, string> = {
 export const AuditTrailPanel: React.FC<AuditTrailPanelProps> = ({
   auditLogs,
 }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <div
       data-testid="audit-trail-panel"
@@ -78,7 +79,7 @@ export const AuditTrailPanel: React.FC<AuditTrailPanelProps> = ({
                 <span
                   className={`rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-semibold ${badgeStyle}`}
                 >
-                  {entry.action}
+                  {localizeAuditAction(entry.action, locale)}
                 </span>
                 <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
                   {entry.actor_role} · {entry.actor_user_id.slice(0, 8)}

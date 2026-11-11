@@ -13,9 +13,10 @@ import { AIPlaybookExtractorPanel } from "@/components/playbooks/AIPlaybookExtra
 import { useAuthSession } from "@/services/authSession";
 import type { PlaybookRuleDTO } from "@/services/contracts";
 import { useI18n } from "@/i18n/useI18n";
+import { localizePlaybookRuleForDisplay } from "@/i18n/domainLocalization";
 
 export default function PlaybooksPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { token, isLoading: isAuthLoading } = useAuthSession();
   const [rules, setRules] = useState<PlaybookRuleDTO[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -292,7 +293,9 @@ export default function PlaybooksPage() {
             data-testid="playbook-rules-grid"
             className="grid grid-cols-1 gap-6 md:grid-cols-2"
           >
-            {rules.map((rule) => (
+            {rules.map((rule) => {
+              const displayRule = localizePlaybookRuleForDisplay(rule, locale);
+              return (
               <div
                 key={rule.id}
                 data-testid={`playbook-rule-card-${rule.id}`}
@@ -302,7 +305,7 @@ export default function PlaybooksPage() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="micro-badge border-indigo-200/90 bg-indigo-50/90 text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
                       <ShieldCheck className="h-3.5 w-3.5" />
-                      <span>{rule.category}</span>
+                      <span>{displayRule.category}</span>
                     </span>
                     <button
                       type="button"
@@ -321,7 +324,7 @@ export default function PlaybooksPage() {
                       {t.playbooks.standardPosHeading}
                     </span>
                     <p className="font-serif text-[14.5px] leading-[1.65] text-slate-800 dark:text-slate-200">
-                      {rule.standard_position}
+                      {displayRule.standard_position}
                     </p>
                   </div>
 
@@ -331,7 +334,7 @@ export default function PlaybooksPage() {
                       {t.playbooks.fallbackPosHeading}
                     </span>
                     <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                      {rule.fallback_position}
+                      {displayRule.fallback_position}
                     </p>
                   </div>
 
@@ -341,7 +344,7 @@ export default function PlaybooksPage() {
                       {t.playbooks.triggersHeading}
                     </span>
                     <p className="font-mono text-[11px] leading-relaxed text-rose-800 dark:text-rose-200">
-                      {rule.unacceptable_triggers}
+                      {displayRule.unacceptable_triggers}
                     </p>
                   </div>
                 </div>
@@ -351,7 +354,8 @@ export default function PlaybooksPage() {
                   <span>{t.playbooks.vectorIndexed}</span>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>

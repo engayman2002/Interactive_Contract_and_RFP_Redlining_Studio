@@ -22,6 +22,16 @@ import type {
 } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useI18n } from "@/i18n/useI18n";
+import {
+  localizeClauseForDisplay,
+  localizeCriticNotesText,
+  localizePushbackSeverityBadge,
+  localizePushbackSimulationForDisplay,
+  localizeRedlineSuggestionForDisplay,
+  localizeRiskLabel,
+  localizeSuggestionStatus,
+  STUDIO_DRAWER_UI_COPY,
+} from "@/i18n/domainLocalization";
 
 export interface RedlineCardProps {
   clause: ClauseDTO;
@@ -125,7 +135,16 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
     onLocalApplyPreview,
     onLocalRejectPreview,
   }) => {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
+    const drawerCopy = STUDIO_DRAWER_UI_COPY[locale];
+    const localizedClause = useMemo(
+      () => localizeClauseForDisplay(clause, locale, suggestion),
+      [clause, locale, suggestion]
+    );
+    const localizedSuggestion = useMemo(
+      () => localizeRedlineSuggestionForDisplay(suggestion, locale),
+      [suggestion, locale]
+    );
     const isSelected = useWorkspaceStore(
       (state) => state.activeClauseId === clause.id
     );
@@ -144,6 +163,13 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
     );
     const pushbackSim = useWorkspaceStore(
       (state) => state.pushbackSimulations[suggestion.id]
+    );
+    const localizedPushbackSim = useMemo(
+      () =>
+        pushbackSim
+          ? localizePushbackSimulationForDisplay(pushbackSim, locale)
+          : undefined,
+      [pushbackSim, locale]
     );
     const simulateSuggestionPushback = useWorkspaceStore(
       (state) => state.simulateSuggestionPushback
@@ -192,8 +218,8 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
     const obligationPreservedPassed =
       suggestion.obligation_preservation_passed ?? true;
     const criticNotes =
-      suggestion.critic_notes ??
-      "Verified by Critic Agent against Playbook policy and hallucination guard.";
+      localizedSuggestion.critic_notes ??
+      localizeCriticNotesText(suggestion.critic_notes, locale);
     const verificationCfg = VERIFICATION_BADGE_CONFIG[verificationStatus];
     const verificationLabel =
       verificationStatus === "VERIFIED"
@@ -215,7 +241,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
         setVerifyError(
           err instanceof Error
             ? err.message
-            : "Critic verification check failed."
+            : drawerCopy.verifyErrorFallback
         );
       } finally {
         setIsVerifyingCritic(false);
@@ -242,7 +268,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
         setPushbackError(
           err instanceof Error
             ? err.message
-            : "Failed to simulate counterparty pushback."
+            : drawerCopy.pushbackErrorFallback
         );
       } finally {
         setIsSimulatingPushback(false);
@@ -263,7 +289,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
         setPushbackError(
           err instanceof Error
             ? err.message
-            : "Failed to simulate counterparty pushback."
+            : drawerCopy.pushbackErrorFallback
         );
       } finally {
         setIsSimulatingPushback(false);
@@ -286,7 +312,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
     const handleApplyCompromise = async (e: React.MouseEvent) => {
       e.stopPropagation();
       await applyPushbackCompromise(suggestion.id);
-      setCompromiseAppliedMsg("Round-2 compromise applied to proposed wording.");
+      setCompromiseAppliedMsg(drawerCopy.compromiseAppliedToast);
       setTimeout(() => setCompromiseAppliedMsg(null), 3500);
     };
 
@@ -295,8 +321,8 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
     }, [suggestion.proposed_text]);
 
     const { rationale, talkingPoint } = useMemo(
-      () => splitRationaleAndTalkingPoint(suggestion.rationale),
-      [suggestion.rationale]
+      () => splitRationaleAndTalkingPoint(localizedSuggestion.rationale),
+      [localizedSuggestion.rationale]
     );
 
     const handleRefineSubmit = async (
@@ -316,12 +342,12 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
         setCopilotSuccessMsg(
           res.talkingPoint
             ? `Refined: "${res.talkingPoint}"`
-            : "Clause refined successfully!"
+            : drawerCopy.copilotSuccessFallback
         );
         setTimeout(() => setCopilotSuccessMsg(null), 4000);
       } catch (err) {
         setRefineError(
-          err instanceof Error ? err.message : "Failed to refine clause."
+          err instanceof Error ? err.message : drawerCopy.copilotErrorFallback
         );
       } finally {
         setIsRefining(false);
@@ -382,7 +408,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
               {t.redlineCard.clausePrefix} #{clause.clause_index + 1}
             </span>
             <h4 className="truncate text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-              {clause.heading ??
+              {localizedClause.heading ??
                 `${t.redlineCard.sectionPrefix} ${clause.clause_index + 1}`}
             </h4>
           </div>
@@ -415,7 +441,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 }`}
                 aria-hidden="true"
               />
-              {suggestion.risk}
+              {localizeRiskLabel(suggestion.risk, locale)}
             </span>
           </div>
         </div>
@@ -510,7 +536,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 data-testid={`proposed-text-${suggestion.id}`}
                 className="font-serif text-[14px] leading-[1.6] text-slate-800 dark:text-emerald-100"
               >
-                {suggestion.proposed_text}
+                {localizedSuggestion.proposed_text}
               </p>
             )}
           </div>
@@ -525,7 +551,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 data-testid={`suggestion-status-${clause.id}`}
                 className="font-mono text-slate-800 dark:text-slate-200"
               >
-                {suggestion.status}
+                {localizeSuggestionStatus(suggestion.status, locale)}
               </strong>
             </span>
           </div>
@@ -770,11 +796,11 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 <span className="text-xs font-semibold text-indigo-950 dark:text-indigo-200">
-                  Inline AI Clause Copilot
+                  {drawerCopy.copilotTitle}
                 </span>
               </div>
               <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                Steer wording with custom prompt
+                {drawerCopy.copilotSubtitle}
               </span>
             </div>
 
@@ -784,49 +810,39 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 type="button"
                 data-testid={`copilot-chip-mutual-${suggestion.id}`}
                 onClick={() =>
-                  setCopilotInstruction(
-                    "Make this obligation strictly mutual and exclude indirect damages."
-                  )
+                  setCopilotInstruction(drawerCopy.chipMutualPrompt)
                 }
                 className="rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
               >
-                Make Strictly Mutual
+                {drawerCopy.chipMutualLabel}
               </button>
               <button
                 type="button"
                 data-testid={`copilot-chip-cap-${suggestion.id}`}
-                onClick={() =>
-                  setCopilotInstruction(
-                    "Cap aggregate liability at $100,000 instead of 12 months of fees."
-                  )
-                }
+                onClick={() => setCopilotInstruction(drawerCopy.chipCapPrompt)}
                 className="rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
               >
-                Cap Liability at $100,000
+                {drawerCopy.chipCapLabel}
               </button>
               <button
                 type="button"
                 data-testid={`copilot-chip-cure-${suggestion.id}`}
                 onClick={() =>
-                  setCopilotInstruction(
-                    "Add a 30-day written notice and cure period before any termination."
-                  )
+                  setCopilotInstruction(drawerCopy.chipCurePrompt)
                 }
                 className="rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
               >
-                Add 30-Day Cure Period
+                {drawerCopy.chipCureLabel}
               </button>
               <button
                 type="button"
                 data-testid={`copilot-chip-soften-${suggestion.id}`}
                 onClick={() =>
-                  setCopilotInstruction(
-                    "Soften the legal tone for a strategic partner while keeping core IP protection."
-                  )
+                  setCopilotInstruction(drawerCopy.chipSoftenPrompt)
                 }
                 className="rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
               >
-                Soften Tone for Partner
+                {drawerCopy.chipSoftenLabel}
               </button>
             </div>
 
@@ -838,7 +854,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 rows={2}
                 value={copilotInstruction}
                 onChange={(e) => setCopilotInstruction(e.target.value)}
-                placeholder="e.g., Cap liability at $100,000 and add a 30-day notice and cure period..."
+                placeholder={drawerCopy.copilotPlaceholder}
                 className="w-full rounded-lg border border-indigo-200/80 bg-white p-2.5 text-xs leading-relaxed text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-indigo-500/30 dark:bg-slate-950 dark:text-indigo-100"
               />
 
@@ -859,7 +875,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                   onClick={() => setActiveToolDrawer(null)}
                   className="rounded-lg border border-slate-200/90 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 >
-                  Close
+                  {drawerCopy.copilotClose}
                 </button>
                 <button
                   type="submit"
@@ -870,12 +886,12 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                   {isRefining ? (
                     <>
                       <Loader2 className="h-3 w-3 animate-spin" />
-                      <span>Refining...</span>
+                      <span>{drawerCopy.copilotRefining}</span>
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-3 w-3" />
-                      <span>Refine with AI</span>
+                      <span>{drawerCopy.copilotRefineBtn}</span>
                     </>
                   )}
                 </button>
@@ -896,42 +912,49 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 <Target className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                 <div>
                   <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                    Counterparty Pushback Simulator &amp; Round-2 Strategy
+                    {drawerCopy.pushbackTitle}
                   </span>
-                  {pushbackSim && (
+                  {localizedPushbackSim && (
                     <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                      Simulated Persona: {pushbackSim.counterparty_persona}
+                      {drawerCopy.simulatedPersonaPrefix}{" "}
+                      {localizedPushbackSim.counterparty_persona}
                     </p>
                   )}
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5">
-                {pushbackSim && (
+                {localizedPushbackSim && (
                   <>
                     <span
                       data-testid={`pushback-probability-badge-${suggestion.id}`}
                       className="rounded-full border border-slate-200 bg-white px-2.5 py-0.5 font-mono text-[10px] font-semibold text-slate-800 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                     >
-                      Acceptance Likelihood: {pushbackSim.acceptance_probability}%
+                      {drawerCopy.acceptanceLikelihoodPrefix}{" "}
+                      {localizedPushbackSim.acceptance_probability}%
                     </span>
                     <span
                       data-testid={`pushback-severity-badge-${suggestion.id}`}
                       className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                        PUSHBACK_SEVERITY_STYLES[pushbackSim.pushback_severity]
+                        PUSHBACK_SEVERITY_STYLES[
+                          localizedPushbackSim.pushback_severity
+                        ]
                       }`}
                     >
-                      {pushbackSim.pushback_severity} PUSHBACK
+                      {localizePushbackSeverityBadge(
+                        localizedPushbackSim.pushback_severity,
+                        locale
+                      )}
                     </span>
                   </>
                 )}
               </div>
             </div>
 
-            {isSimulatingPushback && !pushbackSim ? (
+            {isSimulatingPushback && !localizedPushbackSim ? (
               <div className="flex items-center gap-2 py-4 text-xs text-slate-600 dark:text-slate-300">
                 <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
-                <span>Simulating opposing counsel negotiation response...</span>
+                <span>{drawerCopy.simulatingSpinner}</span>
               </div>
             ) : null}
 
@@ -941,18 +964,18 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
               </p>
             )}
 
-            {pushbackSim && (
+            {localizedPushbackSim && (
               <div className="space-y-3">
                 {/* Expected Counterparty Objection */}
                 <div className="rounded-lg border border-rose-200/80 bg-rose-50/50 p-3 dark:border-rose-500/20 dark:bg-rose-950/20">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-800 dark:text-rose-300">
-                    Expected Counterparty Objection
+                    {drawerCopy.expectedObjectionLabel}
                   </div>
                   <p
                     data-testid={`pushback-objection-text-${suggestion.id}`}
                     className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-rose-100"
                   >
-                    {pushbackSim.expected_objection}
+                    {localizedPushbackSim.expected_objection}
                   </p>
                 </div>
 
@@ -960,7 +983,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 <div className="rounded-lg border border-indigo-200/80 bg-indigo-50/50 p-3 dark:border-indigo-500/25 dark:bg-indigo-950/20">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-800 dark:text-indigo-300">
-                      Round-2 Rebuttal Script
+                      {drawerCopy.round2RebuttalLabel}
                     </span>
                     <button
                       type="button"
@@ -968,7 +991,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                       onClick={(e) =>
                         void handleCopyRebuttal(
                           e,
-                          pushbackSim.rebuttal_talking_point
+                          localizedPushbackSim.rebuttal_talking_point
                         )
                       }
                       className="inline-flex items-center gap-1 rounded-md border border-slate-200/90 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
@@ -976,12 +999,12 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                       {copiedRebuttal ? (
                         <>
                           <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                          <span>Copied</span>
+                          <span>{drawerCopy.copiedBtn}</span>
                         </>
                       ) : (
                         <>
                           <Copy className="h-3 w-3" />
-                          <span>Copy Rebuttal</span>
+                          <span>{drawerCopy.copyRebuttalBtn}</span>
                         </>
                       )}
                     </button>
@@ -990,7 +1013,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                     data-testid={`pushback-rebuttal-text-${suggestion.id}`}
                     className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-indigo-100"
                   >
-                    {pushbackSim.rebuttal_talking_point}
+                    {localizedPushbackSim.rebuttal_talking_point}
                   </p>
                 </div>
 
@@ -998,7 +1021,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 <div className="rounded-lg border border-emerald-200/80 bg-emerald-50/40 p-3 dark:border-emerald-500/20 dark:bg-emerald-950/20">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                      Round-2 Fallback Compromise Wording
+                      {drawerCopy.fallbackCompromiseLabel}
                     </span>
                     <button
                       type="button"
@@ -1007,14 +1030,14 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                       className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500"
                     >
                       <Check className="h-3 w-3" />
-                      <span>Use Compromise Wording</span>
+                      <span>{drawerCopy.useCompromiseBtn}</span>
                     </button>
                   </div>
                   <p
                     data-testid={`pushback-compromise-text-${suggestion.id}`}
                     className="mt-1.5 text-xs leading-relaxed text-slate-800 dark:text-emerald-100"
                   >
-                    {pushbackSim.fallback_compromise_text}
+                    {localizedPushbackSim.fallback_compromise_text}
                   </p>
                   {compromiseAppliedMsg && (
                     <p className="mt-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
@@ -1031,14 +1054,14 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                     className="inline-flex items-center gap-1 rounded-md border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   >
                     <RefreshCw className="h-3 w-3" />
-                    <span>Re-Simulate</span>
+                    <span>{drawerCopy.reSimulateBtn}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setActiveToolDrawer(null)}
                     className="rounded-md border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   >
-                    Close
+                    {drawerCopy.copilotClose}
                   </button>
                 </div>
               </div>

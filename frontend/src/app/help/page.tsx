@@ -13,19 +13,50 @@ import {
 import { InteractiveTutorialWizard } from "@/components/help/InteractiveTutorialWizard";
 import { TopNavBar } from "@/components/navigation/TopNavBar";
 import {
-  EXPORT_MODE_COMPARISON,
-  HELP_FAQ_ITEMS,
-  HELP_GUIDE_MODULES,
-  type LearningTrackId,
-  PLAYBOOK_RULE_TEMPLATES,
-  type PlaybookRuleTemplate,
-  RISK_HEATMAP_LEGEND,
+  getLocalizedHelpContent,
   getModuleLearningTrack,
+  type LearningTrackId,
+  type PlaybookRuleTemplate,
 } from "@/services/helpContent";
 import { useI18n } from "@/i18n/useI18n";
 
+const INLINE_DIFF_DEMO_COPY = {
+  en: {
+    heading: 'Live Inline Word-Diff Preview Example (When Hovering "Apply Redline")',
+    clauseBadge: "Clause #1 · Limitation of Liability",
+    prefix: "Total aggregate liability shall not exceed ",
+    deleted: "five hundred dollars ($500)",
+    inserted1: "twelve (12) months of fees paid immediately preceding the claim",
+    middle: ", and neither party shall be liable for ",
+    inserted2: "indirect, special, or",
+    suffix: " consequential damages.",
+  },
+  es: {
+    heading: 'Ejemplo de Previsualización Palabra por Palabra (Al Pasar Sobre "Aplicar Cambio")',
+    clauseBadge: "Cláusula #1 · Limitación de Responsabilidad",
+    prefix: "La responsabilidad agregada total no excederá de ",
+    deleted: "quinientos dólares ($500)",
+    inserted1: "doce (12) meses de tarifas pagadas inmediatamente anteriores a la reclamación",
+    middle: ", y ninguna parte responderá por daños ",
+    inserted2: "indirectos, especiales o",
+    suffix: " consecuentes.",
+  },
+  fr: {
+    heading: 'Exemple d\'Aperçu Mot à Mot en Ligne (Au Survol de « Appliquer »)',
+    clauseBadge: "Clause #1 · Limitation de Responsabilité",
+    prefix: "La responsabilité cumulée totale n'excédera pas ",
+    deleted: "cinq cents dollars (500 $)",
+    inserted1: "douze (12) mois de redevances versées précédant immédiatement la réclamation",
+    middle: ", et aucune partie ne répondra des dommages ",
+    inserted2: "indirects, spéciaux ou",
+    suffix: " consécutifs.",
+  },
+} as const;
+
 export default function HelpCenterPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const helpContent = useMemo(() => getLocalizedHelpContent(locale), [locale]);
+  const diffDemo = INLINE_DIFF_DEMO_COPY[locale];
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTrack, setSelectedTrack] = useState<"ALL" | LearningTrackId>(
     "ALL"
@@ -41,12 +72,12 @@ export default function HelpCenterPage() {
 
   const trackModules = useMemo(() => {
     if (selectedTrack === "ALL") {
-      return HELP_GUIDE_MODULES;
+      return helpContent.modules;
     }
-    return HELP_GUIDE_MODULES.filter(
+    return helpContent.modules.filter(
       (mod) => getModuleLearningTrack(mod.id) === selectedTrack
     );
-  }, [selectedTrack]);
+  }, [helpContent.modules, selectedTrack]);
 
   const filteredModules = useMemo(() => {
     return trackModules.filter((mod) => {
@@ -71,9 +102,9 @@ export default function HelpCenterPage() {
 
   const filteredTemplates = useMemo(() => {
     if (!normalizedQuery) {
-      return PLAYBOOK_RULE_TEMPLATES;
+      return helpContent.templates;
     }
-    return PLAYBOOK_RULE_TEMPLATES.filter((tpl) => {
+    return helpContent.templates.filter((tpl) => {
       const haystack = [
         tpl.title,
         tpl.category,
@@ -86,19 +117,19 @@ export default function HelpCenterPage() {
         .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-  }, [normalizedQuery]);
+  }, [helpContent.templates, normalizedQuery]);
 
   const filteredFaqs = useMemo(() => {
     if (!normalizedQuery) {
-      return HELP_FAQ_ITEMS;
+      return helpContent.faqs;
     }
-    return HELP_FAQ_ITEMS.filter((faq) => {
+    return helpContent.faqs.filter((faq) => {
       const haystack = [faq.question, faq.answer, ...faq.keywords]
         .join(" ")
         .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-  }, [normalizedQuery]);
+  }, [helpContent.faqs, normalizedQuery]);
 
   const handleCopyTemplate = async (tpl: PlaybookRuleTemplate) => {
     const formatted = [
@@ -409,7 +440,7 @@ export default function HelpCenterPage() {
               </p>
 
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {RISK_HEATMAP_LEGEND.map((item) => (
+                {helpContent.heatmapLegend.map((item) => (
                   <div
                     key={item.level}
                     className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/70"
@@ -426,7 +457,7 @@ export default function HelpCenterPage() {
                       <span
                         className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${item.badgeClass}`}
                       >
-                        {item.level}
+                        {item.localizedLevel}
                       </span>
                     </div>
                     <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
@@ -449,27 +480,25 @@ export default function HelpCenterPage() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                    Live Inline Word-Diff Preview Example (When Hovering
-                    &ldquo;Apply Redline&rdquo;)
+                    {diffDemo.heading}
                   </span>
                   <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                    Clause #1 · Limitation of Liability
+                    {diffDemo.clauseBadge}
                   </span>
                 </div>
                 <p className="legal-document-prose mt-3 text-slate-800 dark:text-slate-200">
-                  Total aggregate liability shall not exceed{" "}
+                  {diffDemo.prefix}
                   <span className="rounded bg-rose-100/90 px-1.5 py-0.5 text-rose-800 line-through decoration-rose-500 dark:bg-rose-500/25 dark:text-rose-200 dark:decoration-rose-400">
-                    five hundred dollars ($500)
+                    {diffDemo.deleted}
                   </span>{" "}
                   <span className="rounded bg-emerald-100/90 px-1.5 py-0.5 font-medium text-emerald-900 underline decoration-emerald-500 dark:bg-emerald-500/25 dark:text-emerald-200 dark:decoration-emerald-400">
-                    twelve (12) months of fees paid immediately preceding the
-                    claim
+                    {diffDemo.inserted1}
                   </span>
-                  , and neither party shall be liable for{" "}
+                  {diffDemo.middle}
                   <span className="rounded bg-emerald-100/90 px-1.5 py-0.5 font-medium text-emerald-900 underline decoration-emerald-500 dark:bg-emerald-500/25 dark:text-emerald-200 dark:decoration-emerald-400">
-                    indirect, special, or
-                  </span>{" "}
-                  consequential damages.
+                    {diffDemo.inserted2}
+                  </span>
+                  {diffDemo.suffix}
                 </p>
               </div>
             </section>
@@ -595,7 +624,7 @@ export default function HelpCenterPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800/60">
-                    {EXPORT_MODE_COMPARISON.map((row) => (
+                    {helpContent.exportComparison.map((row) => (
                       <tr
                         key={row.feature}
                         className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30"

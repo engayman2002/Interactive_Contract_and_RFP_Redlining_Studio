@@ -2,6 +2,12 @@
 
 import React, { useCallback } from "react";
 import type { ClauseDTO, RedlineSuggestionDTO } from "@/services/contracts";
+import { useI18n } from "@/i18n/useI18n";
+import {
+  localizeHeadingText,
+  localizeRiskLabel,
+  STUDIO_DRAWER_UI_COPY,
+} from "@/i18n/domainLocalization";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import {
   ClauseRiskBadge,
@@ -54,6 +60,8 @@ const HeatmapPin = React.memo(
     suggestion?: RedlineSuggestionDTO;
     onSelect: (clauseId: string) => void;
   }) => {
+    const { t, locale } = useI18n();
+    const drawerCopy = STUDIO_DRAWER_UI_COPY[locale];
     const isSelected = useWorkspaceStore(
       (state) => state.activeClauseId === clause.id
     );
@@ -67,9 +75,11 @@ const HeatmapPin = React.memo(
         data-clause-id={clause.id}
         data-risk-level={riskBadge}
         data-heatmap-tone={styleInfo.tone}
-        title={`Clause #${clause.clause_index + 1}: ${
-          clause.heading ?? "Provision"
-        } — ${styleInfo.label}`}
+        title={`${t.redlineCard.clausePrefix} #${clause.clause_index + 1}: ${
+          clause.heading
+            ? localizeHeadingText(clause.heading, locale)
+            : drawerCopy.compliantFallbackHeading
+        } — ${locale === "en" ? styleInfo.label : localizeRiskLabel(riskBadge, locale)}`}
         onClick={() => onSelect(clause.id)}
         className={`group relative flex h-7 w-full items-center justify-center rounded-md transition-all ${
           isSelected
@@ -93,6 +103,8 @@ export const RiskHeatmapGutter: React.FC<RiskHeatmapGutterProps> = ({
   clauses,
   redlinesByClauseId,
 }) => {
+  const { locale } = useI18n();
+  const drawerCopy = STUDIO_DRAWER_UI_COPY[locale];
   const selectClause = useWorkspaceStore((state) => state.selectClause);
 
   const handleSelect = useCallback(
@@ -109,7 +121,7 @@ export const RiskHeatmapGutter: React.FC<RiskHeatmapGutterProps> = ({
       className="flex w-11 shrink-0 flex-col items-center gap-2 border-r border-slate-200/80 bg-white/80 py-5 backdrop-blur-md dark:border-slate-800/80 dark:bg-[#070B14]/85"
     >
       <span className="mb-1 font-mono text-[9px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-        Map
+        {drawerCopy.gutterMapLabel}
       </span>
       <div className="flex w-full flex-col items-center gap-1.5 px-1.5">
         {clauses.map((clause) => (

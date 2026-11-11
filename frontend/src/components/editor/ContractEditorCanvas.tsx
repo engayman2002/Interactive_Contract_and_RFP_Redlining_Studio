@@ -6,6 +6,13 @@ import StarterKit from "@tiptap/starter-kit";
 import { InlineDiffPreview } from "@/components/diff/InlineDiffPreview";
 import type { ClauseDTO, RedlineSuggestionDTO } from "@/services/contracts";
 import { useI18n } from "@/i18n/useI18n";
+import {
+  localizeClauseForDisplay,
+  localizeDemoDocumentTitle,
+  localizeNegotiationStance,
+  localizeRedlineSuggestionForDisplay,
+  localizeRiskLabel,
+} from "@/i18n/domainLocalization";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import {
   buildTipTapDocumentFromClauses,
@@ -69,7 +76,12 @@ const EditorClauseItem = React.memo(
         state.hoveredSuggestionId !== null &&
         suggestion?.id === state.hoveredSuggestionId
     );
+    const { locale } = useI18n();
     const riskBadge = resolveClauseRiskBadge(suggestion);
+    const localizedClause = localizeClauseForDisplay(clause, locale, suggestion);
+    const localizedSuggestion = suggestion
+      ? localizeRedlineSuggestionForDisplay(suggestion, locale)
+      : undefined;
 
     return (
       <div
@@ -107,9 +119,9 @@ const EditorClauseItem = React.memo(
               </span>
               <span>#{clause.clause_index + 1}</span>
             </span>
-            {clause.heading ? (
+            {localizedClause.heading ? (
               <h3 className="text-[14.5px] font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                {clause.heading}
+                {localizedClause.heading}
               </h3>
             ) : null}
           </div>
@@ -121,7 +133,7 @@ const EditorClauseItem = React.memo(
                 className={`micro-badge-dot ${RISK_DOT_STYLE_MAP[riskBadge]}`}
                 aria-hidden="true"
               />
-              {riskBadge}
+              {localizeRiskLabel(riskBadge, locale)}
             </span>
             <span className="rounded-md border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-slate-500 dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-400">
               v{clause.version}
@@ -129,15 +141,15 @@ const EditorClauseItem = React.memo(
           </div>
         </div>
 
-        {isHoverDiffActive && suggestion ? (
+        {isHoverDiffActive && localizedSuggestion ? (
           <InlineDiffPreview
             clauseId={clause.id}
-            originalText={clause.current_text}
-            proposedText={suggestion.proposed_text}
+            originalText={localizedClause.current_text}
+            proposedText={localizedSuggestion.proposed_text}
           />
         ) : (
           <p className="legal-document-prose text-slate-800 dark:text-slate-200">
-            {clause.current_text}
+            {localizedClause.current_text}
           </p>
         )}
       </div>
@@ -152,7 +164,7 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
   redlines,
   documentTitle = "Master Commercial Agreement — Review Copy",
 }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const selectClause = useWorkspaceStore((state) => state.selectClause);
   const negotiationStance = useWorkspaceStore(
     (state) => state.negotiationStance
@@ -240,7 +252,7 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
             </div>
 
             <h2 className="mt-2 font-serif text-xl font-medium tracking-tight text-slate-900 dark:text-white sm:text-2xl">
-              {documentTitle}
+              {localizeDemoDocumentTitle(documentTitle, locale)}
             </h2>
 
             {/* Compact Single-Row Executive Instrument Summary Strip */}
@@ -258,7 +270,7 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
                 <span className="font-mono">
                   {t.editor.posturePrefix}{" "}
                   <strong className="font-semibold uppercase text-indigo-700 dark:text-indigo-300">
-                    {negotiationStance}
+                    {localizeNegotiationStance(negotiationStance, locale)}
                   </strong>
                 </span>
                 <span

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { MessageSquare } from "lucide-react";
 import type { ClauseCommentDTO, ClauseDTO } from "@/services/contracts";
 import { useI18n } from "@/i18n/useI18n";
+import { localizeHeadingText } from "@/i18n/domainLocalization";
 
 export interface ClauseCommentThreadProps {
   clause: ClauseDTO;
@@ -15,7 +16,7 @@ export interface ClauseCommentThreadProps {
 export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
   React.memo(
     ({ clause, comments, onAddComment, defaultExpanded = false }) => {
-      const { t } = useI18n();
+      const { t, locale } = useI18n();
       const [isExpanded, setIsExpanded] = useState<boolean>(defaultExpanded);
       const [draftBody, setDraftBody] = useState<string>("");
 
@@ -53,7 +54,7 @@ export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
               </h3>
               {clause.heading ? (
                 <span className="max-w-[160px] truncate text-[11px] text-slate-500 dark:text-slate-400">
-                  · {clause.heading}
+                  · {localizeHeadingText(clause.heading, locale)}
                 </span>
               ) : null}
             </div>

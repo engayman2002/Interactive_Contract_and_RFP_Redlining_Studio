@@ -14,9 +14,14 @@ import {
 import { useAuthSession } from "@/services/authSession";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useI18n } from "@/i18n/useI18n";
+import {
+  localizeOperationName,
+  STUDIO_DRAWER_UI_COPY,
+} from "@/i18n/domainLocalization";
 
 export const AITelemetryPanel: React.FC = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const drawerCopy = STUDIO_DRAWER_UI_COPY[locale];
   const { session, token } = useAuthSession();
   const isViewer = session?.userRole === "VIEWER";
 
@@ -55,7 +60,7 @@ export const AITelemetryPanel: React.FC = () => {
       setErrorMsg(
         err instanceof Error
           ? err.message
-          : "Failed to purge Semantic Clause Audit Cache."
+          : drawerCopy.telemetryPurgeError
       );
     } finally {
       setIsPurging(false);
@@ -109,7 +114,7 @@ export const AITelemetryPanel: React.FC = () => {
               disabled={isPurging || isViewer}
               title={
                 isViewer
-                  ? "Viewer role cannot purge AI Semantic Cache"
+                  ? drawerCopy.telemetryViewerTitle
                   : undefined
               }
               className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-600 dark:hover:bg-rose-600"
@@ -255,7 +260,7 @@ export const AITelemetryPanel: React.FC = () => {
                 className="rounded-lg border border-slate-100 bg-slate-50/70 p-2 text-[11px] dark:border-slate-800 dark:bg-slate-950/60"
               >
                 <div className="truncate font-mono text-[10px] font-semibold text-slate-700 dark:text-slate-300">
-                  {op.operation}
+                  {localizeOperationName(op.operation, locale)}
                 </div>
                 <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
                   <span>
@@ -302,7 +307,7 @@ export const AITelemetryPanel: React.FC = () => {
                     </span>
                   )}
                   <span className="font-mono text-[10px] font-semibold text-slate-800 dark:text-slate-200">
-                    {evt.operation}
+                    {localizeOperationName(evt.operation, locale)}
                   </span>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400">
                     {evt.provider}/{evt.model}
@@ -312,11 +317,12 @@ export const AITelemetryPanel: React.FC = () => {
                 <div className="flex items-center gap-3 font-mono text-[10px] text-slate-600 dark:text-slate-300">
                   {evt.cache_hit ? (
                     <span className="text-emerald-700 dark:text-emerald-400">
-                      +{evt.tokens_saved} saved
+                      +{evt.tokens_saved} {drawerCopy.telemetryTokensSavedUnit}
                     </span>
                   ) : (
                     <span>
-                      {evt.prompt_tokens + evt.completion_tokens} tok
+                      {evt.prompt_tokens + evt.completion_tokens}{" "}
+                      {drawerCopy.telemetryTokUnit}
                     </span>
                   )}
                   <span>{evt.latency_ms.toFixed(2)} ms</span>

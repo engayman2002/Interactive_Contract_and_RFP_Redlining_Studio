@@ -3,11 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, GraduationCap, HelpCircle, X } from "lucide-react";
-import {
-  EXPORT_MODE_COMPARISON,
-  HELP_GUIDE_MODULES,
-  RISK_HEATMAP_LEGEND,
-} from "@/services/helpContent";
+import { getLocalizedHelpContent } from "@/services/helpContent";
+import { QUICK_HELP_BODY_COPY } from "@/i18n/quickHelpTranslations";
 import { useI18n } from "@/i18n/useI18n";
 
 export interface QuickHelpModalProps {
@@ -31,14 +28,16 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [activeTab, setActiveTab] = useState<QuickHelpTab>("workflow");
 
   if (!isOpen) {
     return null;
   }
 
-  const quickStartModule = HELP_GUIDE_MODULES[0];
+  const helpContent = getLocalizedHelpContent(locale);
+  const quickStartModule = helpContent.modules[0];
+  const bodyCopy = QUICK_HELP_BODY_COPY[locale];
 
   return (
     <div
@@ -242,61 +241,47 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
               <div className="rounded-xl border border-indigo-200/90 bg-indigo-50/50 p-4 dark:border-indigo-500/30 dark:bg-indigo-950/20">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">
-                    Inline Clause AI Copilot &amp; Custom Prompting
+                    {bodyCopy.copilot.heading}
                   </span>
                   <span className="rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-800 dark:border-indigo-500/40 dark:bg-indigo-900/50 dark:text-indigo-200">
-                    COPILOT
+                    {bodyCopy.copilot.badge}
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Steer AI redlining on any individual clause. Click the <strong className="text-indigo-700 dark:text-indigo-300">✨ AI Copilot</strong> button on any redline card to open the copilot drawer with one-click quick directive chips or type custom natural-language instructions.
+                  {bodyCopy.copilot.introPrefix}
+                  <strong className="text-indigo-700 dark:text-indigo-300">
+                    {bodyCopy.copilot.introStrong}
+                  </strong>
+                  {bodyCopy.copilot.introSuffix}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
-                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
-                    Make Strictly Mutual
-                  </h4>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Converts unilateral covenants into bilateral obligations (&ldquo;Each party shall...&rdquo;) and carves out indirect or consequential damages.
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
-                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
-                    Cap Liability at $100,000
-                  </h4>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Replaces fee-multiple formulas with an explicit, predictable dollar ceiling ($100,000) for aggregate commercial exposure.
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
-                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
-                    Add 30-Day Cure Period
-                  </h4>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Inserts standard written notice and a 30-day opportunity to cure prior to any termination for cause or service cancellation.
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
-                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
-                    Soften Tone for Partner
-                  </h4>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Softens contentious language while preserving core IP and confidentiality boundaries—ideal for strategic alliance negotiations.
-                  </p>
-                </div>
+                {bodyCopy.copilot.chips.map((chip) => (
+                  <div
+                    key={chip.title}
+                    className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70"
+                  >
+                    <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
+                      {chip.title}
+                    </h4>
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                      {chip.body}
+                    </p>
+                  </div>
+                ))}
               </div>
 
               <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/40 p-3.5 dark:border-emerald-500/25 dark:bg-slate-950">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                  Compliance Audit Trail Guarantee
+                  {bodyCopy.copilot.footerTitle}
                 </span>
                 <p className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Every refinement logs an immutable <code className="font-mono text-[11px]">SUGGESTION_REFINED</code> event with the exact prompt instruction, actor role, timestamp, and generated rationale.
+                  {bodyCopy.copilot.footerPrefix}
+                  <code className="font-mono text-[11px]">
+                    {bodyCopy.copilot.footerCode}
+                  </code>
+                  {bodyCopy.copilot.footerSuffix}
                 </p>
               </div>
             </div>
@@ -307,14 +292,18 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
               <div className="rounded-xl border border-indigo-200/90 bg-indigo-50/50 p-4 dark:border-indigo-500/30 dark:bg-indigo-950/20">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">
-                    Cross-Clause Integrity &amp; Contradiction Radar
+                    {bodyCopy.radar.heading}
                   </span>
                   <span className="rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-800 dark:border-indigo-500/40 dark:bg-indigo-900/50 dark:text-indigo-200">
-                    RADAR
+                    {bodyCopy.radar.badge}
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Evaluates the entire contract graph to catch multi-clause structural conflicts that single-clause redlines miss. Switch to the <strong className="text-indigo-700 dark:text-indigo-300">Cross-Clause Radar</strong> tab in the right-hand Inspector to trigger or view real-time diagnostics.
+                  {bodyCopy.radar.introPrefix}
+                  <strong className="text-indigo-700 dark:text-indigo-300">
+                    {bodyCopy.radar.introStrong}
+                  </strong>
+                  {bodyCopy.radar.introSuffix}
                 </p>
               </div>
 
@@ -323,11 +312,11 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-rose-500" />
                     <h4 className="text-xs font-semibold text-rose-900 dark:text-rose-200">
-                      Contradictions
+                      {bodyCopy.radar.categories[0].title}
                     </h4>
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Opposing obligations, monetary liability caps vs uncapped indemnities, or conflicting payment terms (Net 30 vs Net 15).
+                    {bodyCopy.radar.categories[0].body}
                   </p>
                 </div>
 
@@ -335,11 +324,11 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-amber-500" />
                     <h4 className="text-xs font-semibold text-amber-900 dark:text-amber-200">
-                      Broken References
+                      {bodyCopy.radar.categories[1].title}
                     </h4>
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Citations referencing sections, articles, or exhibits that do not exist anywhere in the agreement body.
+                    {bodyCopy.radar.categories[1].body}
                   </p>
                 </div>
 
@@ -347,21 +336,29 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-sky-500" />
                     <h4 className="text-xs font-semibold text-sky-900 dark:text-sky-200">
-                      Undefined Terms
+                      {bodyCopy.radar.categories[2].title}
                     </h4>
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Capitalized terms used in operative commitments without prior definitions in the preamble or Section 1.
+                    {bodyCopy.radar.categories[2].body}
                   </p>
                 </div>
               </div>
 
               <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">
-                  Dynamic Document Integrity Score (0-100%) &amp; Clause Navigation
+                  {bodyCopy.radar.footerTitle}
                 </span>
                 <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                  Starts at 100% and deducts weighted penalties for each unresolved issue. Click the interactive <span className="font-semibold text-indigo-600 dark:text-indigo-400">Source: Clause #X</span> and <span className="font-semibold text-rose-600 dark:text-rose-400">Conflicts with: Clause #Y</span> jump buttons to instantly highlight and scroll to either clause in the live editor.
+                  {bodyCopy.radar.footerBeforeSource}
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                    {bodyCopy.radar.footerSourceBtn}
+                  </span>
+                  {bodyCopy.radar.footerBetween}
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">
+                    {bodyCopy.radar.footerTargetBtn}
+                  </span>
+                  {bodyCopy.radar.footerAfterTarget}
                 </p>
               </div>
             </div>
@@ -372,50 +369,69 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
               <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/50 p-4 dark:border-emerald-500/30 dark:bg-emerald-950/20">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
-                    Critic-Refiner Multi-Agent Loop &amp; Hallucination Guard
+                    {bodyCopy.critic.heading}
                   </span>
                   <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-900/50 dark:text-emerald-200">
-                    AGENT 2 GUARD
+                    {bodyCopy.critic.badge}
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Every redline runs through a 2-agent pipeline: <strong className="text-slate-900 dark:text-white">Agent 1</strong> drafts the proposed revision and <strong className="text-emerald-800 dark:text-emerald-300">Agent 2 (Critic Verifier)</strong> enforces 3 safety gates and auto-repairs defects before display.
+                  {bodyCopy.critic.introPrefix}
+                  <strong className="text-slate-900 dark:text-white">
+                    {bodyCopy.critic.introStrong1}
+                  </strong>
+                  {bodyCopy.critic.introMiddle}
+                  <strong className="text-emerald-800 dark:text-emerald-300">
+                    {bodyCopy.critic.introStrong2}
+                  </strong>
+                  {bodyCopy.critic.introSuffix}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                 <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
                   <h4 className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                    ✓ Policy Grounded
+                    {bodyCopy.critic.gates[0].title}
                   </h4>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Ensures zero banned Playbook triggers leak into the proposed text and aligns wording with standard/fallback rules.
+                    {bodyCopy.critic.gates[0].body}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
                   <h4 className="text-xs font-semibold text-sky-700 dark:text-sky-300">
-                    ✓ Hallucination-Free
+                    {bodyCopy.critic.gates[1].title}
                   </h4>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Scrubs LLM placeholder tokens (<code className="font-mono">[TBD]</code>, <code className="font-mono">[INSERT]</code>) and ungrounded concessions.
+                    {bodyCopy.critic.gates[1].body}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
                   <h4 className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                    ✓ Numbering Preserved
+                    {bodyCopy.critic.gates[2].title}
                   </h4>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Restores clause numbering prefixes (e.g., <code className="font-mono">1.1</code>) if omitted so Word Track Changes stays aligned.
+                    {bodyCopy.critic.gates[2].body}
                   </p>
                 </div>
               </div>
 
               <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">
-                  Verification Badges &amp; On-Demand Re-Verification
+                  {bodyCopy.critic.footerTitle}
                 </span>
                 <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                  Badges classify outputs as <strong>🛡️ Verified</strong> (85–99%), <strong>✨ Auto-Refined</strong> (auto-repaired by Agent 2), or <strong>⚠️ Review Needed</strong> (&lt;75%). After custom edits or Copilot refinements, click <strong>Re-Verify with Critic</strong> to validate and log <code className="font-mono text-[11px]">SUGGESTION_VERIFIED</code>.
+                  <strong>{bodyCopy.critic.footerVerifiedStrong}</strong>
+                  {bodyCopy.critic.footerVerifiedText}
+                  <strong>{bodyCopy.critic.footerRefinedStrong}</strong>
+                  {bodyCopy.critic.footerRefinedText}
+                  <strong>{bodyCopy.critic.footerReviewStrong}</strong>
+                  {bodyCopy.critic.footerReviewText}
+                  <strong>{bodyCopy.critic.footerReverifyStrong}</strong>
+                  {bodyCopy.critic.footerReverifySuffix}
+                  <code className="font-mono text-[11px]">
+                    SUGGESTION_VERIFIED
+                  </code>
+                  .
                 </p>
               </div>
             </div>
@@ -426,43 +442,57 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
               <div className="rounded-xl border border-orange-200/90 bg-orange-50/50 p-4 dark:border-orange-500/30 dark:bg-orange-950/20">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-orange-900 dark:text-orange-200">
-                    Counterparty Pushback Simulator &amp; Round-2 Strategy
+                    {bodyCopy.pushback.heading}
                   </span>
                   <span className="rounded-full border border-orange-300 bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-800 dark:border-orange-500/40 dark:bg-orange-900/50 dark:text-orange-200">
-                    ADVERSARIAL PREP
+                    {bodyCopy.pushback.badge}
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Click <strong className="text-orange-800 dark:text-orange-300">🎯 Simulate Pushback</strong> on any redline card to simulate how opposing counsel will push back before circulating redlines externally.
+                  {bodyCopy.pushback.introPrefix}
+                  <strong className="text-orange-800 dark:text-orange-300">
+                    {bodyCopy.pushback.introStrong}
+                  </strong>
+                  {bodyCopy.pushback.introSuffix}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
                   <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
-                    Acceptance Probability &amp; Severity
+                    {bodyCopy.pushback.card1Title}
                   </h4>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Forecasts <strong>0–100% Acceptance Likelihood</strong> classified as <strong>LOW</strong> (&ge;75%), <strong>MODERATE</strong> (50–74%), <strong>HIGH</strong> (25–49%), or <strong>DEALBREAKER</strong> (&lt;25%).
+                    {bodyCopy.pushback.card1Prefix}
+                    <strong>{bodyCopy.pushback.card1Range}</strong>
+                    {bodyCopy.pushback.card1Suffix}
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
                   <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
-                    Objection &amp; Copy Rebuttal Script
+                    {bodyCopy.pushback.card2Title}
                   </h4>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Predicts opposing counsel&apos;s strongest objection and supplies a ready-to-copy <strong>Round-2 Rebuttal Script</strong> grounded in commercial parity.
+                    {bodyCopy.pushback.card2Prefix}
+                    <strong>{bodyCopy.pushback.card2Strong}</strong>
+                    {bodyCopy.pushback.card2Suffix}
                   </p>
                 </div>
               </div>
 
               <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/40 p-3.5 dark:border-emerald-500/25 dark:bg-slate-950">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                  One-Click Round-2 Pivot: Use Compromise Wording
+                  {bodyCopy.pushback.footerTitle}
                 </span>
                 <p className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Click <strong>Use Compromise Wording</strong> to load the section-numbered Round-2 middle-ground fallback directly into Proposed Playbook Wording for immediate diff preview and <code className="font-mono text-[11px]">PUSHBACK_SIMULATED</code> audit logging.
+                  {bodyCopy.pushback.footerPrefix}
+                  <strong>{bodyCopy.pushback.footerStrong}</strong>
+                  {bodyCopy.pushback.footerMiddle}
+                  <code className="font-mono text-[11px]">
+                    PUSHBACK_SIMULATED
+                  </code>
+                  {bodyCopy.pushback.footerSuffix}
                 </p>
               </div>
             </div>
@@ -473,42 +503,54 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
               <div className="rounded-xl border border-rose-200/90 bg-rose-50/50 p-4 dark:border-rose-500/30 dark:bg-rose-950/20">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-rose-800 dark:text-rose-300">
-                    Strict Posture (Zero Compromise)
+                    {bodyCopy.stance.strictTitle}
                   </span>
                   <span className="rounded-full border border-rose-300 bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-800 dark:border-rose-500/40 dark:bg-rose-900/50 dark:text-rose-200">
-                    STRICT
+                    {bodyCopy.stance.strictBadge}
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Strictly enforces your organization&apos;s standard position. Escalates borderline risks to Critical/High, prefixes rationales with <code className="text-[11px] font-mono">[Strict Protective Stance]</code>, and crafts firm, non-negotiable talking points. Best for high-liability infrastructure and core IP.
+                  {bodyCopy.stance.strictPrefix}
+                  <code className="text-[11px] font-mono">
+                    {bodyCopy.stance.strictCode}
+                  </code>
+                  {bodyCopy.stance.strictSuffix}
                 </p>
               </div>
 
               <div className="rounded-xl border border-indigo-200/90 bg-indigo-50/50 p-4 dark:border-indigo-500/30 dark:bg-indigo-950/20">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-indigo-800 dark:text-indigo-300">
-                    Balanced Posture (Reciprocal Bilateral — Default)
+                    {bodyCopy.stance.balancedTitle}
                   </span>
                   <span className="rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-800 dark:border-indigo-500/40 dark:bg-indigo-900/50 dark:text-indigo-200">
-                    BALANCED
+                    {bodyCopy.stance.balancedBadge}
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Converts one-sided clauses into fair, mutual (&ldquo;Each party...&rdquo;) terms while defending core corporate boundaries. Rationale is prefixed with <code className="text-[11px] font-mono">[Balanced Mutual Stance]</code>. Standard for 80% of routine commercial transactions.
+                  {bodyCopy.stance.balancedPrefix}
+                  <code className="text-[11px] font-mono">
+                    {bodyCopy.stance.balancedCode}
+                  </code>
+                  {bodyCopy.stance.balancedSuffix}
                 </p>
               </div>
 
               <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/50 p-4 dark:border-emerald-500/30 dark:bg-emerald-950/20">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                    Commercial Posture (Fast-Close Deal Velocity)
+                    {bodyCopy.stance.commercialTitle}
                   </span>
                   <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-900/50 dark:text-emerald-200">
-                    COMMERCIAL
+                    {bodyCopy.stance.commercialBadge}
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Prioritizes deal closing velocity. Automatically adopts pre-approved fallback positions from your Playbook (e.g., 2x fee cap instead of strict 12-month cap), marks acceptable fallback provisions compliant, prefixes rationales with <code className="text-[11px] font-mono">[Commercial Fast-Close Stance]</code>, and crafts deal-closing talking points.
+                  {bodyCopy.stance.commercialPrefix}
+                  <code className="text-[11px] font-mono">
+                    {bodyCopy.stance.commercialCode}
+                  </code>
+                  {bodyCopy.stance.commercialSuffix}
                 </p>
               </div>
             </div>
@@ -517,7 +559,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
           {activeTab === "heatmap" && (
             <div data-testid="quick-help-content-heatmap" className="space-y-3">
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                {RISK_HEATMAP_LEGEND.map((item) => (
+                {helpContent.heatmapLegend.map((item) => (
                   <div
                     key={item.level}
                     className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/70"
@@ -534,7 +576,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                       <span
                         className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${item.badgeClass}`}
                       >
-                        {item.level}
+                        {item.localizedLevel}
                       </span>
                     </div>
                     <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
@@ -546,22 +588,22 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
 
               <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/40 p-4 dark:border-emerald-500/25 dark:bg-slate-950">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                  Live Word-Level Diff Preview
+                  {bodyCopy.heatmap.diffTitle}
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Hover over{" "}
+                  {bodyCopy.heatmap.diffHoverPrefix}
                   <span className="font-semibold text-emerald-700 dark:text-emerald-300">
-                    Apply Redline
-                  </span>{" "}
-                  to preview{" "}
+                    {bodyCopy.heatmap.diffApplyLabel}
+                  </span>
+                  {bodyCopy.heatmap.diffToPreview}
                   <span className="rounded bg-rose-100 px-1 text-rose-800 line-through dark:bg-rose-500/25 dark:text-rose-200">
-                    deleted words
-                  </span>{" "}
-                  and{" "}
+                    {bodyCopy.heatmap.diffDeleted}
+                  </span>
+                  {bodyCopy.heatmap.diffAnd}
                   <span className="rounded bg-emerald-100 px-1 font-medium text-emerald-900 underline dark:bg-emerald-500/25 dark:text-emerald-200">
-                    inserted Playbook words
-                  </span>{" "}
-                  directly inside the contract sheet before committing.
+                    {bodyCopy.heatmap.diffInserted}
+                  </span>
+                  {bodyCopy.heatmap.diffSuffix}
                 </p>
               </div>
             </div>
@@ -569,7 +611,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
 
           {activeTab === "export" && (
             <div data-testid="quick-help-content-export" className="space-y-3">
-              {EXPORT_MODE_COMPARISON.map((row) => (
+              {helpContent.exportComparison.map((row) => (
                 <div
                   key={row.feature}
                   className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 text-xs dark:border-slate-800 dark:bg-slate-950/70"
@@ -580,7 +622,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                   <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <div>
                       <span className="font-semibold text-indigo-700 dark:text-indigo-300">
-                        Track Changes (.docx):{" "}
+                        {bodyCopy.exportTab.trackChangesPrefix}{" "}
                       </span>
                       <span className="text-slate-600 dark:text-slate-300">
                         {row.trackChanges}
@@ -588,7 +630,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                     </div>
                     <div>
                       <span className="font-semibold text-emerald-700 dark:text-emerald-300">
-                        Clean (.docx):{" "}
+                        {bodyCopy.exportTab.cleanCopyPrefix}{" "}
                       </span>
                       <span className="text-slate-600 dark:text-slate-300">
                         {row.cleanCopy}
@@ -605,39 +647,42 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
               <div className="rounded-xl border border-indigo-200/90 bg-indigo-50/60 p-4 dark:border-indigo-500/30 dark:bg-indigo-950/25">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-indigo-800 dark:text-indigo-300">
-                    Golden Contract to Playbook Rules (AI Feature #6)
+                    {bodyCopy.extractor.heading}
                   </span>
                   <span className="rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-800 dark:border-indigo-500/40 dark:bg-indigo-900/50 dark:text-indigo-200">
                     /playbooks
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Open{" "}
+                  {bodyCopy.extractor.introOpen}
                   <Link href="/playbooks" className="font-semibold underline">
-                    Playbooks Manager
-                  </Link>{" "}
-                  to paste signed Golden Contract clauses (or click{" "}
-                  <strong>Load Sample Golden MSA</strong>) or upload a{" "}
-                  <code className="font-mono text-[11px]">.docx</code>/
-                  <code className="font-mono text-[11px]">.pdf</code> template.
+                    {bodyCopy.extractor.linkLabel}
+                  </Link>
+                  {bodyCopy.extractor.introMiddle}
+                  <strong>{bodyCopy.extractor.introSample}</strong>
+                  {bodyCopy.extractor.introUpload}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-3.5 text-xs dark:border-emerald-500/20 dark:bg-emerald-950/20">
                   <div className="font-semibold text-emerald-800 dark:text-emerald-300">
-                    Auto-Save &amp; 1536-d Indexing (ADMIN)
+                    {bodyCopy.extractor.card1Title}
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Keep <strong>Auto-save &amp; generate vectors</strong> checked to immediately persist extracted Standard/Fallback positions and Triggers into your hybrid search Playbook.
+                    {bodyCopy.extractor.card1Prefix}
+                    <strong>{bodyCopy.extractor.card1Strong}</strong>
+                    {bodyCopy.extractor.card1Suffix}
                   </p>
                 </div>
                 <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-3.5 text-xs dark:border-amber-500/20 dark:bg-amber-950/20">
                   <div className="font-semibold text-amber-800 dark:text-amber-300">
-                    Safe Preview Mode (Legal / Tech Lead)
+                    {bodyCopy.extractor.card2Title}
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Uncheck auto-save to preview extracted candidates with confidence scores and source excerpts first, then selectively click <strong>Save Rule</strong>.
+                    {bodyCopy.extractor.card2Prefix}
+                    <strong>{bodyCopy.extractor.card2Strong}</strong>
+                    {bodyCopy.extractor.card2Suffix}
                   </p>
                 </div>
               </div>
@@ -649,32 +694,37 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
               <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/50 p-4 dark:border-emerald-500/30 dark:bg-emerald-950/25">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                    Semantic Clause Audit Cache &amp; FinOps Telemetry (Feature #7)
+                    {bodyCopy.telemetry.heading}
                   </span>
                   <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-900/50 dark:text-emerald-200">
-                    &lt;1ms Cache Hit
+                    {bodyCopy.telemetry.badge}
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                  Open the <strong>⚡ AI Telemetry</strong> tab in the right Inspector to monitor real-time cache hit rates, tokens saved, average latency, avoided USD spend, and per-operation metrics.
+                  {bodyCopy.telemetry.introOpen}
+                  <strong>{bodyCopy.telemetry.introStrong}</strong>
+                  {bodyCopy.telemetry.introSuffix}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 text-xs dark:border-slate-800 dark:bg-slate-950/70">
                   <div className="font-semibold text-slate-900 dark:text-white">
-                    Automatic Freshness Keying
+                    {bodyCopy.telemetry.card1Title}
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    SHA-256 keys include <code className="font-mono text-[10px]">org_id</code>, clause text, Negotiation Stance, Playbook rules, and active provider/model — changing any input automatically triggers a fresh inference.
+                    {bodyCopy.telemetry.card1Prefix}
+                    {bodyCopy.telemetry.card1Suffix}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 text-xs dark:border-slate-800 dark:bg-slate-950/70">
                   <div className="font-semibold text-slate-900 dark:text-white">
-                    Purge Semantic Cache
+                    {bodyCopy.telemetry.card2Title}
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                    Switching AI models clears cached entries automatically, or ADMIN / Legal / Tech Lead reviewers can click <strong>Purge Semantic Cache</strong> manually at any time.
+                    {bodyCopy.telemetry.card2Prefix}
+                    <strong>{bodyCopy.telemetry.card2Strong}</strong>
+                    {bodyCopy.telemetry.card2Suffix}
                   </p>
                 </div>
               </div>
@@ -689,7 +739,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
             data-testid="quick-help-full-guide-link"
             className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
           >
-            <span>Open Full Help Center &amp; Playbook Templates</span>
+            <span>{bodyCopy.footer.openFullGuide}</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
           <button
@@ -697,7 +747,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
             onClick={onClose}
             className="rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
-            Got It
+            {bodyCopy.footer.gotIt}
           </button>
         </div>
       </div>

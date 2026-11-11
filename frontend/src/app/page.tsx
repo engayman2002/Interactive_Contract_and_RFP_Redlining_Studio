@@ -17,12 +17,16 @@ import {
 import { TopNavBar } from "@/components/navigation/TopNavBar";
 import { ContractUploadDropzone } from "@/components/workspace/ContractUploadDropzone";
 import { useI18n } from "@/i18n/useI18n";
+import {
+  localizeDemoDocumentTitle,
+  localizeDocumentStatus,
+} from "@/i18n/domainLocalization";
 import { listDocuments, listPlaybookRules } from "@/services/apiClient";
 import { useAuthSession } from "@/services/authSession";
 import type { DocumentListItemDTO } from "@/services/contracts";
 
 export default function DashboardPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { token, isLoading: isAuthLoading } = useAuthSession();
   const [documents, setDocuments] = useState<DocumentListItemDTO[]>([]);
   const [playbookCount, setPlaybookCount] = useState<number>(5);
@@ -363,7 +367,7 @@ export default function DashboardPage() {
                               <FileText className="h-4 w-4" />
                             </span>
                             <span className="font-semibold text-slate-900 dark:text-slate-100">
-                              {doc.title}
+                              {localizeDemoDocumentTitle(doc.title, locale)}
                             </span>
                           </div>
                         </td>
@@ -382,7 +386,7 @@ export default function DashboardPage() {
                               }`}
                               aria-hidden="true"
                             />
-                            {doc.status}
+                            {localizeDocumentStatus(doc.status, locale)}
                           </span>
                         </td>
                         <td className="px-4 py-4 font-mono tabular-nums text-slate-600 dark:text-slate-300">

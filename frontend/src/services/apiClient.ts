@@ -2346,6 +2346,13 @@ const OFFLINE_EXTRACTOR_PROFILES: OfflinePlaybookTemplate[] = [
       "gdpr",
       "ccpa",
       "breach",
+      "rgpd",
+      "privacidad",
+      "confidentialité",
+      "données client",
+      "datos del cliente",
+      "modelos fundacionales",
+      "modèles d'ia",
     ],
     standard_position:
       "Vendor shall never use Customer Data to train public AI/foundation models, shall adhere to GDPR/CCPA DPA safeguards, and shall provide 24-hour confirmed incident notice.",
@@ -2366,6 +2373,10 @@ const OFFLINE_EXTRACTOR_PROFILES: OfflinePlaybookTemplate[] = [
       "aggregate",
       "fees paid",
       "cap",
+      "responsabilidad",
+      "responsabilité",
+      "daños indirectos",
+      "dommages indirects",
     ],
     standard_position:
       "Mutual aggregate liability cap equal to 12 months of fees (or approved floor), excluding indirect/consequential damages except for IP indemnity and confidentiality breaches.",
@@ -2380,7 +2391,17 @@ const OFFLINE_EXTRACTOR_PROFILES: OfflinePlaybookTemplate[] = [
   },
   {
     category: "SLA & Uptime",
-    keywords: ["uptime", "availability", "service level", "sla", "credit"],
+    keywords: [
+      "uptime",
+      "availability",
+      "service level",
+      "sla",
+      "credit",
+      "disponibilidad",
+      "disponibilité",
+      "nivel de servicio",
+      "niveau de service",
+    ],
     standard_position:
       "Minimum 99.9% monthly production availability backed by tiered SLA service credits and chronic failure termination rights.",
     fallback_position:
@@ -2394,7 +2415,16 @@ const OFFLINE_EXTRACTOR_PROFILES: OfflinePlaybookTemplate[] = [
   },
   {
     category: "Payment Terms",
-    keywords: ["net ", "invoice", "payment", "fees", "billing"],
+    keywords: [
+      "net ",
+      "invoice",
+      "payment",
+      "fees",
+      "billing",
+      "factura",
+      "paiement",
+      "facturation",
+    ],
     standard_position:
       "Undisputed invoices payable Net 30 to Net 45 from receipt with good-faith dispute holdback free of late fees or suspension.",
     fallback_position:
@@ -2408,7 +2438,16 @@ const OFFLINE_EXTRACTOR_PROFILES: OfflinePlaybookTemplate[] = [
   },
   {
     category: "Termination",
-    keywords: ["terminat", "cure period", "notice", "auto-renew"],
+    keywords: [
+      "terminat",
+      "cure period",
+      "notice",
+      "auto-renew",
+      "rescisión",
+      "résiliation",
+      "subsanación",
+      "remédiation",
+    ],
     standard_position:
       "Termination for material breach requires 30 days prior written notice and cure period, with pro-rata refund of prepaid unused fees.",
     fallback_position:
@@ -2422,7 +2461,14 @@ const OFFLINE_EXTRACTOR_PROFILES: OfflinePlaybookTemplate[] = [
   },
   {
     category: "IP Ownership",
-    keywords: ["intellectual property", "background ip", "ownership", "work made for hire"],
+    keywords: [
+      "intellectual property",
+      "background ip",
+      "ownership",
+      "work made for hire",
+      "propiedad intelectual",
+      "propriété intellectuelle",
+    ],
     standard_position:
       "Customer retains sole ownership of pre-existing Background IP, Customer Data, and paid bespoke deliverables.",
     fallback_position:

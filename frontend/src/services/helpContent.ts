@@ -2,6 +2,8 @@
  * Structured In-App Help Center, Playbook Best-Practices Templates,
  * Risk Heatmap Legend, Export Mode Comparisons, and FAQ Knowledge Base.
  */
+import { HELP_CATALOG_TRANSLATIONS, type LocalizedHeatmapLegendItem } from "@/i18n/helpTranslations";
+import { TRANSLATIONS, type SupportedLocale } from "@/i18n/translations";
 
 export interface HelpModuleStep {
   title: string;
@@ -1293,4 +1295,46 @@ export const HELP_FAQ_ITEMS: HelpFaqItem[] = [
     ],
   },
 ];
+
+export interface LocalizedHelpBundle {
+  tracks: LearningTrackDefinition[];
+  tutorialStages: TutorialStageItem[];
+  modules: HelpGuideModule[];
+  heatmapLegend: LocalizedHeatmapLegendItem[];
+  templates: PlaybookRuleTemplate[];
+  exportComparison: ExportComparisonItem[];
+  faqs: HelpFaqItem[];
+}
+
+export function getLocalizedHelpContent(
+  locale: SupportedLocale = "en"
+): LocalizedHelpBundle {
+  if (locale === "en") {
+    return {
+      tracks: HELP_LEARNING_TRACKS,
+      tutorialStages: INTERACTIVE_TUTORIAL_STAGES,
+      modules: HELP_GUIDE_MODULES,
+      heatmapLegend: RISK_HEATMAP_LEGEND.map((item) => ({
+        ...item,
+        localizedLevel: item.level,
+      })),
+      templates: PLAYBOOK_RULE_TEMPLATES,
+      exportComparison: EXPORT_MODE_COMPARISON,
+      faqs: HELP_FAQ_ITEMS,
+    };
+  }
+
+  const catalog = HELP_CATALOG_TRANSLATIONS[locale];
+  const helpStrings = TRANSLATIONS[locale].help;
+  return {
+    tracks: helpStrings.tracks as LearningTrackDefinition[],
+    tutorialStages: helpStrings.tutorialStages as TutorialStageItem[],
+    modules: catalog.modules,
+    heatmapLegend: catalog.heatmapLegend,
+    templates: catalog.templates,
+    exportComparison: catalog.exportComparison,
+    faqs: catalog.faqs,
+  };
+}
+
 

@@ -18,6 +18,12 @@ import type {
 } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useI18n } from "@/i18n/useI18n";
+import {
+  localizeCrossClauseFindingForDisplay,
+  localizeCrossClauseIssueType,
+  localizeRiskLabel,
+  STUDIO_DRAWER_UI_COPY,
+} from "@/i18n/domainLocalization";
 
 export interface CrossClauseRadarPanelProps {
   documentId?: string;
@@ -59,7 +65,8 @@ const ISSUE_TYPE_CONFIG: Record<
 export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
   documentId,
 }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const drawerCopy = STUDIO_DRAWER_UI_COPY[locale];
   const report = useWorkspaceStore((state) => state.crossClauseReport);
   const isRunning = useWorkspaceStore(
     (state) => state.isRunningCrossClauseCheck
@@ -249,11 +256,10 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-800">
           <FileSearch className="mb-2 h-8 w-8 text-slate-400" />
           <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-            Document Graph Not Yet Scanned
+            {drawerCopy.emptyScanTitle}
           </h4>
           <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-            Click &ldquo;Scan Cross-Clause Integrity&rdquo; above to inspect the contract for
-            conflicting obligations, broken section numbers, and unanchored capitalized terms.
+            {drawerCopy.emptyScanDesc}
           </p>
         </div>
       )}
@@ -273,6 +279,10 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
       {filteredFindings.map((finding) => {
         const typeCfg = ISSUE_TYPE_CONFIG[finding.issue_type];
         const IconComponent = typeCfg.icon;
+        const localizedFinding = localizeCrossClauseFindingForDisplay(
+          finding,
+          locale
+        );
 
         return (
           <article
@@ -286,23 +296,25 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wider ${typeCfg.color}`}
               >
                 <IconComponent className="h-3 w-3" />
-                <span>{typeCfg.label}</span>
+                <span>
+                  {localizeCrossClauseIssueType(finding.issue_type, locale)}
+                </span>
               </span>
               <span
                 className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wider ${
                   SEVERITY_BADGES[finding.severity]
                 }`}
               >
-                {finding.severity}
+                {localizeRiskLabel(finding.severity, locale)}
               </span>
             </div>
 
             {/* Title & Description */}
             <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
-              {finding.title}
+              {localizedFinding.title}
             </h4>
             <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-              {finding.description}
+              {localizedFinding.description}
             </p>
 
             {/* Interactive Clause Jump Buttons */}
@@ -342,7 +354,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 {t.radar.recommendedResolution}
               </div>
               <p className="mt-0.5 text-[11px] leading-relaxed text-slate-700 dark:text-emerald-100">
-                {finding.recommended_fix}
+                {localizedFinding.recommended_fix}
               </p>
             </div>
           </article>

@@ -1,8 +1,12 @@
 import React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import HelpCenterPage from "@/app/help/page";
 import DashboardPage from "@/app/page";
+import PlaybooksPage from "@/app/playbooks/page";
 import { InteractiveTutorialWizard } from "@/components/help/InteractiveTutorialWizard";
+import { AISettingsModal } from "@/components/workspace/AISettingsModal";
+import { QuickHelpModal } from "@/components/workspace/QuickHelpModal";
 import { RedliningStudioWorkspace } from "@/components/workspace/RedliningStudioWorkspace";
 import { LOCALE_STORAGE_KEY, useLocaleStore } from "@/i18n/useI18n";
 import {
@@ -221,5 +225,176 @@ describe("Multilingual Internationalization (EN / ES / FR)", () => {
     expect(
       screen.getByTestId(`apply-redline-btn-${firstClause.id}`).textContent
     ).toBe("Apply Redline");
+  });
+
+  it("deeply localizes Help Center (/help) guide modules, heatmap legend, templates, and all FAQs into ES and FR", async () => {
+    await act(async () => {
+      render(<HelpCenterPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("lang-option-es"));
+    });
+
+    expect(
+      screen.getByText(
+        "Inicio Rápido: El Flujo de Revisión Contractual en 4 Pasos"
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "¿Cuál es la diferencia entre 'Backend Activo' y 'Espacio Demo / Modo Offline'?"
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText("CRÍTICO")).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("lang-option-fr"));
+    });
+
+    expect(
+      screen.getByText(
+        "Simulateur de Contre-Arguments Adverses & Riposte Tour 2"
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Quelle est la différence entre 'Backend Actif' et le 'Mode Démo Hors-Ligne' ?"
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText("CRITIQUE")).toBeInTheDocument();
+  });
+
+  it("deeply localizes all QuickHelpModal tab bodies and AISettingsModal into ES and FR", async () => {
+    await act(async () => {
+      useLocaleStore.getState().setLocale("es");
+      render(<QuickHelpModal isOpen={true} onClose={() => {}} />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("quick-help-tab-copilot"));
+    });
+    expect(
+      screen.getByTestId("quick-help-content-copilot").textContent
+    ).toContain("Copiloto IA por Cláusula e Instrucciones Personalizadas");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("quick-help-tab-radar"));
+    });
+    expect(
+      screen.getByTestId("quick-help-content-radar").textContent
+    ).toContain("Radar de Integridad y Contradicciones Cruzadas");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("quick-help-tab-critic"));
+    });
+    expect(
+      screen.getByTestId("quick-help-content-critic").textContent
+    ).toContain("Bucle Crítico-Refinador Multiagente y Guardia Anti-Alucinaciones");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("quick-help-tab-telemetry"));
+    });
+    expect(
+      screen.getByTestId("quick-help-content-telemetry").textContent
+    ).toContain("Caché Semántica y Telemetría FinOps IA (Función #7)");
+
+    await act(async () => {
+      useLocaleStore.getState().setLocale("fr");
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("quick-help-tab-pushback"));
+    });
+    expect(
+      screen.getByTestId("quick-help-content-pushback").textContent
+    ).toContain("Simulateur de Réponse Adverse & Stratégie Tour 2");
+
+    let unmountSettings: () => void = () => {};
+    await act(async () => {
+      useLocaleStore.getState().setLocale("es");
+      const rendered = render(<AISettingsModal isOpen={true} onClose={() => {}} />);
+      unmountSettings = rendered.unmount;
+    });
+    expect(screen.getByTestId("ai-settings-modal").textContent).toContain(
+      "Bóveda de Configuración Cifrada"
+    );
+    expect(screen.getByTestId("ai-settings-modal").textContent).toContain(
+      "1. Motor de Razonamiento LLM"
+    );
+
+    unmountSettings();
+
+    await act(async () => {
+      useLocaleStore.getState().setLocale("fr");
+      render(<AISettingsModal isOpen={true} onClose={() => {}} />);
+    });
+    expect(screen.getByTestId("ai-settings-modal").textContent).toContain(
+      "Coffre de Configuration Chiffré"
+    );
+    expect(screen.getByTestId("ai-settings-modal").textContent).toContain(
+      "1. Moteur de Raisonnement LLM"
+    );
+  });
+
+  it("reactively localizes loaded DEMO_WORKSPACE_DATA clauses, redlines, CrossClauseRadarPanel findings, and Playbooks rules", async () => {
+    let unmountStudio: () => void = () => {};
+    await act(async () => {
+      const rendered = render(
+        <RedliningStudioWorkspace initialWorkspace={DEMO_WORKSPACE_DATA} />
+      );
+      unmountStudio = rendered.unmount;
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("lang-option-es"));
+    });
+
+    const firstClauseId = DEMO_WORKSPACE_DATA.clauses[0].id;
+    const firstCard = screen.getByTestId(`redline-card-${firstClauseId}`);
+    expect(firstCard.textContent).toContain("1. Limitación de Responsabilidad");
+    expect(firstCard.textContent).toContain("CRÍTICO");
+    expect(screen.getByTestId(`suggestion-status-${firstClauseId}`).textContent).toBe(
+      "PENDIENTE"
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inspector-tab-cross-clause"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("run-cross-clause-check-btn"));
+    });
+    expect(
+      screen.getByTestId("cross-clause-radar-panel").textContent
+    ).toContain("Contradicción");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("lang-option-fr"));
+    });
+    expect(
+      screen.getByTestId("cross-clause-radar-panel").textContent
+    ).toContain("Contradiction");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inspector-tab-redlines"));
+    });
+    expect(screen.getByTestId(`redline-card-${firstClauseId}`).textContent).toContain(
+      "1. Limitation de Responsabilité"
+    );
+    expect(screen.getByTestId(`redline-card-${firstClauseId}`).textContent).toContain(
+      "CRITIQUE"
+    );
+    expect(screen.getByTestId(`suggestion-status-${firstClauseId}`).textContent).toBe(
+      "EN ATTENTE"
+    );
+
+    unmountStudio();
+
+    await act(async () => {
+      render(<PlaybooksPage />);
+    });
+    expect(screen.getByTestId("playbook-rules-grid").textContent).toContain(
+      "Limitation de Responsabilité"
+    );
   });
 });
