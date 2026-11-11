@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { API_BASE_URL, DEMO_DOCUMENT_ID } from "@/services/apiClient";
+import { getActiveLocale } from "@/i18n/useI18n";
 import { AuditProgressEventDTOSchema, NegotiationStance } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 
@@ -81,7 +82,7 @@ export function useDocumentStream({
       return;
     }
 
-    const url = `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}/stream?stance=${encodeURIComponent(stance)}`;
+    const url = `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}/stream?stance=${encodeURIComponent(stance)}&language=${encodeURIComponent(getActiveLocale())}`;
     const es = new EventSource(url);
     eventSourceRef.current = es;
 

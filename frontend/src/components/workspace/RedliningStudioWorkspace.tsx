@@ -17,7 +17,9 @@ import {
 } from "lucide-react";
 import { ContractEditorCanvas } from "@/components/editor/ContractEditorCanvas";
 import { AiInspectorPanel } from "@/components/inspector/AiInspectorPanel";
+import { LanguageSwitcher } from "@/components/navigation/LanguageSwitcher";
 import { ThemeToggle } from "@/components/navigation/ThemeToggle";
+import { useI18n } from "@/i18n/useI18n";
 import { useDocumentStream } from "@/hooks/useDocumentStream";
 import {
   DEMO_WORKSPACE_DATA,
@@ -41,6 +43,7 @@ export interface RedliningStudioWorkspaceProps {
 export const RedliningStudioWorkspace: React.FC<
   RedliningStudioWorkspaceProps
 > = ({ documentId, initialWorkspace = DEMO_WORKSPACE_DATA, token }) => {
+  const { t } = useI18n();
   const clauses = useWorkspaceStore((state) => state.clauses);
   const redlines = useWorkspaceStore((state) => state.redlines);
   const comments = useWorkspaceStore((state) => state.comments);
@@ -235,7 +238,7 @@ export const RedliningStudioWorkspace: React.FC<
             className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
           >
             <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden="true" />
-            <span>Dashboard</span>
+            <span>{t.studio.backToDashboard}</span>
           </Link>
 
           <div
@@ -283,9 +286,9 @@ export const RedliningStudioWorkspace: React.FC<
                   ? "bg-rose-600 text-white shadow-sm"
                   : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
               }`}
-              title="Strict / Protective Posture: Zero-compromise standard playbook enforcement"
+              title={t.studio.stanceStrictTitle}
             >
-              Strict
+              {t.studio.stanceStrict}
             </button>
             <button
               type="button"
@@ -296,9 +299,9 @@ export const RedliningStudioWorkspace: React.FC<
                   ? "bg-indigo-600 text-white shadow-sm"
                   : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
               }`}
-              title="Balanced / Mutual Posture (Default): Bilateral terms protecting core boundaries"
+              title={t.studio.stanceBalancedTitle}
             >
-              Balanced
+              {t.studio.stanceBalanced}
             </button>
             <button
               type="button"
@@ -309,9 +312,9 @@ export const RedliningStudioWorkspace: React.FC<
                   ? "bg-emerald-600 text-white shadow-sm"
                   : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
               }`}
-              title="Commercial / Fast-Close Posture: Pre-approved fallback positions for rapid deal velocity"
+              title={t.studio.stanceCommercialTitle}
             >
-              Commercial
+              {t.studio.stanceCommercial}
             </button>
           </div>
 
@@ -324,7 +327,9 @@ export const RedliningStudioWorkspace: React.FC<
           >
             <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>
-              {streamProgress.isStreaming ? "Auditing..." : "Analyze Contract"}
+              {streamProgress.isStreaming
+                ? t.studio.auditing
+                : t.studio.analyzeContract}
             </span>
           </button>
 
@@ -350,7 +355,7 @@ export const RedliningStudioWorkspace: React.FC<
             className="inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
           >
             <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>Upload</span>
+            <span>{t.studio.upload}</span>
           </button>
 
           <button
@@ -362,7 +367,7 @@ export const RedliningStudioWorkspace: React.FC<
             className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-300/80 bg-emerald-50/75 px-2.5 text-xs font-semibold text-emerald-800 shadow-sm transition-colors hover:border-emerald-400 hover:bg-emerald-100/75 disabled:opacity-50 dark:border-emerald-500/35 dark:bg-emerald-950/35 dark:text-emerald-300 dark:hover:bg-emerald-900/45"
           >
             <Download className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <span>Track Changes (.docx)</span>
+            <span>{t.studio.trackChangesBtn}</span>
           </button>
 
           <button
@@ -374,14 +379,14 @@ export const RedliningStudioWorkspace: React.FC<
             className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/80"
           >
             <FileCheck2 className="h-3.5 w-3.5 shrink-0 text-slate-500 dark:text-slate-400" />
-            <span>Clean (.docx)</span>
+            <span>{t.studio.cleanBtn}</span>
           </button>
 
           <ThemeToggle />
         </div>
       </header>
 
-      {/* Tier 2: Secondary Sub-Header (Always Accessible Workflow Progress + Playbooks / Tutorial / Help) */}
+      {/* Tier 2: Secondary Sub-Header (Always Accessible Workflow Progress + Language Switcher + Playbooks / Tutorial / Help) */}
       <div
         data-testid="studio-quick-guide-banner"
         className="flex h-9 shrink-0 items-center justify-between gap-3 border-b border-slate-200/70 bg-slate-50/95 px-4 text-[11px] text-slate-600 dark:border-slate-800/70 dark:bg-[#080C16] dark:text-slate-400"
@@ -392,25 +397,25 @@ export const RedliningStudioWorkspace: React.FC<
             {[
               {
                 num: 1,
-                label: "1. Upload / Select Contract",
+                label: t.studio.step1,
                 done: hasClauses,
                 active: !hasClauses,
               },
               {
                 num: 2,
-                label: "2. Stance & Audit",
+                label: t.studio.step2,
                 done: isAnalyzedStage,
                 active: hasClauses && !isAnalyzedStage,
               },
               {
                 num: 3,
-                label: "3. Review Clauses",
+                label: t.studio.step3,
                 done: hasResolvedRedlines,
                 active: isAnalyzedStage && !hasResolvedRedlines,
               },
               {
                 num: 4,
-                label: "4. Export Word (.docx)",
+                label: t.studio.step4,
                 done: hasExportedStage,
                 active: hasResolvedRedlines && !hasExportedStage,
               },
@@ -454,7 +459,7 @@ export const RedliningStudioWorkspace: React.FC<
               data-testid="dismiss-quick-guide-btn"
               onClick={() => setIsGuideDismissed(true)}
               className="ml-1 shrink-0 whitespace-nowrap rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white"
-              title="Hide workflow steps"
+              title={t.studio.hideGuideTitle}
             >
               <X className="h-3 w-3" />
             </button>
@@ -466,13 +471,15 @@ export const RedliningStudioWorkspace: React.FC<
               onClick={() => setIsGuideDismissed(false)}
               className="whitespace-nowrap font-mono text-[10px] font-medium text-slate-500 transition-colors hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300"
             >
-              Show 4-step workflow guide
+              {t.studio.showGuide}
             </button>
           </div>
         )}
 
-        {/* Right side: Workspace Navigation & Help Links (always visible, never clipped) */}
+        {/* Right side: Workspace Navigation, Language Switcher & Help Links */}
         <div className="flex shrink-0 items-center gap-1.5">
+          <LanguageSwitcher compact />
+
           <Link
             href="/playbooks"
             data-testid="header-playbook-link"
@@ -482,7 +489,7 @@ export const RedliningStudioWorkspace: React.FC<
               className="h-3 w-3 shrink-0 text-indigo-600 dark:text-indigo-400"
               aria-hidden="true"
             />
-            <span>Playbooks</span>
+            <span>{t.studio.playbooks}</span>
           </Link>
 
           <Link
@@ -494,7 +501,7 @@ export const RedliningStudioWorkspace: React.FC<
               className="h-3 w-3 shrink-0 text-indigo-600 dark:text-indigo-400"
               aria-hidden="true"
             />
-            <span>🎓 Tutorial</span>
+            <span>{t.studio.tutorial}</span>
           </Link>
 
           <button
@@ -504,7 +511,7 @@ export const RedliningStudioWorkspace: React.FC<
             className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-slate-200/90 bg-white px-2.5 text-[11px] font-medium text-slate-700 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50/50 hover:text-indigo-700 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500/40 dark:hover:bg-slate-800"
           >
             <HelpCircle className="h-3 w-3 shrink-0 text-indigo-600 dark:text-indigo-400" />
-            <span>? Quick Help</span>
+            <span>{t.studio.help}</span>
           </button>
         </div>
       </div>
@@ -518,7 +525,7 @@ export const RedliningStudioWorkspace: React.FC<
         >
           <div className="flex items-center gap-2">
             <span className="rounded bg-rose-600 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase text-white">
-              409 Conflict
+              {t.studio.conflictBadge}
             </span>
             <span className="font-medium">{conflictError}</span>
           </div>
@@ -528,7 +535,7 @@ export const RedliningStudioWorkspace: React.FC<
             onClick={dismissConflictError}
             className="rounded-lg border border-rose-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-900/60 dark:text-rose-100 dark:hover:bg-rose-800/70"
           >
-            Dismiss
+            {t.studio.dismiss}
           </button>
         </div>
       ) : null}
@@ -600,7 +607,7 @@ export const RedliningStudioWorkspace: React.FC<
             aria-hidden="true"
           />
           <span className="whitespace-nowrap">
-            Exported: {lastExportedFilename}
+            {t.studio.exportedPrefix} {lastExportedFilename}
           </span>
         </div>
       ) : null}

@@ -15,6 +15,7 @@ import type {
   RedlineSuggestionDTO,
 } from "@/services/contracts";
 import { RiskFilterMode, useWorkspaceStore } from "@/store/workspaceStore";
+import { useI18n } from "@/i18n/useI18n";
 import { AITelemetryPanel } from "./AITelemetryPanel";
 import { AuditTrailPanel } from "./AuditTrailPanel";
 import { ClauseCommentThread } from "./ClauseCommentThread";
@@ -38,12 +39,12 @@ export interface AiInspectorPanelProps {
   onTriggerAudit?: () => void;
 }
 
-const FILTER_TABS: { mode: RiskFilterMode; label: string }[] = [
-  { mode: "ALL", label: "All" },
-  { mode: "CRITICAL", label: "Critical" },
-  { mode: "HIGH", label: "High" },
-  { mode: "MEDIUM", label: "Medium" },
-  { mode: "COMPLIANT", label: "Compliant" },
+const FILTER_MODES: RiskFilterMode[] = [
+  "ALL",
+  "CRITICAL",
+  "HIGH",
+  "MEDIUM",
+  "COMPLIANT",
 ];
 
 const EMPTY_COMMENTS: ClauseCommentDTO[] = [];
@@ -58,6 +59,7 @@ const CompliantClauseCard = React.memo(
     onSelect: (clauseId: string) => void;
     onRef: (el: HTMLDivElement | null) => void;
   }) => {
+    const { t } = useI18n();
     const isSelected = useWorkspaceStore(
       (state) => state.activeClauseId === clause.id
     );
@@ -83,7 +85,7 @@ const CompliantClauseCard = React.memo(
               aria-hidden="true"
             />
             <span className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">
-              Clause #{clause.clause_index + 1}:{" "}
+              {t.redlineCard.clausePrefix} #{clause.clause_index + 1}:{" "}
               {clause.heading ?? "Provision"}
             </span>
           </div>
@@ -93,7 +95,7 @@ const CompliantClauseCard = React.memo(
           </span>
         </div>
         <p className="mt-1.5 pl-6 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-          Satisfies company Playbook standards with zero unacceptable triggers.
+          {t.inspector.compliantSatisfies}
         </p>
       </div>
     );
@@ -147,6 +149,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
   onLocalRejectPreview,
   onTriggerAudit,
 }) => {
+  const { t } = useI18n();
   const riskFilter = useWorkspaceStore((state) => state.riskFilter);
   const setRiskFilter = useWorkspaceStore((state) => state.setRiskFilter);
   const streamProgress = useWorkspaceStore((state) => state.streamProgress);
@@ -265,6 +268,15 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
     COMPLIANT: compliantClauses.length,
   };
 
+  const filterLabels: Record<RiskFilterMode, string> = {
+    ALL: t.inspector.filterAll,
+    CRITICAL: t.inspector.filterCritical,
+    HIGH: t.inspector.filterHigh,
+    MEDIUM: t.inspector.filterMedium,
+    LOW: "Low",
+    COMPLIANT: t.inspector.filterCompliant,
+  };
+
   return (
     <aside
       aria-label="AI Redline Inspector Panel"
@@ -276,7 +288,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
         {/* Row 1: Compact Header Title + Stance Pill */}
         <div className="flex items-center justify-between gap-2">
           <h2 className="whitespace-nowrap text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-            AI Redline Inspector
+            {t.inspector.title}
           </h2>
           <span
             data-testid="inspector-active-stance-badge"
@@ -298,7 +310,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
               }`}
               aria-hidden="true"
             />
-            Stance: {negotiationStance}
+            {t.inspector.stancePrefix} {negotiationStance}
           </span>
         </div>
 
@@ -315,7 +327,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
             }`}
           >
             <Sparkles className="h-3 w-3 shrink-0 text-indigo-500" />
-            <span className="truncate">Redlines</span>
+            <span className="truncate">{t.inspector.tabRedlines}</span>
             <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] leading-none tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
               {redlines.length}
             </span>
@@ -331,7 +343,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
             }`}
           >
             <ShieldAlert className="h-3 w-3 shrink-0 text-amber-500" />
-            <span className="truncate">Radar</span>
+            <span className="truncate">{t.inspector.tabRadar}</span>
           </button>
           <button
             type="button"
@@ -344,7 +356,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
             }`}
           >
             <Activity className="h-3 w-3 shrink-0 text-emerald-500" />
-            <span className="truncate">⚡ AI Telemetry</span>
+            <span className="truncate">{t.inspector.tabTelemetry}</span>
           </button>
           <button
             type="button"
@@ -357,7 +369,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
             }`}
           >
             <ClipboardList className="h-3 w-3 shrink-0 text-sky-500" />
-            <span className="truncate">Audit Trail</span>
+            <span className="truncate">{t.inspector.tabAudit}</span>
             <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] leading-none tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
               {resolvedAuditLogs.length}
             </span>
@@ -373,11 +385,11 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
             <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-slate-700 dark:text-slate-300">
               <span>
                 {streamProgress.isStreaming
-                  ? "Streaming LangChain Clause Evaluation..."
-                  : "AI Playbook Audit Complete"}
+                  ? t.inspector.streamingLabel
+                  : t.inspector.auditCompleteLabel}
               </span>
               <span className="font-mono tabular-nums text-slate-500 dark:text-slate-400">
-                {streamProgress.completed}/{streamProgress.total} clauses
+                {streamProgress.completed}/{streamProgress.total} {t.inspector.clausesUnit}
               </span>
             </div>
             <div className="h-1 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800">
@@ -401,25 +413,25 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
         {/* Row 2: Calm Neatly Aligned Risk Filter Pills with Embedded Counts */}
         {activeViewTab === "redlines" ? (
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {FILTER_TABS.map((tab) => {
-              const active = riskFilter === tab.mode;
-              const count = filterCounts[tab.mode];
+            {FILTER_MODES.map((mode) => {
+              const active = riskFilter === mode;
+              const count = filterCounts[mode];
               const dotClass =
-                tab.mode === "CRITICAL"
+                mode === "CRITICAL"
                   ? "bg-rose-500"
-                  : tab.mode === "HIGH"
+                  : mode === "HIGH"
                   ? "bg-amber-500"
-                  : tab.mode === "MEDIUM"
+                  : mode === "MEDIUM"
                   ? "bg-sky-500"
-                  : tab.mode === "COMPLIANT"
+                  : mode === "COMPLIANT"
                   ? "bg-emerald-500"
                   : "";
               return (
                 <button
-                  key={tab.mode}
+                  key={mode}
                   type="button"
-                  data-testid={`filter-tab-${tab.mode}`}
-                  onClick={() => setRiskFilter(tab.mode)}
+                  data-testid={`filter-tab-${mode}`}
+                  onClick={() => setRiskFilter(mode)}
                   className={`inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[11px] font-medium transition-all ${
                     active
                       ? "border-indigo-500/80 bg-indigo-50 font-semibold text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-950/60 dark:text-indigo-200"
@@ -433,7 +445,7 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
                     />
                   ) : null}
                   <span>
-                    {tab.label} ({count})
+                    {filterLabels[mode]} ({count})
                   </span>
                 </button>
               );
@@ -459,12 +471,11 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
               </div>
               <h3 className="text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                Ready for Playbook Benchmarking
+                {t.inspector.emptyTitle}
               </h3>
               <p className="mt-2 max-w-sm text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                This agreement contains {clauses.length} segmented provisions.
-                Run AI analysis to evaluate liability caps, indemnification,
-                SLAs, and data governance against your Company Playbook.
+                {t.inspector.emptyDescPrefix} {clauses.length}{" "}
+                {t.inspector.emptyDescSuffix}
               </p>
               <button
                 type="button"
@@ -476,8 +487,8 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
                 <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>
                   {streamProgress.isStreaming
-                    ? "Auditing Clauses..."
-                    : "Analyze Contract with AI"}
+                    ? t.inspector.emptyAuditingBtn
+                    : t.inspector.emptyAnalyzeBtn}
                 </span>
               </button>
             </div>

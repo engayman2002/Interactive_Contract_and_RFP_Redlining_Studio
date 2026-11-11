@@ -4,6 +4,7 @@ import React, { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, FileText, UploadCloud } from "lucide-react";
 import { uploadDocument } from "@/services/apiClient";
+import { useI18n } from "@/i18n/useI18n";
 import { useAuthSession } from "@/services/authSession";
 
 export interface ContractUploadDropzoneProps {
@@ -27,6 +28,7 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
   compact = false,
 }) => {
   const router = useRouter();
+  const { t } = useI18n();
   const { token } = useAuthSession();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -207,18 +209,15 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
               PDF
             </span>
             <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-              Up to 25 MB · Encrypted Ingestion
+              {t.upload.maxSizeNote}
             </span>
           </div>
 
           <h3 className="mt-3 text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-            {selectedFile
-              ? selectedFile.name
-              : "Drop a third-party contract or RFP to begin review"}
+            {selectedFile ? selectedFile.name : t.upload.dropTitle}
           </h3>
           <p className="mt-1.5 max-w-md text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-            Automatically segments hierarchical clauses, preserves legal section
-            numbering, and prepares provisions for Playbook benchmarking.
+            {t.upload.dropSubtitle}
           </p>
 
           <button
@@ -227,7 +226,7 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className="mt-5 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-white"
           >
-            Browse Local Files
+            {t.upload.browseFilesBtn}
           </button>
 
           {/* Optional Document Title & Submit Button */}
@@ -238,7 +237,7 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
                   htmlFor="doc-title-input"
                   className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
                 >
-                  Agreement Title
+                  {t.upload.docTitleLabel}
                 </label>
                 <input
                   id="doc-title-input"
@@ -246,14 +245,14 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
                   data-testid="upload-document-title-input"
                   value={customTitle}
                   onChange={(e) => setCustomTitle(e.target.value)}
-                  placeholder="e.g. Master Cloud Services Agreement 2026"
+                  placeholder={t.upload.docTitlePlaceholder}
                   className="mt-1.5 w-full rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-900 placeholder-slate-400 transition-colors focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
                 />
               </div>
 
               <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800/80">
                 <span className="font-mono text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
-                  {(selectedFile.size / 1024).toFixed(1)} KB · Ready to parse
+                  {(selectedFile.size / 1024).toFixed(1)} KB · {t.upload.readyToParse}
                 </span>
                 <button
                   type="button"
@@ -261,7 +260,7 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
                   onClick={handleStartUpload}
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600"
                 >
-                  <span>Upload & Open Studio</span>
+                  <span>{t.upload.uploadSubmitBtn}</span>
                   <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </div>
@@ -288,19 +287,15 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
           </div>
 
           <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            {stage === "uploading" && "1. Uploading contract to secure workspace..."}
-            {stage === "parsing" &&
-              "2. Parsing & segmenting hierarchical clauses..."}
-            {stage === "opening" && "3. Opening Split-Screen Redlining Studio..."}
+            {stage === "uploading" && t.upload.stageUploading}
+            {stage === "parsing" && t.upload.stageParsing}
+            {stage === "opening" && t.upload.stageOpening}
           </h4>
 
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-            {stage === "uploading" &&
-              "Validating OpenXML / PDF integrity and streaming bytes"}
-            {stage === "parsing" &&
-              "Preserving legal numbering (1.1, Article IV) and sub-clauses"}
-            {stage === "opening" &&
-              "Binding clauses to Playbook vector index"}
+            {stage === "uploading" && t.upload.stageUploadingSub}
+            {stage === "parsing" && t.upload.stageParsingSub}
+            {stage === "opening" && t.upload.stageOpeningSub}
           </p>
 
           {/* Smooth Progress Bar */}
@@ -313,7 +308,7 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
 
           <div className="mt-3 flex items-center gap-4 text-[11px] font-medium text-slate-500 dark:text-slate-400">
             <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Upload
+              <CheckCircle2 className="h-3.5 w-3.5" /> {t.upload.stepUpload}
             </span>
             <span
               className={
@@ -322,7 +317,7 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
                   : ""
               }
             >
-              Clause Segmentation
+              {t.upload.stepSegmentation}
             </span>
             <span
               className={
@@ -331,7 +326,7 @@ export const ContractUploadDropzone: React.FC<ContractUploadDropzoneProps> = ({
                   : ""
               }
             >
-              Studio Launch
+              {t.upload.stepLaunch}
             </span>
           </div>
         </div>

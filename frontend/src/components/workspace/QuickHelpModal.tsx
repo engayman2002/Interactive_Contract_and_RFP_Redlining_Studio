@@ -8,6 +8,7 @@ import {
   HELP_GUIDE_MODULES,
   RISK_HEATMAP_LEGEND,
 } from "@/services/helpContent";
+import { useI18n } from "@/i18n/useI18n";
 
 export interface QuickHelpModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<QuickHelpTab>("workflow");
 
   if (!isOpen) {
@@ -55,10 +57,10 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
             </span>
             <div>
               <h2 className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-                Studio Quick-Reference Guide
+                {t.quickHelp.title}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Contextual cheat-sheet for AI redlining tools, FinOps cache, and Word exports
+                {t.quickHelp.subtitle}
               </p>
             </div>
           </div>
@@ -78,9 +80,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-violet-50/60 to-white px-6 py-2.5 dark:border-indigo-500/20 dark:from-indigo-950/50 dark:via-slate-900 dark:to-slate-900">
           <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
             <GraduationCap className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-            <span>
-              Want a hands-on 5-stage walkthrough of all AI capabilities?
-            </span>
+            <span>{t.quickHelp.tutorialCtaPrompt}</span>
           </div>
           <Link
             href="/help"
@@ -88,7 +88,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
             onClick={onClose}
             className="inline-flex h-7 items-center gap-1 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3 text-[11px] font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600"
           >
-            <span>Launch Full Interactive Tutorial (/help)</span>
+            <span>{t.quickHelp.tutorialCtaBtn}</span>
             <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
@@ -105,7 +105,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            1. Workflow
+            {t.quickHelp.tabWorkflow}
           </button>
           <button
             type="button"
@@ -117,7 +117,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            2. ✨ AI Copilot
+            {t.quickHelp.tabCopilot}
           </button>
           <button
             type="button"
@@ -129,7 +129,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            3. 🎯 Radar
+            {t.quickHelp.tabRadar}
           </button>
           <button
             type="button"
@@ -141,7 +141,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            4. 🛡️ Critic Guard
+            {t.quickHelp.tabCritic}
           </button>
           <button
             type="button"
@@ -153,7 +153,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            5. 🎯 Pushback Sim
+            {t.quickHelp.tabPushback}
           </button>
           <button
             type="button"
@@ -165,7 +165,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            6. AI Stances
+            {t.quickHelp.tabStance}
           </button>
           <button
             type="button"
@@ -177,7 +177,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            7. Risk Heatmap
+            {t.quickHelp.tabHeatmap}
           </button>
           <button
             type="button"
@@ -189,7 +189,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            8. Export (.docx)
+            {t.quickHelp.tabExport}
           </button>
           <button
             type="button"
@@ -201,7 +201,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            9. ✨ Golden Extractor
+            {t.quickHelp.tabExtractor}
           </button>
           <button
             type="button"
@@ -213,7 +213,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            10. ⚡ AI Telemetry
+            {t.quickHelp.tabTelemetry}
           </button>
         </div>
 

@@ -13,8 +13,10 @@ import {
 } from "lucide-react";
 import { useAuthSession } from "@/services/authSession";
 import { useWorkspaceStore } from "@/store/workspaceStore";
+import { useI18n } from "@/i18n/useI18n";
 
 export const AITelemetryPanel: React.FC = () => {
+  const { t } = useI18n();
   const { session, token } = useAuthSession();
   const isViewer = session?.userRole === "VIEWER";
 
@@ -72,11 +74,11 @@ export const AITelemetryPanel: React.FC = () => {
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                AI Telemetry &amp; FinOps Semantic Cache
+                {t.telemetry.title}
               </h3>
             </div>
             <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-              Engine:{" "}
+              {t.telemetry.engineLabel}{" "}
               <span className="font-mono font-semibold text-slate-700 dark:text-slate-200">
                 {aiTelemetry?.active_provider ?? "deterministic"} /{" "}
                 {aiTelemetry?.active_model ?? "policy-deterministic-v1"}
@@ -97,7 +99,7 @@ export const AITelemetryPanel: React.FC = () => {
                   isLoadingTelemetry ? "animate-spin" : ""
                 }`}
               />
-              <span>↻ Refresh Telemetry</span>
+              <span>{t.telemetry.refreshBtn}</span>
             </button>
 
             <button
@@ -117,7 +119,7 @@ export const AITelemetryPanel: React.FC = () => {
               ) : (
                 <Trash2 className="h-3.5 w-3.5" />
               )}
-              <span>Purge Semantic Cache</span>
+              <span>{t.telemetry.purgeBtn}</span>
             </button>
           </div>
         </div>
@@ -150,7 +152,7 @@ export const AITelemetryPanel: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Semantic Cache Hit Rate
+              {t.telemetry.cacheHitRate}
             </span>
             <Zap className="h-4 w-4 text-emerald-500" />
           </div>
@@ -159,11 +161,12 @@ export const AITelemetryPanel: React.FC = () => {
           </div>
           <div className="mt-1 flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400">
             <span>
-              {aiTelemetry?.cache_hits ?? 0} Hits /{" "}
-              {aiTelemetry?.total_requests ?? 0} Total
+              {aiTelemetry?.cache_hits ?? 0} {t.telemetry.hitsLabel} /{" "}
+              {aiTelemetry?.total_requests ?? 0} {t.telemetry.totalLabel}
             </span>
             <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-              {aiTelemetry?.cached_entries_count ?? 0} Cached Clauses
+              {aiTelemetry?.cached_entries_count ?? 0}{" "}
+              {t.telemetry.cachedClausesSuffix}
             </span>
           </div>
         </div>
@@ -175,7 +178,7 @@ export const AITelemetryPanel: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Tokens Used &amp; Saved
+              {t.telemetry.tokensUsedSaved}
             </span>
             <Cpu className="h-4 w-4 text-indigo-500" />
           </div>
@@ -189,7 +192,7 @@ export const AITelemetryPanel: React.FC = () => {
             </span>
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300">
               {(aiTelemetry?.estimated_tokens_saved ?? 0).toLocaleString()}{" "}
-              Tokens Saved
+              {t.telemetry.tokensSavedSuffix}
             </span>
           </div>
         </div>
@@ -201,7 +204,7 @@ export const AITelemetryPanel: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Avg AI Latency
+              {t.telemetry.avgLatency}
             </span>
             <Activity className="h-4 w-4 text-sky-500" />
           </div>
@@ -209,7 +212,7 @@ export const AITelemetryPanel: React.FC = () => {
             {(aiTelemetry?.avg_latency_ms ?? 0).toFixed(2)} ms
           </div>
           <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-            Sub-millisecond (&lt;1ms) on SHA-256 semantic cache hits
+            {t.telemetry.cacheLatencySub}
           </p>
         </div>
 
@@ -220,7 +223,7 @@ export const AITelemetryPanel: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Est. FinOps Spend
+              {t.telemetry.estSpend}
             </span>
             <DollarSign className="h-4 w-4 text-emerald-600" />
           </div>
@@ -229,10 +232,11 @@ export const AITelemetryPanel: React.FC = () => {
           </div>
           <div className="mt-1 flex items-center justify-between text-[11px]">
             <span className="text-slate-500 dark:text-slate-400">
-              Avoided Spend:
+              {t.telemetry.avoidedSpend}
             </span>
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300">
-              Saved ${(aiTelemetry?.estimated_cost_saved_usd ?? 0).toFixed(4)}
+              {t.telemetry.savedPrefix} $
+              {(aiTelemetry?.estimated_cost_saved_usd ?? 0).toFixed(4)}
             </span>
           </div>
         </div>
@@ -242,7 +246,7 @@ export const AITelemetryPanel: React.FC = () => {
       {aiTelemetry && aiTelemetry.operation_metrics.length > 0 ? (
         <div className="surface-card rounded-xl p-3.5">
           <h4 className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Operation FinOps Breakdown
+            {t.telemetry.opBreakdownTitle}
           </h4>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {aiTelemetry.operation_metrics.map((op) => (
@@ -254,7 +258,9 @@ export const AITelemetryPanel: React.FC = () => {
                   {op.operation}
                 </div>
                 <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
-                  <span>{op.total_calls} calls</span>
+                  <span>
+                    {op.total_calls} {t.telemetry.callsSuffix}
+                  </span>
                   <span>{op.avg_latency_ms.toFixed(1)}ms</span>
                 </div>
               </div>
@@ -269,12 +275,11 @@ export const AITelemetryPanel: React.FC = () => {
         className="surface-card rounded-xl p-3.5"
       >
         <h4 className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          Recent AI Invocations &amp; Cache Stream
+          {t.telemetry.recentEventsTitle}
         </h4>
         {!aiTelemetry || aiTelemetry.recent_events.length === 0 ? (
           <p className="py-4 text-center text-xs text-slate-500 dark:text-slate-400">
-            No AI operations recorded yet. Trigger a contract audit or AI action
-            to stream FinOps telemetry.
+            {t.telemetry.noEvents}
           </p>
         ) : (
           <div className="space-y-2">
@@ -288,12 +293,12 @@ export const AITelemetryPanel: React.FC = () => {
                   {evt.cache_hit ? (
                     <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300">
                       <Zap className="h-3 w-3" />
-                      <span>⚡ CACHE HIT (&lt;1ms)</span>
+                      <span>{t.telemetry.cacheHitBadge}</span>
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-300">
                       <Bot className="h-3 w-3" />
-                      <span>🤖 LIVE INFERENCE</span>
+                      <span>🤖 {t.telemetry.liveInferenceBadge}</span>
                     </span>
                   )}
                   <span className="font-mono text-[10px] font-semibold text-slate-800 dark:text-slate-200">

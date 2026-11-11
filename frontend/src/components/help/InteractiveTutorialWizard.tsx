@@ -11,13 +11,15 @@ import {
   Play,
   Sparkles,
 } from "lucide-react";
-import { INTERACTIVE_TUTORIAL_STAGES } from "@/services/helpContent";
+import { useI18n } from "@/i18n/useI18n";
 
 export const InteractiveTutorialWizard: React.FC = () => {
+  const { t } = useI18n();
   const [activeStageIdx, setActiveStageIdx] = useState<number>(0);
 
-  const totalStages = INTERACTIVE_TUTORIAL_STAGES.length;
-  const currentStage = INTERACTIVE_TUTORIAL_STAGES[activeStageIdx];
+  const stages = t.help.tutorialStages;
+  const totalStages = stages.length;
+  const currentStage = stages[activeStageIdx] ?? stages[0];
   const progressPct = Math.round(((activeStageIdx + 1) / totalStages) * 100);
 
   return (
@@ -32,16 +34,17 @@ export const InteractiveTutorialWizard: React.FC = () => {
           <div>
             <span className="micro-badge border-indigo-200 bg-white text-indigo-700 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-950/60 dark:text-indigo-300">
               <GraduationCap className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Interactive 5-Stage Product Masterclass</span>
+              <span>{t.help.tutorialEyebrow}</span>
             </span>
             <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-900 dark:text-white md:text-xl">
-              Learn the Entire Redlining Workflow in 2 Minutes
+              {t.help.tutorialHeading}
             </h2>
           </div>
 
           <div className="flex items-center gap-3">
             <span className="font-mono text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-              Step {activeStageIdx + 1} of {totalStages}
+              {t.help.tutorialStepPrefix} {activeStageIdx + 1}{" "}
+              {t.help.tutorialOf} {totalStages}
             </span>
             <div className="h-2 w-28 overflow-hidden rounded-full bg-indigo-100 dark:bg-slate-800">
               <div
@@ -54,7 +57,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
 
         {/* Clickable Stage Stepper Pills */}
         <div className="mt-4 flex flex-wrap gap-2">
-          {INTERACTIVE_TUTORIAL_STAGES.map((stage) => {
+          {stages.map((stage) => {
             const isActive = stage.index === activeStageIdx;
             const isCompleted = stage.index < activeStageIdx;
             return (
@@ -110,7 +113,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
           <div className="surface-card rounded-xl p-4 lg:col-span-6">
             <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>What You Will Do</span>
+              <span>{t.help.checklistHeading}</span>
             </div>
             <ol className="space-y-2.5">
               {currentStage.checklist.map((item, idx) => (
@@ -132,7 +135,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
             <div className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-300">
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>Interactive Visual Preview</span>
+                <span>{t.help.previewHeading}</span>
               </span>
               <span className="rounded-full border border-indigo-400/30 bg-indigo-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-200">
                 {currentStage.visualPreview.badge}
@@ -166,7 +169,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
           <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <div>
             <strong className="font-semibold">
-              Pro Tip for Legal &amp; Technical Teams:
+              {t.help.proTipHeadingWiz}
             </strong>{" "}
             {currentStage.proTip}
           </div>
@@ -183,7 +186,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
           className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          <span>Previous Step</span>
+          <span>{t.help.prevBtn}</span>
         </button>
 
         <Link
@@ -205,7 +208,7 @@ export const InteractiveTutorialWizard: React.FC = () => {
           }
           className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <span>Next Step</span>
+          <span>{t.help.nextBtn}</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </button>
       </div>

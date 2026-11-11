@@ -33,6 +33,7 @@ The **Interactive Contract & RFP Redlining Studio** is an enterprise-grade, mult
 - **AI Playbook Auto-Extractor & Golden Contract Rule Generator:** Automatically extracts structured Company Playbook rules (`category`, `standard_position`, `fallback_position`, `unacceptable_triggers`, `source_clause_excerpt`, `confidence_score`) from pasted signed Golden Contract text (`POST /api/v1/playbooks/extract-from-text`) or uploaded `.docx`/`.pdf` reference templates (`POST /api/v1/playbooks/extract-from-file`). Supports ADMIN bulk `auto_save` with automatic 1536-d vector embedding generation alongside Preview Mode (`auto_save=false`) for Legal Counsel and Technical Leads (`PLAYBOOK_AUTO_EXTRACTED`).
 - **Semantic Clause Audit Cache & Live AI FinOps Telemetry:** Eliminates redundant LLM spend and latency on unchanged contract clauses via a thread-safe, tenant-isolated SHA-256 LRU cache keyed on `(org_id, normalized_clause_text, heading, negotiation_stance, matched_playbook_fingerprint, active_llm_provider, active_llm_model)`, delivering `<1ms` cache hits with automatic invalidation on AI model changes or manual cache purge (`GET /api/v1/ai-settings/telemetry`, `POST /api/v1/ai-settings/telemetry/clear-cache`). Tracks token consumption, avoided spend (`$ USD`), latency, cache hit rate, and per-operation breakdowns across all 6 AI workflows (`CLAUSE_AUDIT`, `COPILOT_REFINE`, `CRITIC_VERIFY`, `PUSHBACK_SIMULATION`, `CROSS_CLAUSE_RADAR`, `PLAYBOOK_EXTRACTION`).
 - **Progressive Disclosure Studio UX & Interactive 5-Stage Onboarding Academy (`/help`):** Features a two-zone Studio toolbar separating AI Audit Controls from Document Actions, an interactive 4-step lifecycle Workflow Stepper, mutual-exclusion AI Power Tool drawers (`✨ AI Copilot`, `🎯 Simulate Pushback`, `🛡️ Critic Guard`) inside [`RedlineCard`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/inspector/RedlineCard.tsx), an executive onboarding banner on [`DashboardPage`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/app/page.tsx), and an interactive 5-Stage Masterclass Tutorial Wizard (`InteractiveTutorialWizard`) paired with 4 Categorized Learning Tracks organizing all 14 Help Center modules.
+- **Full Multilingual Support (`EN` English / `ES` Español / `FR` Français):** Features a persistent, zero-wrap **`EN | ES | FR`** [`LanguageSwitcher`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/navigation/LanguageSwitcher.tsx) in both the global navigation header and the Studio toolbar powered by [`useLocaleStore`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/i18n/useI18n.ts) (`redline_studio_locale`) and strongly typed [`TRANSLATIONS`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/i18n/translations.ts). Dynamically translates Dashboard KPIs, Studio controls, Inspector filters & tabs, [`RedlineCard`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/inspector/RedlineCard.tsx) actions, Cross-Clause Radar, FinOps Telemetry, Playbook Manager, the 5-Stage Tutorial Wizard, Help Center UI, and Demo/Offline AI audit/Copilot/Pushback outputs while defaulting to English (`"en"`) on first load.
 - **Bidirectional Split-Screen Editor & Surgical Word Diffs:** Binds each PostgreSQL `document_clauses` row to a custom TipTap/ProseMirror [`ClauseNodeExtension`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/ClauseNodeExtension.ts#L23-L84) (`div[data-clause-id]`) paired with a visual [`RiskHeatmapGutter`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/editor/RiskHeatmapGutter.tsx#L44-L92) and hover-activated [`InlineDiffPreview`](file:///home/ayman/Interactive_Contract_and_RFP_Redlining_Studio/frontend/src/components/diff/InlineDiffPreview.tsx#L12-L72).
 - **Optimistic Concurrency & Multi-Tenant RBAC:** Enforces `org_id` isolation on every repository query, 4-tier RBAC (`ADMIN`, `LEGAL_COUNSEL`, `TECHNICAL_LEAD`, `VIEWER`), and `expected_clause_version` optimistic locking that automatically rejects stale concurrent edits with `409 Conflict` and rolls back client state.
 - **Native Microsoft Word OpenXML Track-Changes Export:** Reconstructs valid `.docx` archives embedding native `<w:del>` (`<w:delText>`) and `<w:ins>` (`<w:t>`) revision tags with `w:author` and ISO-8601 `w:date` attributes, `<w:commentRangeStart/>`/`<w:commentRangeEnd/>` anchors, AI rationales, and reviewer comments.
@@ -228,8 +229,13 @@ Interactive_Contract_and_RFP_Redlining_Studio/
         │   └── help/page.tsx                       # /help — Interactive In-App Help Center, Playbook Templates & FAQ
         ├── components/
         │   ├── navigation/
+        │   │   ├── LanguageSwitcher.tsx            # Compact EN | ES | FR Persistent Locale Switcher Pill
         │   │   ├── TopNavBar.tsx                   # Sticky Enterprise Header, Segmented Nav, Status & Auth Modal
         │   │   └── ThemeToggle.tsx                 # Persistent Dual-Theme Toggle (Executive Light / Slate Dark)
+        │   ├── help/
+        │   │   └── InteractiveTutorialWizard.tsx   # Localized 5-Stage Product Masterclass Tutorial Wizard
+        │   ├── playbooks/
+        │   │   └── AIPlaybookExtractorPanel.tsx    # Golden Contract (.docx/.pdf/Text) Playbook Rule Extractor
         │   ├── workspace/
         │   │   ├── RedliningStudioWorkspace.tsx    # Resizable Split-Screen Container, Export Controls & 409 Banner
         │   │   ├── AISettingsModal.tsx             # In-App AI Provider Switcher, Live Discovery & Encrypted .rsvault.json Vault
@@ -245,20 +251,25 @@ Interactive_Contract_and_RFP_Redlining_Studio/
         │   │   └── InlineDiffPreview.tsx           # Live Surgical Redline Preview Overlay
         │   └── inspector/
         │       ├── AiInspectorPanel.tsx            # Right-Hand Inspector, Risk Pill Filters & Segmented Tab Switcher
-        │       ├── RedlineCard.tsx                 # Executive Suggestion Card (Talking Point Copy, Apply, Modify, Reject)
+        │       ├── CrossClauseRadarPanel.tsx       # Multi-Clause Contradiction, Broken Ref & Undefined Term Radar
+        │       ├── AITelemetryPanel.tsx            # FinOps Cache Hit Rate, Token Savings & Cost Telemetry Panel
+        │       ├── RedlineCard.tsx                 # Executive Suggestion Card (Copilot, Critic Guard, Pushback Sim)
         │       ├── ClauseCommentThread.tsx         # Collapsible Per-Clause Threaded Discussion Panel
         │       └── AuditTrailPanel.tsx             # Chronological Immutable Compliance Audit Trail Viewer
+        ├── i18n/
+        │   ├── translations.ts                     # Strongly Typed EN / ES / FR Dictionaries (TRANSLATIONS)
+        │   └── useI18n.ts                          # Persistent Zustand Locale Store (useLocaleStore) & useI18n() Hook
         ├── hooks/
         │   ├── useDocumentStream.ts                # Real-Time SSE Client Hook with Demo Stream Simulation
         │   └── useTheme.ts                         # Dual-Theme State Hook (Executive Light Default + Slate Dark)
         ├── services/
         │   ├── contracts.ts                        # Strict Zod Schemas & TypeScript DTO Types
-        │   ├── apiClient.ts                        # Typed Fetch Client, 409 VersionConflictError & Offline Storage
+        │   ├── apiClient.ts                        # Typed Fetch Client, 409 VersionConflictError & Localized Offline AI
         │   ├── authSession.ts                      # Seamless Workspace Session Bootstrapper & Default Playbook Seeder
         │   └── helpContent.ts                      # Structured User Guide Modules, Playbook Templates & FAQ Library
         ├── store/
         │   └── workspaceStore.ts                   # Zustand Store (Bidirectional Sync, Optimistic Edits & Rollback)
-        └── __tests__/                              # 7 Vitest + React Testing Library Test Suites (25 Tests)
+        └── __tests__/                              # 16 Vitest + React Testing Library Test Suites
 ```
 
 ### 1.4 Frontend User Journey, Multi-Page Routes & Automatic Session Bootstrapper

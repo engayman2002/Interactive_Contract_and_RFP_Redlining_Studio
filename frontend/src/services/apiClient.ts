@@ -68,6 +68,8 @@ import {
   VerifySuggestionResponseDTO,
   VerifySuggestionResponseDTOSchema,
 } from "./contracts";
+import type { SupportedLocale } from "@/i18n/translations";
+import { getActiveLocale } from "@/i18n/useI18n";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
@@ -641,168 +643,369 @@ export async function uploadDocument(
   return { document_id: localDocId };
 }
 
+interface SimulatedClauseTemplate {
+  matched_rule_id: string;
+  risk: RedlineSuggestionDTO["risk"];
+  proposed_text: string;
+  rationale: string;
+}
+
+const LOCALIZED_REDLINE_TEMPLATES: Record<
+  SupportedLocale,
+  Record<NegotiationStance, SimulatedClauseTemplate[]>
+> = {
+  en: {
+    commercial: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "HIGH",
+        proposed_text:
+          "1.1 Each party's aggregate cumulative liability under this Agreement shall not exceed two times (2x) the annual fees paid under this Agreement, to facilitate fast closing.",
+        rationale:
+          "[Commercial Fast-Close Stance] Pre-approved commercial fallback position adopted to expedite deal closure: 2x annual fees cap. | Talking Point: To accelerate deal closure, we have pre-approved our commercial fallback terms (2x fees).",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "HIGH",
+        proposed_text:
+          "2.1 Vendor shall defend and indemnify Customer against third-party claims alleging direct infringement of United States patents or copyrights.",
+        rationale:
+          "[Commercial Fast-Close Stance] Commercial fallback indemnity adopted to expedite deal closure. | Talking Point: Standard commercial indemnity provided for fast close.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "MEDIUM",
+        proposed_text:
+          "3.1 Vendor targets 99.9% monthly availability with commercially standard service credit remedies.",
+        rationale:
+          "[Commercial Fast-Close Stance] Standard commercial SLA adopted to accelerate deal velocity. | Talking Point: Commercially balanced availability target.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "HIGH",
+        proposed_text:
+          "4.1 Vendor shall not use Customer Confidential Information to train public foundation models without written consent.",
+        rationale:
+          "[Commercial Fast-Close Stance] Commercial fallback standard: public model training prohibited. | Talking Point: Practical protection for Customer data.",
+      },
+    ],
+    strict: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "CRITICAL",
+        proposed_text:
+          "1.1 Each party's aggregate cumulative liability under this Agreement shall not exceed twelve (12) months of fees paid or payable, with strict mutual consequential damages waiver and no carve-outs.",
+        rationale:
+          "[Strict Protective Stance] Playbook strictly mandates zero-compromise mutual 12-month liability cap and mutual waiver of indirect or consequential damages. | Talking Point: Our corporate policy strictly requires standard 12-month cap without compromise.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "CRITICAL",
+        proposed_text:
+          "2.1 Vendor shall unconditionally defend, indemnify, and hold harmless Customer against all third-party IP infringement claims, data breaches, and gross negligence without limitation.",
+        rationale:
+          "[Strict Protective Stance] Customer cannot indemnify Vendor unilaterally; Vendor must provide full IP and data breach indemnity. | Talking Point: Strict non-negotiable protection against third-party infringement.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "CRITICAL",
+        proposed_text:
+          "3.1 Vendor guarantees 99.99% monthly uptime with 20% service credits per 0.1% downtime and immediate termination rights upon consecutive failures.",
+        rationale:
+          "[Strict Protective Stance] Best-efforts availability violates strict company SLA standards. Full enterprise commitments required. | Talking Point: Enterprise mission-critical uptime is non-negotiable.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "CRITICAL",
+        proposed_text:
+          "4.1 Vendor shall process Customer data strictly to deliver the service and is absolutely prohibited from training AI models or retaining Customer confidential information.",
+        rationale:
+          "[Strict Protective Stance] Absolute prohibition on training AI foundation models on Customer confidential information per strict governance. | Talking Point: Strict data protection boundary.",
+      },
+    ],
+    balanced: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "CRITICAL",
+        proposed_text:
+          "1.1 Each party's aggregate cumulative liability under this Agreement shall not exceed twelve (12) months of fees paid or payable, with mutual consequential damages waiver.",
+        rationale:
+          "[Balanced Mutual Stance] Playbook mandates a balanced mutual 12-month liability cap and mutual waiver of indirect or consequential damages. | Talking Point: Our standard corporate policy requires balanced 12-month terms.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "CRITICAL",
+        proposed_text:
+          "2.1 Vendor shall defend and indemnify Customer against third-party IP infringement claims and gross negligence.",
+        rationale:
+          "[Balanced Mutual Stance] Customer cannot indemnify Vendor unilaterally; Vendor must provide standard IP infringement indemnity. | Talking Point: Standard mutual indemnity provisions required.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "HIGH",
+        proposed_text:
+          "3.1 Vendor guarantees 99.95% monthly uptime with 10% service credits per 0.1% downtime and chronic failure termination rights.",
+        rationale:
+          "[Balanced Mutual Stance] Best-efforts availability without service credits violates company SLA standards. | Talking Point: Please align SLA with standard 99.95% target.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "CRITICAL",
+        proposed_text:
+          "4.1 Vendor shall process Customer data solely to deliver the service and is strictly prohibited from training AI models on Customer data.",
+        rationale:
+          "[Balanced Mutual Stance] Prohibits training foundation models on Customer confidential information per data privacy policy. | Talking Point: Customer proprietary data may not be used for AI training.",
+      },
+    ],
+  },
+  es: {
+    commercial: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "HIGH",
+        proposed_text:
+          "1.1 La responsabilidad acumulada agregada de cada parte conforme a este Contrato no excederá de dos veces (2x) las tarifas anuales pagadas, para facilitar un cierre ágil.",
+        rationale:
+          "[Postura Comercial Ágil] Posición alternativa comercial preaprobada adoptada para acelerar el cierre: límite de 2x tarifas anuales. | Argumento: Para agilizar el cierre del acuerdo, ofrecemos nuestro límite alternativo preaprobado de 2x tarifas anuales.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "HIGH",
+        proposed_text:
+          "2.1 El Proveedor defenderá e indemnizará al Cliente frente a reclamaciones de terceros por infracción directa de patentes o derechos de autor.",
+        rationale:
+          "[Postura Comercial Ágil] Indemnidad comercial alternativa adoptada para facilitar el cierre rápido. | Argumento: Cobertura estándar de propiedad intelectual para agilizar la firma.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "MEDIUM",
+        proposed_text:
+          "3.1 El Proveedor garantiza un objetivo de disponibilidad mensual del 99.9% con créditos de servicio comercialmente estándar.",
+        rationale:
+          "[Postura Comercial Ágil] SLA comercial estándar aplicado para mantener la velocidad de negociación. | Argumento: Objetivo de disponibilidad equilibrado comercialmente.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "HIGH",
+        proposed_text:
+          "4.1 El Proveedor no utilizará Información Confidencial del Cliente para entrenar modelos públicos de IA sin consentimiento previo por escrito.",
+        rationale:
+          "[Postura Comercial Ágil] Estándar alternativo comercial: prohibición de entrenar modelos fundacionales públicos. | Argumento: Protección práctica para los datos propietarios del Cliente.",
+      },
+    ],
+    strict: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "CRITICAL",
+        proposed_text:
+          "1.1 La responsabilidad agregada de cada parte no excederá de doce (12) meses de tarifas pagadas o pagaderas, con exclusión mutua estricta de daños consecuentes y sin excepciones.",
+        rationale:
+          "[Postura Estricta Protectora] El Playbook exige sin concesiones un límite mutuo de 12 meses y renuncia mutua a daños indirectos. | Argumento: Nuestra política corporativa requiere estrictamente el tope de 12 meses sin excepciones.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "CRITICAL",
+        proposed_text:
+          "2.1 El Proveedor defenderá, indemnizará y mantendrá indemne al Cliente sin límite frente a toda reclamación de propiedad intelectual, brecha de datos y negligencia grave.",
+        rationale:
+          "[Postura Estricta Protectora] El Cliente no puede indemnizar unilateralmente al Proveedor; el Proveedor debe otorgar cobertura total. | Argumento: Protección estricta e innegociable ante infracciones de terceros.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "CRITICAL",
+        proposed_text:
+          "3.1 El Proveedor garantiza 99.99% de disponibilidad mensual con créditos del 20% por cada 0.1% de caída y rescisión inmediata ante fallos consecutivos.",
+        rationale:
+          "[Postura Estricta Protectora] La disponibilidad por mejores esfuerzos incumple los requisitos estrictos de SLA. | Argumento: La continuidad crítica empresarial del SLA es innegociable.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "CRITICAL",
+        proposed_text:
+          "4.1 El Proveedor tratará los datos del Cliente únicamente para prestar el servicio y queda absolutamente prohibido entrenar modelos de IA o retener información confidencial.",
+        rationale:
+          "[Postura Estricta Protectora] Prohibición absoluta de entrenar modelos de IA con información confidencial del Cliente. | Argumento: Límite estricto de gobernanza y protección de datos.",
+      },
+    ],
+    balanced: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "CRITICAL",
+        proposed_text:
+          "1.1 La responsabilidad acumulada agregada de cada parte no excederá de doce (12) meses de tarifas pagadas o pagaderas, con exclusión mutua de daños consecuentes.",
+        rationale:
+          "[Postura Mutua Equilibrada] El Playbook establece un límite mutuo equilibrado de 12 meses y exclusión mutua de daños indirectos o consecuentes. | Argumento: Nuestra política estándar exige términos equilibrados a 12 meses.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "CRITICAL",
+        proposed_text:
+          "2.1 El Proveedor defenderá e indemnizará al Cliente frente a reclamaciones de terceros por infracción de propiedad intelectual y negligencia grave.",
+        rationale:
+          "[Postura Mutua Equilibrada] El Cliente no puede indemnizar unilateralmente; se requiere indemnidad estándar por PI y negligencia. | Argumento: Se requieren cláusulas estándar de indemnización mutua.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "HIGH",
+        proposed_text:
+          "3.1 El Proveedor garantiza 99.95% de disponibilidad mensual con créditos del 10% por cada 0.1% de caída y derecho de rescisión por fallo crónico.",
+        rationale:
+          "[Postura Mutua Equilibrada] La disponibilidad sin créditos incumple los estándares del SLA corporativo. | Argumento: Alinear el SLA con el objetivo estándar del 99.95%.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "CRITICAL",
+        proposed_text:
+          "4.1 El Proveedor tratará los datos del Cliente solo para prestar el servicio y tiene estrictamente prohibido entrenar modelos de IA con dichos datos.",
+        rationale:
+          "[Postura Mutua Equilibrada] Prohíbe entrenar modelos fundacionales con información confidencial del Cliente según la política de privacidad. | Argumento: Los datos propietarios del Cliente no pueden usarse para entrenamiento de IA.",
+      },
+    ],
+  },
+  fr: {
+    commercial: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "HIGH",
+        proposed_text:
+          "1.1 La responsabilité cumulée globale de chaque partie au titre du présent Contrat n'excédera pas deux fois (2x) les frais annuels versés, afin d'accélérer la signature.",
+        rationale:
+          "[Posture Commerciale Rapide] Position de repli commerciale préapprouvée adoptée pour accélérer la conclusion : plafond à 2x les redevances annuelles. | Argumentaire : Pour accélérer la signature, nous proposons notre plafond de repli préapprouvé à 2x.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "HIGH",
+        proposed_text:
+          "2.1 Le Prestataire défendra et indemnisera le Client contre toute réclamation de tiers alléguant une violation directe de brevets ou droits d'auteur.",
+        rationale:
+          "[Posture Commerciale Rapide] Garantie d'éviction PI commerciale de repli adoptée pour une signature rapide. | Argumentaire : Couverture PI standard prévue pour une conclusion accélérée.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "MEDIUM",
+        proposed_text:
+          "3.1 Le Prestataire vise une disponibilité mensuelle de 99,9 % avec des crédits de service conformes aux standards du marché.",
+        rationale:
+          "[Posture Commerciale Rapide] SLA commercial standard retenu pour maintenir la vélocité de négociation. | Argumentaire : Objectif de disponibilité commercialement équilibré.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "HIGH",
+        proposed_text:
+          "4.1 Le Prestataire s'interdit d'utiliser les Informations Confidentielles du Client pour entraîner des modèles publics d'IA sans consentement écrit.",
+        rationale:
+          "[Posture Commerciale Rapide] Standard commercial de repli : entraînement de modèles publics interdit sans accord. | Argumentaire : Protection pragmatique des données propriétaires du Client.",
+      },
+    ],
+    strict: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "CRITICAL",
+        proposed_text:
+          "1.1 La responsabilité cumulée de chaque partie est strictement plafonnée à douze (12) mois de redevances payées ou dues, avec renonciation mutuelle stricte aux dommages indirects sans exception.",
+        rationale:
+          "[Posture Stricte Protectrice] Le Playbook impose sans compromis un plafond mutuel de 12 mois et une exclusion stricte des dommages indirects. | Argumentaire : Notre politique d'entreprise impose strictement un plafond de 12 mois sans dérogation.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "CRITICAL",
+        proposed_text:
+          "2.1 Le Prestataire défendra, indemnisera et garantira intégralement le Client sans plafond contre toute réclamation de propriété intellectuelle, violation de données et faute lourde.",
+        rationale:
+          "[Posture Stricte Protectrice] Le Client ne peut indemniser unilatéralement le Prestataire ; une garantie PI et sécurité complète est exigée. | Argumentaire : Protection stricte et non négociable contre les recours tiers.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "CRITICAL",
+        proposed_text:
+          "3.1 Le Prestataire garantit une disponibilité mensuelle de 99,99 % avec crédits de 20 % par tranche de 0,1 % d'indisponibilité et résiliation immédiate en cas d'échecs consécutifs.",
+        rationale:
+          "[Posture Stricte Protectrice] L'obligation de moyens contrevient aux standards SLA stricts du groupe. | Argumentaire : La disponibilité critique de niveau entreprise est non négociable.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "CRITICAL",
+        proposed_text:
+          "4.1 Le Prestataire traitera les données du Client exclusivement pour fournir le service et il lui est absolument interdit d'entraîner des modèles d'IA ou de conserver ces données.",
+        rationale:
+          "[Posture Stricte Protectrice] Interdiction absolue d'entraînement de modèles d'IA sur les données confidentielles du Client. | Argumentaire : Frontière stricte de gouvernance et souveraineté des données.",
+      },
+    ],
+    balanced: [
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000301",
+        risk: "CRITICAL",
+        proposed_text:
+          "1.1 La responsabilité cumulée de chaque partie au titre du présent Contrat n'excédera pas douze (12) mois de frais payés ou dus, avec exclusion mutuelle des dommages indirects.",
+        rationale:
+          "[Posture Mutuelle Équilibrée] Le Playbook prescrit un plafond mutuel équilibré de 12 mois et l'exclusion mutuelle des dommages indirects. | Argumentaire : Notre politique standard requiert des conditions équilibrées sur 12 mois.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000302",
+        risk: "CRITICAL",
+        proposed_text:
+          "2.1 Le Prestataire défendra et indemnisera le Client contre les réclamations de tiers pour contrefaçon de propriété intellectuelle et faute lourde.",
+        rationale:
+          "[Posture Mutuelle Équilibrée] Le Client ne peut indemniser unilatéralement le Prestataire ; une garantie PI standard est requise. | Argumentaire : Des clauses standards d'indemnisation mutuelle sont nécessaires.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000303",
+        risk: "HIGH",
+        proposed_text:
+          "3.1 Le Prestataire garantit une disponibilité mensuelle de 99,95 % avec des crédits de 10 % par tranche de 0,1 % et un droit de résiliation en cas de manquement chronique.",
+        rationale:
+          "[Posture Mutuelle Équilibrée] Une disponibilité sans pénalités contrevient aux standards SLA de l'entreprise. | Argumentaire : Veuillez aligner le SLA sur l'objectif standard de 99,95 %.",
+      },
+      {
+        matched_rule_id: "p0000000-0000-4000-8000-000000000304",
+        risk: "CRITICAL",
+        proposed_text:
+          "4.1 Le Prestataire traitera les données du Client uniquement pour exécuter le service et a l'interdiction stricte d'entraîner des modèles d'IA sur ces données.",
+        rationale:
+          "[Posture Mutuelle Équilibrée] Interdit l'entraînement de modèles fondation sur les données confidentielles conformément à la politique de confidentialité. | Argumentaire : Les données propriétaires du Client ne doivent pas servir à l'entraînement de l'IA.",
+      },
+    ],
+  },
+};
+
+function buildLocalizedSimulatedRedlines(
+  documentId: string,
+  clauses: ClauseDTO[],
+  stance: NegotiationStance,
+  locale: SupportedLocale
+): RedlineSuggestionDTO[] {
+  const templates =
+    LOCALIZED_REDLINE_TEMPLATES[locale]?.[stance] ??
+    LOCALIZED_REDLINE_TEMPLATES.en[stance];
+  const now = new Date().toISOString();
+  return templates.map((tpl, idx) => ({
+    id: `r-${documentId}-${idx + 1}`,
+    clause_id: clauses[idx]?.id ?? `c${idx + 1}`,
+    matched_rule_id: tpl.matched_rule_id,
+    risk: tpl.risk,
+    proposed_text: tpl.proposed_text,
+    rationale: tpl.rationale,
+    status: "PENDING",
+    created_at: now,
+  }));
+}
+
 export async function triggerDocumentAnalysis(
   documentId: string,
   token?: string,
   stance: NegotiationStance = "balanced"
 ): Promise<DocumentAnalysisSummaryDTO> {
+  const activeLocale = getActiveLocale();
   const local = getLocalDocumentWorkspace(documentId);
 
   if (documentId === DEMO_DOCUMENT_ID || documentId === "demo" || !token || local) {
     if (local) {
-      const simulatedRedlines: RedlineSuggestionDTO[] =
-        stance === "commercial"
-          ? [
-              {
-                id: `r-${documentId}-1`,
-                clause_id: local.clauses[0]?.id ?? "c1",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000301",
-                risk: "HIGH",
-                proposed_text:
-                  "1.1 Each party's aggregate cumulative liability under this Agreement shall not exceed two times (2x) the annual fees paid under this Agreement, to facilitate fast closing.",
-                rationale:
-                  "[Commercial Fast-Close Stance] Pre-approved commercial fallback position adopted to expedite deal closure: 2x annual fees cap. | Talking Point: To accelerate deal closure, we have pre-approved our commercial fallback terms (2x fees).",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-              {
-                id: `r-${documentId}-2`,
-                clause_id: local.clauses[1]?.id ?? "c2",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000302",
-                risk: "HIGH",
-                proposed_text:
-                  "2.1 Vendor shall defend and indemnify Customer against third-party claims alleging direct infringement of United States patents or copyrights.",
-                rationale:
-                  "[Commercial Fast-Close Stance] Commercial fallback indemnity adopted to expedite deal closure. | Talking Point: Standard commercial indemnity provided for fast close.",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-              {
-                id: `r-${documentId}-3`,
-                clause_id: local.clauses[2]?.id ?? "c3",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000303",
-                risk: "MEDIUM",
-                proposed_text:
-                  "3.1 Vendor targets 99.9% monthly availability with commercially standard service credit remedies.",
-                rationale:
-                  "[Commercial Fast-Close Stance] Standard commercial SLA adopted to accelerate deal velocity. | Talking Point: Commercially balanced availability target.",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-              {
-                id: `r-${documentId}-4`,
-                clause_id: local.clauses[3]?.id ?? "c4",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000304",
-                risk: "HIGH",
-                proposed_text:
-                  "4.1 Vendor shall not use Customer Confidential Information to train public foundation models without written consent.",
-                rationale:
-                  "[Commercial Fast-Close Stance] Commercial fallback standard: public model training prohibited. | Talking Point: Practical protection for Customer data.",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-            ]
-          : stance === "strict"
-          ? [
-              {
-                id: `r-${documentId}-1`,
-                clause_id: local.clauses[0]?.id ?? "c1",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000301",
-                risk: "CRITICAL",
-                proposed_text:
-                  "1.1 Each party's aggregate cumulative liability under this Agreement shall not exceed twelve (12) months of fees paid or payable, with strict mutual consequential damages waiver and no carve-outs.",
-                rationale:
-                  "[Strict Protective Stance] Playbook strictly mandates zero-compromise mutual 12-month liability cap and mutual waiver of indirect or consequential damages. | Talking Point: Our corporate policy strictly requires standard 12-month cap without compromise.",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-              {
-                id: `r-${documentId}-2`,
-                clause_id: local.clauses[1]?.id ?? "c2",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000302",
-                risk: "CRITICAL",
-                proposed_text:
-                  "2.1 Vendor shall unconditionally defend, indemnify, and hold harmless Customer against all third-party IP infringement claims, data breaches, and gross negligence without limitation.",
-                rationale:
-                  "[Strict Protective Stance] Customer cannot indemnify Vendor unilaterally; Vendor must provide full IP and data breach indemnity. | Talking Point: Strict non-negotiable protection against third-party infringement.",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-              {
-                id: `r-${documentId}-3`,
-                clause_id: local.clauses[2]?.id ?? "c3",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000303",
-                risk: "CRITICAL",
-                proposed_text:
-                  "3.1 Vendor guarantees 99.99% monthly uptime with 20% service credits per 0.1% downtime and immediate termination rights upon consecutive failures.",
-                rationale:
-                  "[Strict Protective Stance] Best-efforts availability violates strict company SLA standards. Full enterprise commitments required. | Talking Point: Enterprise mission-critical uptime is non-negotiable.",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-              {
-                id: `r-${documentId}-4`,
-                clause_id: local.clauses[3]?.id ?? "c4",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000304",
-                risk: "CRITICAL",
-                proposed_text:
-                  "4.1 Vendor shall process Customer data strictly to deliver the service and is absolutely prohibited from training AI models or retaining Customer confidential information.",
-                rationale:
-                  "[Strict Protective Stance] Absolute prohibition on training AI foundation models on Customer confidential information per strict governance. | Talking Point: Strict data protection boundary.",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-            ]
-          : [
-              {
-                id: `r-${documentId}-1`,
-                clause_id: local.clauses[0]?.id ?? "c1",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000301",
-                risk: "CRITICAL",
-                proposed_text:
-                  "1.1 Each party's aggregate cumulative liability under this Agreement shall not exceed twelve (12) months of fees paid or payable, with mutual consequential damages waiver.",
-                rationale:
-                  "[Balanced Mutual Stance] Playbook mandates a balanced mutual 12-month liability cap and mutual waiver of indirect or consequential damages. | Talking Point: Our standard corporate policy requires balanced 12-month terms.",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-              {
-                id: `r-${documentId}-2`,
-                clause_id: local.clauses[1]?.id ?? "c2",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000302",
-                risk: "CRITICAL",
-                proposed_text:
-                  "2.1 Vendor shall defend and indemnify Customer against third-party IP infringement claims and gross negligence.",
-                rationale:
-                  "[Balanced Mutual Stance] Customer cannot indemnify Vendor unilaterally; Vendor must provide standard IP infringement indemnity. | Talking Point: Standard mutual indemnity provisions required.",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-              {
-                id: `r-${documentId}-3`,
-                clause_id: local.clauses[2]?.id ?? "c3",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000303",
-                risk: "HIGH",
-                proposed_text:
-                  "3.1 Vendor guarantees 99.95% monthly uptime with 10% service credits per 0.1% downtime and chronic failure termination rights.",
-                rationale:
-                  "[Balanced Mutual Stance] Best-efforts availability without service credits violates company SLA standards. | Talking Point: Please align SLA with standard 99.95% target.",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-              {
-                id: `r-${documentId}-4`,
-                clause_id: local.clauses[3]?.id ?? "c4",
-                matched_rule_id: "p0000000-0000-4000-8000-000000000304",
-                risk: "CRITICAL",
-                proposed_text:
-                  "4.1 Vendor shall process Customer data solely to deliver the service and is strictly prohibited from training AI models on Customer data.",
-                rationale:
-                  "[Balanced Mutual Stance] Prohibits training foundation models on Customer confidential information per data privacy policy. | Talking Point: Customer proprietary data may not be used for AI training.",
-                status: "PENDING",
-                created_at: new Date().toISOString(),
-              },
-            ];
+      const simulatedRedlines = buildLocalizedSimulatedRedlines(
+        documentId,
+        local.clauses,
+        stance,
+        activeLocale
+      );
 
       local.redlines = simulatedRedlines;
       local.status = "ANALYZED";
@@ -862,7 +1065,7 @@ export async function triggerDocumentAnalysis(
     {
       method: "POST",
       headers: buildHeaders(token),
-      body: JSON.stringify({ stance }),
+      body: JSON.stringify({ stance, language: activeLocale }),
     }
   );
   if (!response.ok) {
@@ -933,7 +1136,11 @@ export async function refineRedlineSuggestion(
   payload: RefineSuggestionRequestDTO,
   token?: string
 ): Promise<RefineSuggestionResponseDTO> {
-  const validatedPayload = RefineSuggestionRequestDTOSchema.parse(payload);
+  const activeLocale = payload.language ?? getActiveLocale();
+  const validatedPayload = RefineSuggestionRequestDTOSchema.parse({
+    ...payload,
+    language: activeLocale,
+  });
 
   if (token) {
     try {
@@ -957,7 +1164,12 @@ export async function refineRedlineSuggestion(
 
   // Offline / Demo Fallback Simulation
   const instructionLower = validatedPayload.instruction.toLowerCase();
-  let talkingPoint = `Refined per instruction: "${validatedPayload.instruction}". Proposed language balances commercial interests while safeguarding standard protections.`;
+  let talkingPoint =
+    activeLocale === "es"
+      ? `Propuesta refinada según instrucción: "${validatedPayload.instruction}". El texto equilibra intereses comerciales protegiendo las garantías estándar.`
+      : activeLocale === "fr"
+      ? `Proposition affinée selon l'instruction : « ${validatedPayload.instruction} ». La formulation équilibre les intérêts commerciaux tout en préservant nos protections standards.`
+      : `Refined per instruction: "${validatedPayload.instruction}". Proposed language balances commercial interests while safeguarding standard protections.`;
 
   // Search across localStorage workspaces or DEMO_WORKSPACE_DATA
   let matchedSuggestion: RedlineSuggestionDTO | null = null;
@@ -1015,7 +1227,12 @@ export async function refineRedlineSuggestion(
       updatedText =
         updatedText.replace(/\.\s*$/, "") + `, capped at ${formattedCap}.`;
     }
-    talkingPoint = `We have revised our proposal to cap aggregate liability at ${formattedCap}, establishing a clear, predictable ceiling for both parties.`;
+    talkingPoint =
+      activeLocale === "es"
+        ? `Hemos ajustado nuestra propuesta para limitar la responsabilidad acumulada a ${formattedCap}, fijando un tope claro y predecible para ambas partes.`
+        : activeLocale === "fr"
+        ? `Nous avons ajusté notre proposition pour plafonner la responsabilité cumulée à ${formattedCap}, offrant un plafond clair et prévisible aux deux parties.`
+        : `We have revised our proposal to cap aggregate liability at ${formattedCap}, establishing a clear, predictable ceiling for both parties.`;
   }
 
   // Cure period addition
@@ -1029,7 +1246,12 @@ export async function refineRedlineSuggestion(
         updatedText.replace(/\.\s*$/, "") +
         `, provided that either party receives a ${cureStr} written notice and cure period before any termination.`;
     }
-    talkingPoint = `Added standard ${cureStr} notice and cure protection so administrative delays do not trigger immediate termination.`;
+    talkingPoint =
+      activeLocale === "es"
+        ? `Se añadió un plazo estándar de notificación y subsanación de ${cureStr} para evitar rescisiones inmediatas por retrasos operativos.`
+        : activeLocale === "fr"
+        ? `Ajout d'un préavis écrit et d'un délai de remédiation de ${cureStr} afin d'éviter toute résiliation immédiate pour retard administratif.`
+        : `Added standard ${cureStr} notice and cure protection so administrative delays do not trigger immediate termination.`;
   }
 
   // Mutual / Reciprocal
@@ -1043,7 +1265,11 @@ export async function refineRedlineSuggestion(
       .replace(/\bVendor shall\b/gi, "Each party shall")
       .replace(/\beither party's\b/gi, "each party's");
     talkingPoint =
-      "We propose making these covenants bilateral and mutual so both organizations share equivalent protections.";
+      activeLocale === "es"
+        ? "Proponemos hacer estas obligaciones bilaterales y recíprocas para que ambas organizaciones compartan garantías equivalentes."
+        : activeLocale === "fr"
+        ? "Nous proposons de rendre ces engagements bilatéraux et réciproques afin que chaque organisation bénéficie de protections équivalentes."
+        : "We propose making these covenants bilateral and mutual so both organizations share equivalent protections.";
   }
 
   // Soften tone
@@ -1057,17 +1283,34 @@ export async function refineRedlineSuggestion(
       "subject to prior written mutual approval"
     );
     talkingPoint =
-      "Adopted a collaborative, partnership-friendly phrasing while upholding our core compliance baseline.";
+      activeLocale === "es"
+        ? "Adoptamos una redacción colaborativa y orientada a socios manteniendo nuestra línea base de cumplimiento."
+        : activeLocale === "fr"
+        ? "Formulation plus collaborative et orientée partenariat tout en maintenant notre socle de conformité."
+        : "Adopted a collaborative, partnership-friendly phrasing while upholding our core compliance baseline.";
   }
+
+  const localizedRationale =
+    activeLocale === "es"
+      ? `[Copiloto IA Refinado: "${validatedPayload.instruction}"] Redacción actualizada según indicación del revisor.`
+      : activeLocale === "fr"
+      ? `[Copilote IA Affiné : "${validatedPayload.instruction}"] Formulation mise à jour selon la directive du réviseur.`
+      : `[AI Copilot Refined: "${validatedPayload.instruction}"] Updated wording per prompt instruction.`;
+
+  const localizedCriticNotes =
+    activeLocale === "es"
+      ? "Critic Guard: Alineado al Playbook • 0 frases prohibidas • Obligaciones preservadas tras el refinamiento del Copiloto (Confianza: 96%)."
+      : activeLocale === "fr"
+      ? "Critic Guard : Conforme au Playbook • 0 terme interdit • Obligations préservées après affinement par le Copilote (Confiance : 96 %)."
+      : "Critic Guard: Playbook policy aligned • 0 banned triggers • Obligations preserved after Copilot refinement (Confidence: 96%).";
 
   const refinedSuggestion: RedlineSuggestionDTO = {
     ...matchedSuggestion,
     proposed_text: updatedText,
-    rationale: `[AI Copilot Refined: "${validatedPayload.instruction}"] Updated wording per prompt instruction.`,
+    rationale: localizedRationale,
     confidence_score: 96,
     verification_status: "VERIFIED",
-    critic_notes:
-      "Critic Guard: Playbook policy aligned • 0 banned triggers • Obligations preserved after Copilot refinement (Confidence: 96%).",
+    critic_notes: localizedCriticNotes,
     policy_alignment_passed: true,
     hallucination_free_passed: true,
     obligation_preservation_passed: true,
@@ -1316,7 +1559,11 @@ export async function simulateCounterpartyPushback(
     clause?: ClauseDTO;
   }
 ): Promise<SimulatePushbackResponseDTO> {
-  const validatedPayload = SimulatePushbackRequestDTOSchema.parse(payload);
+  const activeLocale = payload.language ?? getActiveLocale();
+  const validatedPayload = SimulatePushbackRequestDTOSchema.parse({
+    ...payload,
+    language: activeLocale,
+  });
 
   if (token) {
     try {
@@ -1487,6 +1734,24 @@ export async function simulateCounterpartyPushback(
       "Our treasury cycle processes undisputed invoices on standard Net 45 automated ACH schedules, while ensuring prompt pro-rata refunds strictly for uncured breach.";
     fallbackBody =
       "Undisputed invoices shall be payable within thirty (30) days of receipt via ACH, with a 15-day notice and dispute cure window.";
+  }
+
+  if (activeLocale === "es") {
+    counterpartyPersona = "Dirección Jurídica y Comercial de la Contraparte";
+    expectedObjection =
+      "El equipo legal de la contraparte argumentará que el cambio propuesto altera su distribución estándar de riesgos comerciales.";
+    rebuttalTalkingPoint =
+      "Nuestra propuesta sustituye una exposición unilateral por términos mutuos y alineados con estándares empresariales de mercado.";
+    fallbackBody =
+      "La responsabilidad agregada acumulada de cada parte no excederá de dos veces (2x) las tarifas anuales para brechas de seguridad o PI, ni de doce (12) meses de tarifas para daños directos generales.";
+  } else if (activeLocale === "fr") {
+    counterpartyPersona = "Direction Juridique et Commerciale du Cocontractant";
+    expectedObjection =
+      "Le conseil adverse fera valoir que la révision proposée modifie son allocation standard du risque commercial.";
+    rebuttalTalkingPoint =
+      "Notre proposition remplace une exposition asymétrique par des engagements réciproques conformes aux standards du marché.";
+    fallbackBody =
+      "La responsabilité cumulée globale de chaque partie n'excédera pas deux fois (2x) les redevances annuelles pour la violation de données ou la PI, et douze (12) mois de redevances pour les dommages directs généraux.";
   }
 
   const origPrefixMatch = matchedClause?.original_text.match(

@@ -12,8 +12,10 @@ import {
 import { AIPlaybookExtractorPanel } from "@/components/playbooks/AIPlaybookExtractorPanel";
 import { useAuthSession } from "@/services/authSession";
 import type { PlaybookRuleDTO } from "@/services/contracts";
+import { useI18n } from "@/i18n/useI18n";
 
 export default function PlaybooksPage() {
+  const { t } = useI18n();
   const { token, isLoading: isAuthLoading } = useAuthSession();
   const [rules, setRules] = useState<PlaybookRuleDTO[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -111,16 +113,13 @@ export default function PlaybooksPage() {
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to Dashboard</span>
+              <span>{t.playbooks.backToDashboard}</span>
             </Link>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white md:text-3xl">
-              Company Playbook Rules Manager
+              {t.playbooks.title}
             </h1>
             <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-              Define corporate baseline standards, pre-approved fallback
-              boundaries, and deal-breaker triggers. Every rule is automatically
-              vector-indexed (<code className="font-mono text-xs">1536-d</code> cosine + BM25 lexical search) for
-              real-time clause auditing.
+              {t.playbooks.subtitle}
             </p>
           </div>
 
@@ -137,12 +136,12 @@ export default function PlaybooksPage() {
             {isAdding ? (
               <>
                 <X className="h-3.5 w-3.5" />
-                <span>Cancel</span>
+                <span>{t.playbooks.cancelBtn}</span>
               </>
             ) : (
               <>
                 <Plus className="h-3.5 w-3.5" />
-                <span>Add New Playbook Rule</span>
+                <span>{t.playbooks.addRuleBtn}</span>
               </>
             )}
           </button>
@@ -170,15 +169,15 @@ export default function PlaybooksPage() {
           >
             <div className="border-b border-slate-100 pb-3 dark:border-slate-800">
               <h2 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
-                Create Corporate Playbook Policy
+                {t.playbooks.formTitle}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Need inspiration? Browse copyable templates in the{" "}
+                {t.playbooks.formHintPrefix}{" "}
                 <Link
                   href="/help"
                   className="font-semibold text-indigo-600 underline dark:text-indigo-400"
                 >
-                  Help &amp; Guide
+                  {t.playbooks.formHintLink}
                 </Link>
                 .
               </p>
@@ -187,13 +186,13 @@ export default function PlaybooksPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Clause Category / Legal Subject
+                  {t.playbooks.categoryLabel}
                 </label>
                 <input
                   type="text"
                   required
                   data-testid="rule-category-input"
-                  placeholder="e.g. Limitation of Liability, Indemnification, Data Privacy & AI..."
+                  placeholder={t.playbooks.categoryPlaceholder}
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder-slate-500"
@@ -202,13 +201,13 @@ export default function PlaybooksPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                  Standard Position (Preferred Corporate Baseline)
+                  {t.playbooks.standardLabel}
                 </label>
                 <textarea
                   required
                   rows={3}
                   data-testid="rule-standard-input"
-                  placeholder="e.g. Mutual 12 months fees paid cap; mutual waiver of consequential damages..."
+                  placeholder={t.playbooks.standardPlaceholder}
                   value={standardPosition}
                   onChange={(e) => setStandardPosition(e.target.value)}
                   className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs leading-relaxed text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder-slate-500"
@@ -217,13 +216,13 @@ export default function PlaybooksPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-amber-800 dark:text-amber-300">
-                  Fallback Position (Authorized Negotiating Floor)
+                  {t.playbooks.fallbackLabel}
                 </label>
                 <textarea
                   required
                   rows={3}
                   data-testid="rule-fallback-input"
-                  placeholder="e.g. Mutual 2x annual contract value super-cap for confidentiality and IP..."
+                  placeholder={t.playbooks.fallbackPlaceholder}
                   value={fallbackPosition}
                   onChange={(e) => setFallbackPosition(e.target.value)}
                   className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs leading-relaxed text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder-slate-500"
@@ -232,13 +231,13 @@ export default function PlaybooksPage() {
 
               <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-rose-700 dark:text-rose-300">
-                  Unacceptable Triggers (Red-Flag Escalation Phrases)
+                  {t.playbooks.triggersLabel}
                 </label>
                 <textarea
                   required
                   rows={2}
                   data-testid="rule-unacceptable-input"
-                  placeholder="e.g. unlimited liability, uncapped liability, consequential damages, train public foundation models..."
+                  placeholder={t.playbooks.triggersPlaceholder}
                   value={unacceptableTriggers}
                   onChange={(e) => setUnacceptableTriggers(e.target.value)}
                   className="mt-1.5 w-full rounded-lg border border-rose-200 bg-rose-50/30 px-3.5 py-2 font-mono text-xs text-slate-900 placeholder-slate-400 shadow-sm focus:border-rose-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 dark:border-rose-500/30 dark:bg-slate-950 dark:text-slate-100 dark:placeholder-slate-500"
@@ -258,7 +257,7 @@ export default function PlaybooksPage() {
                 onClick={() => setIsAdding(false)}
                 className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
-                Cancel
+                {t.playbooks.cancelBtn}
               </button>
               <button
                 type="submit"
@@ -267,8 +266,8 @@ export default function PlaybooksPage() {
                 className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:opacity-50"
               >
                 {isSubmitting
-                  ? "Generating Vectors..."
-                  : "Save Rule & Embed Vectors"}
+                  ? t.playbooks.savingVectorsBtn
+                  : t.playbooks.saveEmbedBtn}
               </button>
             </div>
           </form>
@@ -277,16 +276,15 @@ export default function PlaybooksPage() {
         {/* Playbook Rules Cards Grid */}
         {isLoading ? (
           <div className="py-16 text-center text-xs text-slate-500 dark:text-slate-400">
-            Loading corporate playbook knowledge base...
+            {t.playbooks.loadingRules}
           </div>
         ) : rules.length === 0 ? (
           <div className="surface-card rounded-2xl py-16 text-center">
             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              No playbook rules configured yet
+              {t.playbooks.emptyTitle}
             </p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Click &ldquo;Add New Playbook Rule&rdquo; above to define your
-              corporate negotiation standards.
+              {t.playbooks.emptyDesc}
             </p>
           </div>
         ) : (
@@ -320,7 +318,7 @@ export default function PlaybooksPage() {
                   {/* Standard Position */}
                   <div className="mt-4 space-y-1">
                     <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                      Standard Position
+                      {t.playbooks.standardPosHeading}
                     </span>
                     <p className="font-serif text-[14.5px] leading-[1.65] text-slate-800 dark:text-slate-200">
                       {rule.standard_position}
@@ -330,7 +328,7 @@ export default function PlaybooksPage() {
                   {/* Fallback Position */}
                   <div className="mt-3.5 space-y-1">
                     <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-400">
-                      Fallback Position
+                      {t.playbooks.fallbackPosHeading}
                     </span>
                     <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                       {rule.fallback_position}
@@ -340,7 +338,7 @@ export default function PlaybooksPage() {
                   {/* Unacceptable Triggers */}
                   <div className="mt-4 space-y-1 rounded-xl border border-rose-200/80 bg-rose-50/50 p-3 dark:border-rose-500/20 dark:bg-rose-950/20">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300">
-                      Unacceptable Triggers
+                      {t.playbooks.triggersHeading}
                     </span>
                     <p className="font-mono text-[11px] leading-relaxed text-rose-800 dark:text-rose-200">
                       {rule.unacceptable_triggers}
@@ -350,7 +348,7 @@ export default function PlaybooksPage() {
 
                 <div className="flex items-center justify-between border-t border-slate-100 pt-3 font-mono text-[11px] text-slate-400 dark:border-slate-800 dark:text-slate-500">
                   <span>ID: {rule.id.slice(0, 10)}</span>
-                  <span>1536-d Vector Indexed</span>
+                  <span>{t.playbooks.vectorIndexed}</span>
                 </div>
               </div>
             ))}

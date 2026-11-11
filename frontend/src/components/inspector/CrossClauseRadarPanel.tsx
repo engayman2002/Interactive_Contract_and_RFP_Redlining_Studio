@@ -17,6 +17,7 @@ import type {
   RiskLevel,
 } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
+import { useI18n } from "@/i18n/useI18n";
 
 export interface CrossClauseRadarPanelProps {
   documentId?: string;
@@ -58,6 +59,7 @@ const ISSUE_TYPE_CONFIG: Record<
 export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
   documentId,
 }) => {
+  const { t } = useI18n();
   const report = useWorkspaceStore((state) => state.crossClauseReport);
   const isRunning = useWorkspaceStore(
     (state) => state.isRunningCrossClauseCheck
@@ -114,10 +116,10 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
             </span>
             <div>
               <h3 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
-                Cross-Clause Integrity &amp; Contradiction Radar
+                {t.radar.title}
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Multi-clause graph analysis across obligations, section citations &amp; terms
+                {t.radar.subtitle}
               </p>
             </div>
           </div>
@@ -132,12 +134,12 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
             {isRunning ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>Scanning Graph...</span>
+                <span>{t.radar.scanningBtn}</span>
               </>
             ) : (
               <>
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>{report ? "Re-Scan Integrity" : "Scan Cross-Clause Integrity"}</span>
+                <span>{report ? t.radar.rescanBtn : t.radar.scanBtn}</span>
               </>
             )}
           </button>
@@ -154,7 +156,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 {report.integrity_score}%
               </div>
               <div className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Integrity Score
+                {t.radar.integrityScore}
               </div>
             </div>
 
@@ -163,7 +165,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 {report.contradiction_count}
               </div>
               <div className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Contradictions
+                {t.radar.contradictions}
               </div>
             </div>
 
@@ -172,7 +174,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 {report.broken_reference_count}
               </div>
               <div className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Broken Refs
+                {t.radar.brokenRefs}
               </div>
             </div>
 
@@ -181,7 +183,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 {report.undefined_term_count}
               </div>
               <div className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Undefined Terms
+                {t.radar.undefinedTerms}
               </div>
             </div>
           </div>
@@ -201,7 +203,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
-            All Issues ({report.total_findings})
+            {t.radar.filterAllIssues} ({report.total_findings})
           </button>
           <button
             type="button"
@@ -213,7 +215,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
-            Contradictions ({report.contradiction_count})
+            {t.radar.filterContradictions} ({report.contradiction_count})
           </button>
           <button
             type="button"
@@ -225,7 +227,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
-            Broken Refs ({report.broken_reference_count})
+            {t.radar.filterBrokenRefs} ({report.broken_reference_count})
           </button>
           <button
             type="button"
@@ -237,7 +239,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
-            Undefined Terms ({report.undefined_term_count})
+            {t.radar.filterUndefinedTerms} ({report.undefined_term_count})
           </button>
         </div>
       )}
@@ -260,10 +262,10 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
         <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50/40 p-8 text-center dark:border-emerald-500/20 dark:bg-emerald-950/20">
           <CheckCircle2 className="mb-2 h-8 w-8 text-emerald-600 dark:text-emerald-400" />
           <h4 className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
-            Optimal Cross-Clause Integrity
+            {t.radar.noIssuesFilterTitle}
           </h4>
           <p className="mt-1 max-w-sm text-xs leading-relaxed text-emerald-700 dark:text-emerald-300">
-            No contradictions, dangling section citations, or undefined terms detected in this category.
+            {t.radar.noIssuesFilterDesc}
           </p>
         </div>
       )}
@@ -311,7 +313,9 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                 onClick={() => selectClause(finding.source_clause_id, "inspector")}
                 className="inline-flex items-center gap-1 rounded-lg border border-slate-200/90 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
               >
-                <span>Source: Clause #{finding.source_clause_index + 1}</span>
+                <span>
+                  {t.radar.sourceClausePrefix} #{finding.source_clause_index + 1}
+                </span>
                 <ArrowRight className="h-3 w-3" />
               </button>
 
@@ -324,7 +328,9 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
                   onClick={() => selectClause(finding.target_clause_id ?? null, "inspector")}
                   className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50/70 px-2.5 py-1 text-[11px] font-semibold text-rose-700 shadow-sm transition-colors hover:border-rose-400 hover:bg-rose-100 hover:text-rose-800 dark:border-rose-500/30 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60"
                 >
-                  <span>Conflicts with: Clause #{finding.target_clause_index + 1}</span>
+                  <span>
+                    {t.radar.targetClausePrefix} #{finding.target_clause_index + 1}
+                  </span>
                   <ArrowRight className="h-3 w-3" />
                 </button>
               ) : null}
@@ -333,7 +339,7 @@ export const CrossClauseRadarPanel: React.FC<CrossClauseRadarPanelProps> = ({
             {/* Recommended Fix Box */}
             <div className="mt-3 rounded-lg border border-emerald-200/80 bg-emerald-50/40 p-2.5 dark:border-emerald-500/20 dark:bg-emerald-950/20">
               <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                Recommended Resolution
+                {t.radar.recommendedResolution}
               </div>
               <p className="mt-0.5 text-[11px] leading-relaxed text-slate-700 dark:text-emerald-100">
                 {finding.recommended_fix}

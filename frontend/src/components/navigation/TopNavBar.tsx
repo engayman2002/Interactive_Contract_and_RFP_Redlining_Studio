@@ -10,11 +10,14 @@ import {
 } from "@/components/workspace/AISettingsModal";
 import { fetchAISettings } from "@/services/apiClient";
 import { useAuthSession } from "@/services/authSession";
+import { useI18n } from "@/i18n/useI18n";
 import { useWorkspaceStore } from "@/store/workspaceStore";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 
 export const TopNavBar: React.FC = () => {
   const pathname = usePathname();
+  const { t } = useI18n();
   const { session, connectionStatus, login, logout } = useAuthSession();
   const activeLLMProvider = useWorkspaceStore(
     (state) => state.activeLLMProvider
@@ -66,15 +69,15 @@ export const TopNavBar: React.FC = () => {
   };
 
   const navLinks = [
-    { label: "Dashboard", href: "/" },
-    { label: "Sample Studio", href: "/documents/demo" },
-    { label: "Company Playbook", href: "/playbooks" },
-    { label: "Help & Guide", href: "/help" },
+    { label: t.nav.dashboard, href: "/" },
+    { label: t.nav.sampleStudio, href: "/documents/demo" },
+    { label: t.nav.companyPlaybook, href: "/playbooks" },
+    { label: t.nav.helpGuide, href: "/help" },
   ];
 
   const formattedRole =
     session.userRole === "ADMIN"
-      ? "Legal Counsel • Admin"
+      ? t.nav.roleAdmin
       : session.userRole.replace(/_/g, " ");
 
   return (
@@ -95,10 +98,10 @@ export const TopNavBar: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <span className="whitespace-nowrap text-[14px] font-semibold tracking-tight text-slate-900 dark:text-white">
-                Redline Studio
+                {t.nav.brandName}
               </span>
               <span className="hidden shrink-0 whitespace-nowrap rounded-md border border-indigo-200/80 bg-indigo-50/80 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300 sm:inline-block">
-                ENTERPRISE
+                {t.nav.enterpriseTag}
               </span>
             </div>
           </Link>
@@ -137,7 +140,7 @@ export const TopNavBar: React.FC = () => {
             className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-indigo-200/90 bg-indigo-50/70 px-2.5 text-[11px] font-semibold text-indigo-700 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-100/80 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:border-indigo-500/50 dark:hover:bg-indigo-900/50"
           >
             <Cpu className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span className="font-mono whitespace-nowrap">
+            <span className="whitespace-nowrap font-mono">
               {formatActiveAIBadge(activeLLMProvider, activeLLMModel)}
             </span>
           </button>
@@ -159,11 +162,14 @@ export const TopNavBar: React.FC = () => {
               }`}
             />
             <span className="whitespace-nowrap">
-              {connectionStatus === "live" ? "Live Backend" : "Demo Workspace"}
+              {connectionStatus === "live"
+                ? t.nav.liveBackend
+                : t.nav.demoWorkspace}
             </span>
           </div>
 
-          {/* Theme Toggle */}
+          {/* Language Switcher & Theme Toggle */}
+          <LanguageSwitcher />
           <ThemeToggle />
 
           {/* Executive Role Badge */}
@@ -213,10 +219,10 @@ export const TopNavBar: React.FC = () => {
             <div className="mb-4 flex items-center justify-between border-b border-slate-200/80 pb-3.5 dark:border-slate-800">
               <div>
                 <h3 className="text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                  Workspace Authentication
+                  {t.nav.authModalTitle}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Sign in or switch organization tenant credentials.
+                  {t.nav.authModalSubtitle}
                 </p>
               </div>
               <button
@@ -231,7 +237,7 @@ export const TopNavBar: React.FC = () => {
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Corporate Email
+                  {t.nav.emailLabel}
                 </label>
                 <input
                   type="email"
@@ -244,7 +250,7 @@ export const TopNavBar: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Password
+                  {t.nav.passwordLabel}
                 </label>
                 <input
                   type="password"

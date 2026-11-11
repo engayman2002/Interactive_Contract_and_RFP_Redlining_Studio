@@ -16,11 +16,13 @@ import {
 } from "lucide-react";
 import { TopNavBar } from "@/components/navigation/TopNavBar";
 import { ContractUploadDropzone } from "@/components/workspace/ContractUploadDropzone";
+import { useI18n } from "@/i18n/useI18n";
 import { listDocuments, listPlaybookRules } from "@/services/apiClient";
 import { useAuthSession } from "@/services/authSession";
 import type { DocumentListItemDTO } from "@/services/contracts";
 
 export default function DashboardPage() {
+  const { t } = useI18n();
   const { token, isLoading: isAuthLoading } = useAuthSession();
   const [documents, setDocuments] = useState<DocumentListItemDTO[]>([]);
   const [playbookCount, setPlaybookCount] = useState<number>(5);
@@ -65,15 +67,13 @@ export default function DashboardPage() {
           <div>
             <span className="micro-badge border-indigo-200/80 bg-indigo-50/90 text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
               <span className="micro-badge-dot bg-indigo-500" aria-hidden="true" />
-              Enterprise Legal Operations
+              {t.dashboard.heroEyebrow}
             </span>
             <h1 className="mt-2.5 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white md:text-3xl">
-              Contract &amp; RFP Intelligence Workspace
+              {t.dashboard.heroTitle}
             </h1>
             <p className="mt-1.5 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-              Ingest counterparty agreements, benchmark clauses against your
-              vector-indexed Company Playbook, and export executive-ready
-              Microsoft Word Track Changes turns.
+              {t.dashboard.heroSubtitle}
             </p>
           </div>
 
@@ -83,14 +83,14 @@ export default function DashboardPage() {
               className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               <BookOpen className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-              <span>Configure Playbook</span>
+              <span>{t.dashboard.configurePlaybook}</span>
             </Link>
             <Link
               href="/help"
               className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               <HelpCircle className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
-              <span>User Guide</span>
+              <span>{t.dashboard.userGuide}</span>
             </Link>
           </div>
         </div>
@@ -106,12 +106,10 @@ export default function DashboardPage() {
             </span>
             <div>
               <h2 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
-                New User? Start the 2-Minute Interactive Tutorial
+                {t.dashboard.onboardingTitle}
               </h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                Walk through Golden Playbook extraction, Stance-tuned AI audits,
-                Copilot prompting, Critic Guard verification, Pushback
-                Simulation, and native Word Track Changes export step by step.
+                {t.dashboard.onboardingDesc}
               </p>
             </div>
           </div>
@@ -123,7 +121,7 @@ export default function DashboardPage() {
               className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 transition-all hover:from-indigo-400 hover:to-indigo-600"
             >
               <GraduationCap className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>🎓 Start Interactive Tutorial</span>
+              <span>{t.dashboard.startTutorialBtn}</span>
             </Link>
             <Link
               href="/documents/demo"
@@ -131,7 +129,7 @@ export default function DashboardPage() {
               className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-indigo-200/90 bg-white px-3.5 text-xs font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50 dark:border-indigo-500/30 dark:bg-slate-800 dark:text-indigo-300 dark:hover:bg-slate-700"
             >
               <Rocket className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>🚀 Launch Guided Sample Studio</span>
+              <span>{t.dashboard.launchGuidedDemoBtn}</span>
             </Link>
           </div>
         </section>
@@ -145,7 +143,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Total Contracts Audited
+                  {t.dashboard.kpiAuditedLabel}
                 </span>
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50/80 text-indigo-600 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400">
                   <FileText className="h-3.5 w-3.5" />
@@ -156,7 +154,7 @@ export default function DashboardPage() {
                   {Math.max(documents.length, 1)}
                 </span>
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  ({analyzedCount} analyzed)
+                  ({analyzedCount} {t.dashboard.kpiAuditedWord})
                 </span>
               </div>
             </div>
@@ -177,7 +175,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Active Playbook Policies
+                  {t.dashboard.kpiPlaybooksLabel}
                 </span>
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50/80 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
                   <BookOpen className="h-3.5 w-3.5" />
@@ -188,7 +186,7 @@ export default function DashboardPage() {
                   {playbookCount}
                 </span>
                 <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                  Hybrid Vector + BM25
+                  {t.dashboard.kpiPlaybooksSub}
                 </span>
               </div>
             </div>
@@ -201,7 +199,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Critical Risks Identified
+                  {t.dashboard.kpiRisksLabel}
                 </span>
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-100 bg-rose-50/80 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400">
                   <ShieldAlert className="h-3.5 w-3.5" />
@@ -213,7 +211,7 @@ export default function DashboardPage() {
                 </span>
                 <span className="micro-badge border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
                   <span className="micro-badge-dot bg-rose-500" aria-hidden="true" />
-                  Liability &amp; AI Data
+                  {t.dashboard.kpiRisksBadge}
                 </span>
               </div>
             </div>
@@ -227,7 +225,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Avg. Clause Audit Speed
+                  {t.dashboard.kpiSpeedLabel}
                 </span>
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-100 bg-sky-50/80 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400">
                   <Clock className="h-3.5 w-3.5" />
@@ -238,7 +236,7 @@ export default function DashboardPage() {
                   &lt;150ms
                 </span>
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  20x concurrent stream
+                  {t.dashboard.kpiSpeedSub}
                 </span>
               </div>
             </div>
@@ -263,42 +261,31 @@ export default function DashboardPage() {
             <div className="relative">
               <div className="micro-badge border-indigo-400/30 bg-indigo-500/15 text-indigo-200">
                 <Sparkles className="h-3 w-3 text-indigo-300" />
-                <span>Interactive Evaluation Showcase</span>
+                <span>{t.dashboard.showcaseBadge}</span>
               </div>
 
               <h2 className="mt-4 text-base font-semibold tracking-tight text-white">
-                Master Cloud &amp; Enterprise AI Agreement
+                {t.dashboard.showcaseTitle}
               </h2>
               <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
-                Explore a live pre-segmented enterprise agreement complete with
-                Playbook deviations, inline word-level diffs, threaded comments,
-                and OpenXML Word Track Changes export.
+                {t.dashboard.showcaseDesc}
               </p>
 
               <div className="mt-4 space-y-2.5 border-t border-white/10 pt-4">
                 <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                  Flagged Counterparty Risks Inside
+                  {t.dashboard.showcaseRisksHeading}
                 </p>
                 <div className="flex items-start gap-2 text-xs text-slate-200">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
-                  <span>
-                    <strong className="text-white">Critical:</strong> Asymmetric $500 vendor liability
-                    cap vs. uncapped customer exposure
-                  </span>
+                  <span>{t.dashboard.showcaseRisk1}</span>
                 </div>
                 <div className="flex items-start gap-2 text-xs text-slate-200">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
-                  <span>
-                    <strong className="text-white">Critical:</strong> Perpetual right to train public
-                    foundation AI models on Customer Data
-                  </span>
+                  <span>{t.dashboard.showcaseRisk2}</span>
                 </div>
                 <div className="flex items-start gap-2 text-xs text-slate-200">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
-                  <span>
-                    <strong className="text-white">High:</strong> Unilateral indemnification &amp;
-                    missing SLA financial service credits
-                  </span>
+                  <span>{t.dashboard.showcaseRisk3}</span>
                 </div>
               </div>
             </div>
@@ -309,7 +296,7 @@ export default function DashboardPage() {
                 data-testid="try-demo-contract-btn"
                 className="flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-4 text-xs font-semibold text-white shadow-md ring-1 ring-inset ring-white/25 transition-all hover:from-indigo-400 hover:to-indigo-500"
               >
-                <span>Launch Sample Studio</span>
+                <span>{t.dashboard.launchSampleStudioBtn}</span>
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </Link>
             </div>
@@ -321,29 +308,31 @@ export default function DashboardPage() {
           <div className="flex flex-col justify-between gap-2 border-b border-slate-200/80 px-6 py-4 dark:border-slate-800/80 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-                Recent Contracts &amp; RFPs
+                {t.dashboard.tableTitle}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Agreements ingested in your organization workspace
+                {t.dashboard.tableSubtitle}
               </p>
             </div>
             <span className="inline-flex items-center self-start rounded-full border border-slate-200/90 bg-slate-50 px-2.5 py-0.5 font-mono text-[11px] font-medium tabular-nums text-slate-600 dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-300 sm:self-auto">
-              {documents.length} {documents.length === 1 ? "record" : "records"}
+              {documents.length}{" "}
+              {documents.length === 1
+                ? t.dashboard.recordSingular
+                : t.dashboard.recordPlural}
             </span>
           </div>
 
           {isLoadingDocs ? (
             <div className="flex items-center justify-center py-12 text-xs text-slate-500 dark:text-slate-400">
-              Loading workspace agreements...
+              {t.dashboard.loadingDocs}
             </div>
           ) : documents.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                No contracts uploaded yet
+                {t.dashboard.emptyTitle}
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Drop a .docx or .pdf above or launch the Sample Studio to start
-                redlining.
+                {t.dashboard.emptyDesc}
               </p>
             </div>
           ) : (
@@ -351,12 +340,12 @@ export default function DashboardPage() {
               <table className="w-full border-collapse text-left">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/70 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
-                    <th className="px-6 py-3.5">Document Title</th>
-                    <th className="px-4 py-3.5">Status</th>
-                    <th className="px-4 py-3.5">Clauses</th>
-                    <th className="px-4 py-3.5">Version</th>
-                    <th className="px-4 py-3.5">Ingested Date</th>
-                    <th className="px-6 py-3.5 text-right">Workspace</th>
+                    <th className="px-6 py-3.5">{t.dashboard.colDocTitle}</th>
+                    <th className="px-4 py-3.5">{t.dashboard.colStatus}</th>
+                    <th className="px-4 py-3.5">{t.dashboard.colClauses}</th>
+                    <th className="px-4 py-3.5">{t.dashboard.colVersion}</th>
+                    <th className="px-4 py-3.5">{t.dashboard.colDate}</th>
+                    <th className="px-6 py-3.5 text-right">{t.dashboard.colWorkspace}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200/70 text-xs dark:divide-slate-800/70">
@@ -397,7 +386,7 @@ export default function DashboardPage() {
                           </span>
                         </td>
                         <td className="px-4 py-4 font-mono tabular-nums text-slate-600 dark:text-slate-300">
-                          {doc.clause_count ?? "—"} clauses
+                          {doc.clause_count ?? "—"} {t.dashboard.clausesSuffix}
                         </td>
                         <td className="px-4 py-4">
                           <span className="rounded-md border border-slate-200/90 bg-slate-100/80 px-2 py-0.5 font-mono text-[11px] font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
@@ -420,7 +409,7 @@ export default function DashboardPage() {
                             data-testid={`open-studio-btn-${doc.id}`}
                             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-3 text-xs font-semibold text-indigo-600 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50/70 dark:border-slate-700/80 dark:bg-slate-800 dark:text-indigo-300 dark:hover:border-indigo-500/40 dark:hover:bg-slate-700"
                           >
-                            <span>Open in Studio</span>
+                            <span>{t.dashboard.openInStudioBtn}</span>
                             <ArrowRight className="h-3.5 w-3.5" />
                           </Link>
                         </td>

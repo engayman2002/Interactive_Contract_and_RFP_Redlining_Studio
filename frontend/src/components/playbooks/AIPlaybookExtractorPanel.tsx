@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { useAuthSession } from "@/services/authSession";
+import { useI18n } from "@/i18n/useI18n";
 import {
   createPlaybookRule,
   extractPlaybookFromFile,
@@ -38,6 +39,7 @@ interface AIPlaybookExtractorPanelProps {
 export function AIPlaybookExtractorPanel({
   onRulesSaved,
 }: AIPlaybookExtractorPanelProps) {
+  const { t } = useI18n();
   const { session, token } = useAuthSession();
   const isViewer = session?.userRole === "VIEWER";
 
@@ -156,17 +158,13 @@ export function AIPlaybookExtractorPanel({
         <div>
           <div className="micro-badge border-indigo-200/90 bg-white/95 text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-950/50 dark:text-indigo-300">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>AI Feature #6 — Golden Contract Auto-Extractor</span>
+            <span>{t.extractor.badge}</span>
           </div>
           <h2 className="mt-2.5 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-            Generate Playbook Rules from a Golden Contract
+            {t.extractor.title}
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-            Paste approved MSA clauses or upload a signed{" "}
-            <code className="font-mono">.docx</code>/
-            <code className="font-mono">.pdf</code> template. The AI distills
-            standard positions, fallback boundaries, and counterparty red-flag
-            triggers, then automatically embeds and indexes them.
+            {t.extractor.subtitle}
           </p>
         </div>
 
@@ -186,7 +184,7 @@ export function AIPlaybookExtractorPanel({
             }`}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Paste Clauses</span>
+            <span>{t.extractor.modeText}</span>
           </button>
           <button
             type="button"
@@ -202,7 +200,7 @@ export function AIPlaybookExtractorPanel({
             }`}
           >
             <FileUp className="h-3.5 w-3.5" />
-            <span>Upload DOCX/PDF</span>
+            <span>{t.extractor.modeFile}</span>
           </button>
         </div>
       </div>
@@ -215,7 +213,7 @@ export function AIPlaybookExtractorPanel({
                 htmlFor="extractor-reference-textarea"
                 className="text-xs font-semibold text-slate-700 dark:text-slate-300"
               >
-                Golden Contract Clauses / Reference Policy Text
+                {t.extractor.referenceLabel}
               </label>
               <button
                 type="button"
@@ -224,7 +222,7 @@ export function AIPlaybookExtractorPanel({
                 className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-50 dark:border-indigo-500/30 dark:bg-slate-800 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
               >
                 <Sparkles className="h-3 w-3" />
-                <span>Load Sample Golden MSA</span>
+                <span>{t.extractor.loadSampleBtn}</span>
               </button>
             </div>
             <textarea
@@ -233,7 +231,7 @@ export function AIPlaybookExtractorPanel({
               rows={5}
               value={referenceText}
               onChange={(e) => setReferenceText(e.target.value)}
-              placeholder="Paste numbered clauses from your signed Golden MSA, DPA, or SLA template..."
+              placeholder={t.extractor.textPlaceholder}
               className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs leading-relaxed text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             />
           </div>
@@ -241,7 +239,10 @@ export function AIPlaybookExtractorPanel({
           <div className="rounded-xl border border-dashed border-indigo-300 bg-white/80 p-5 text-center dark:border-indigo-500/40 dark:bg-slate-950/60">
             <Upload className="mx-auto h-6 w-6 text-indigo-500" />
             <p className="mt-2 text-xs font-medium text-slate-800 dark:text-slate-200">
-              Select a signed Golden Contract or Template (.docx or .pdf)
+              {t.extractor.uploadTitle}
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+              {t.extractor.uploadSubtitle}
             </p>
             <input
               type="file"
@@ -252,7 +253,7 @@ export function AIPlaybookExtractorPanel({
             />
             {selectedFile ? (
               <p className="mt-2 text-[11px] font-medium text-indigo-700 dark:text-indigo-300">
-                Ready to parse: {selectedFile.name} (
+                {t.upload.readyToParse}: {selectedFile.name} (
                 {Math.max(1, Math.round(selectedFile.size / 1024))} KB)
               </p>
             ) : null}
@@ -269,11 +270,13 @@ export function AIPlaybookExtractorPanel({
                 onChange={(e) => setAutoSave(e.target.checked)}
                 className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
               />
-              <span>Auto-save &amp; generate 1536-d vector embeddings</span>
+              <span>
+                {autoSave ? t.extractor.autoSaveLabel : t.extractor.previewOnlyHint}
+              </span>
             </label>
 
             <label className="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-              <span>Max Rules:</span>
+              <span>{t.extractor.maxRulesLabel}</span>
               <select
                 value={maxRules}
                 onChange={(e) => setMaxRules(Number(e.target.value))}
@@ -301,12 +304,12 @@ export function AIPlaybookExtractorPanel({
             {isExtracting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Extracting Playbook Rules...</span>
+                <span>{t.extractor.extractingBtn}</span>
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                <span>Auto-Extract Playbook Rules</span>
+                <span>{t.extractor.extractBtn}</span>
               </>
             )}
           </button>
@@ -331,17 +334,16 @@ export function AIPlaybookExtractorPanel({
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
               <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <span>
-                Extracted {result.extracted_count} Playbook{" "}
-                {result.extracted_count === 1 ? "Rule" : "Rules"} in{" "}
+                {t.extractor.candidatesTitle} ({result.extracted_count}) ·{" "}
                 {Math.round(result.latency_ms)} ms
               </span>
               {result.auto_saved ? (
                 <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
-                  Auto-Saved &amp; Indexed
+                  {t.extractor.autoSavedStatus}
                 </span>
               ) : (
                 <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
-                  Preview Mode
+                  {t.extractor.previewStatus}
                 </span>
               )}
             </div>
@@ -363,13 +365,14 @@ export function AIPlaybookExtractorPanel({
                         <span>{candidate.category}</span>
                       </span>
                       <span className="font-mono text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-                        {candidate.confidence_score}% confidence
+                        {candidate.confidence_score}
+                        {t.extractor.confidenceSuffix}
                       </span>
                     </div>
 
                     <div className="mt-3 space-y-1">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                        Standard Position
+                        {t.playbooks.standardPosHeading}
                       </span>
                       <p className="text-xs leading-relaxed text-slate-800 dark:text-slate-200">
                         {candidate.standard_position}
@@ -378,7 +381,7 @@ export function AIPlaybookExtractorPanel({
 
                     <div className="mt-2.5 space-y-1">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-400">
-                        Fallback Position
+                        {t.playbooks.fallbackPosHeading}
                       </span>
                       <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                         {candidate.fallback_position}
@@ -415,17 +418,17 @@ export function AIPlaybookExtractorPanel({
                         {isSaved ? (
                           <>
                             <CheckCircle2 className="h-3.5 w-3.5" />
-                            <span>Saved to Playbook</span>
+                            <span>{t.extractor.savedBtn}</span>
                           </>
                         ) : savingCandidateIdx === idx ? (
                           <>
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            <span>Saving...</span>
+                            <span>{t.extractor.savingBtn}</span>
                           </>
                         ) : (
                           <>
                             <Plus className="h-3.5 w-3.5" />
-                            <span>Save Rule</span>
+                            <span>{t.extractor.saveBtn}</span>
                           </>
                         )}
                       </button>

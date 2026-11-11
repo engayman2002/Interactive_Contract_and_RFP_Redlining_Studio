@@ -5,6 +5,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { InlineDiffPreview } from "@/components/diff/InlineDiffPreview";
 import type { ClauseDTO, RedlineSuggestionDTO } from "@/services/contracts";
+import { useI18n } from "@/i18n/useI18n";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import {
   buildTipTapDocumentFromClauses,
@@ -151,6 +152,7 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
   redlines,
   documentTitle = "Master Commercial Agreement — Review Copy",
 }) => {
+  const { t } = useI18n();
   const selectClause = useWorkspaceStore((state) => state.selectClause);
   const negotiationStance = useWorkspaceStore(
     (state) => state.negotiationStance
@@ -230,10 +232,10 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
           <div className="mb-5 border-b border-slate-200/80 pb-4 dark:border-slate-800/80">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-400">
-                Confidential Legal Review Instrument
+                {t.editor.sheetEyebrow}
               </span>
               <span className="whitespace-nowrap rounded-md border border-slate-200/90 bg-slate-50 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-300">
-                Revision v{documentVersion}
+                {t.editor.revisionPrefix} v{documentVersion}
               </span>
             </div>
 
@@ -245,7 +247,7 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/75 px-3.5 py-2 text-[11px] dark:border-slate-800 dark:bg-slate-950/60">
               <div className="flex flex-wrap items-center gap-2.5 text-slate-600 dark:text-slate-400">
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  Commercial Agreement
+                  {t.editor.agreementLabel}
                 </span>
                 <span
                   aria-hidden="true"
@@ -254,7 +256,7 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
                   ·
                 </span>
                 <span className="font-mono">
-                  Posture:{" "}
+                  {t.editor.posturePrefix}{" "}
                   <strong className="font-semibold uppercase text-indigo-700 dark:text-indigo-300">
                     {negotiationStance}
                   </strong>
@@ -266,7 +268,7 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
                   ·
                 </span>
                 <span className="font-mono tabular-nums">
-                  {clauses.length} Provisions
+                  {clauses.length} {t.editor.provisionsSuffix}
                 </span>
               </div>
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-[11px] font-semibold">
@@ -284,8 +286,8 @@ export const ContractEditorCanvas: React.FC<ContractEditorCanvasProps> = ({
                   }
                 >
                   {pendingRedlineCount > 0
-                    ? `${pendingRedlineCount} Flagged`
-                    : "Verified"}
+                    ? `${pendingRedlineCount} ${t.editor.flaggedSuffix}`
+                    : t.editor.verifiedStatus}
                 </span>
               </span>
             </div>

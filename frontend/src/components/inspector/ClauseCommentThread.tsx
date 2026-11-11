@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { MessageSquare } from "lucide-react";
 import type { ClauseCommentDTO, ClauseDTO } from "@/services/contracts";
+import { useI18n } from "@/i18n/useI18n";
 
 export interface ClauseCommentThreadProps {
   clause: ClauseDTO;
@@ -14,6 +15,7 @@ export interface ClauseCommentThreadProps {
 export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
   React.memo(
     ({ clause, comments, onAddComment, defaultExpanded = false }) => {
+      const { t } = useI18n();
       const [isExpanded, setIsExpanded] = useState<boolean>(defaultExpanded);
       const [draftBody, setDraftBody] = useState<string>("");
 
@@ -46,7 +48,8 @@ export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
                 aria-hidden="true"
               />
               <h3 className="whitespace-nowrap text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                Clause #{clause.clause_index + 1} Discussion
+                {t.redlineCard.clausePrefix} #{clause.clause_index + 1}{" "}
+                {t.comments.discussionSuffix}
               </h3>
               {clause.heading ? (
                 <span className="max-w-[160px] truncate text-[11px] text-slate-500 dark:text-slate-400">
@@ -59,7 +62,10 @@ export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
                 data-testid={`comment-count-${clause.id}`}
                 className="shrink-0 whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[11px] font-medium tabular-nums text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
               >
-                {comments.length} {comments.length === 1 ? "comment" : "comments"}
+                {comments.length}{" "}
+                {comments.length === 1
+                  ? t.comments.commentSingular
+                  : t.comments.commentPlural}
               </span>
               <button
                 type="button"
@@ -71,7 +77,7 @@ export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
                 }}
                 className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-slate-200/90 bg-white px-2 text-[11px] font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
               >
-                {isExpanded ? "▲ Collapse" : "▼ Expand"}
+                {isExpanded ? t.comments.collapseBtn : t.comments.expandBtn}
               </button>
             </div>
           </div>
@@ -88,7 +94,7 @@ export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
             >
               {comments.length === 0 ? (
                 <p className="text-xs italic text-slate-500 dark:text-slate-400">
-                  No review notes on this clause yet. Add a comment below.
+                  {t.comments.empty}
                 </p>
               ) : (
                 comments.map((comment) => (
@@ -121,7 +127,7 @@ export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
               <input
                 type="text"
                 aria-label="Clause comment body"
-                placeholder={`Add a review comment on Clause #${
+                placeholder={`${t.comments.placeholder} #${
                   clause.clause_index + 1
                 }...`}
                 data-testid={`comment-input-${clause.id}`}
@@ -135,7 +141,7 @@ export const ClauseCommentThread: React.FC<ClauseCommentThreadProps> =
                 disabled={!draftBody.trim()}
                 className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:opacity-50"
               >
-                Post Comment
+                {t.comments.postBtn}
               </button>
             </form>
           </div>

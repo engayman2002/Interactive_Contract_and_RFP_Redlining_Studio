@@ -21,6 +21,7 @@ import type {
   VerificationStatus,
 } from "@/services/contracts";
 import { useWorkspaceStore } from "@/store/workspaceStore";
+import { useI18n } from "@/i18n/useI18n";
 
 export interface RedlineCardProps {
   clause: ClauseDTO;
@@ -96,15 +97,21 @@ function splitRationaleAndTalkingPoint(rawRationale: string): {
   rationale: string;
   talkingPoint: string | null;
 } {
-  const marker = " | Talking Point: ";
-  const idx = rawRationale.indexOf(marker);
-  if (idx === -1) {
-    return { rationale: rawRationale, talkingPoint: null };
+  const markers = [
+    " | Talking Point: ",
+    " | Argumento: ",
+    " | Argumentaire: ",
+  ];
+  for (const marker of markers) {
+    const idx = rawRationale.indexOf(marker);
+    if (idx !== -1) {
+      return {
+        rationale: rawRationale.slice(0, idx).trim(),
+        talkingPoint: rawRationale.slice(idx + marker.length).trim(),
+      };
+    }
   }
-  return {
-    rationale: rawRationale.slice(0, idx).trim(),
-    talkingPoint: rawRationale.slice(idx + marker.length).trim(),
-  };
+  return { rationale: rawRationale, talkingPoint: null };
 }
 
 export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
@@ -118,6 +125,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
     onLocalApplyPreview,
     onLocalRejectPreview,
   }) => {
+    const { t } = useI18n();
     const isSelected = useWorkspaceStore(
       (state) => state.activeClauseId === clause.id
     );
@@ -187,6 +195,12 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
       suggestion.critic_notes ??
       "Verified by Critic Agent against Playbook policy and hallucination guard.";
     const verificationCfg = VERIFICATION_BADGE_CONFIG[verificationStatus];
+    const verificationLabel =
+      verificationStatus === "VERIFIED"
+        ? t.redlineCard.badgeVerified
+        : verificationStatus === "AUTO_REFINED"
+        ? t.redlineCard.badgeAutoRefined
+        : t.redlineCard.badgeNeedsReview;
 
     const handleVerifyWithCritic = async (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -365,16 +379,20 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <span className="shrink-0 whitespace-nowrap rounded-md border border-slate-200/90 bg-slate-100/80 px-2 py-0.5 font-mono text-[11px] font-medium tabular-nums text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-              Clause #{clause.clause_index + 1}
+              {t.redlineCard.clausePrefix} #{clause.clause_index + 1}
             </span>
             <h4 className="truncate text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-              {clause.heading ?? `Section ${clause.clause_index + 1}`}
+              {clause.heading ??
+                `${t.redlineCard.sectionPrefix} ${clause.clause_index + 1}`}
             </h4>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-1.5">
             {commentCount > 0 ? (
               <span className="micro-badge shrink-0 whitespace-nowrap border-indigo-200 bg-indigo-50 font-mono text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
-                {commentCount} {commentCount === 1 ? "Comment" : "Comments"}
+                {commentCount}{" "}
+                {commentCount === 1
+                  ? t.redlineCard.commentSingular
+                  : t.redlineCard.commentPlural}
               </span>
             ) : null}
             <span
@@ -383,7 +401,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
             >
               <span>{verificationCfg.emoji}</span>
               <span>
-                {confidenceScore}% {verificationCfg.label}
+                {confidenceScore}% {verificationLabel}
               </span>
             </span>
             <span
@@ -412,7 +430,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
           <div className="mb-2.5 rounded-r-lg border-l-2 border-indigo-500 bg-slate-50/90 p-2.5 dark:bg-slate-800/55">
             <div className="mb-0.5 flex items-center justify-between gap-2">
               <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-                Negotiation Talking Point
+                {t.redlineCard.talkingPointLabel}
               </span>
               <button
                 type="button"
@@ -423,12 +441,12 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 {copiedTalkingPoint ? (
                   <>
                     <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                    <span>Copied</span>
+                    <span>{t.redlineCard.copiedBtn}</span>
                   </>
                 ) : (
                   <>
                     <Copy className="h-3 w-3" />
-                    <span>Copy</span>
+                    <span>{t.redlineCard.copyBtn}</span>
                   </>
                 )}
               </button>
@@ -443,10 +461,10 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
         <div className="mb-3 overflow-hidden rounded-xl border border-emerald-200/80 bg-emerald-50/35 dark:border-emerald-500/20 dark:bg-emerald-950/15">
           <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-emerald-200/70 bg-emerald-50/80 px-3 py-1.5 dark:border-emerald-500/20 dark:bg-emerald-950/45">
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-              Proposed Playbook Wording
+              {t.redlineCard.proposedWordingLabel}
             </span>
             <span className="text-[10px] font-medium text-emerald-700/80 dark:text-emerald-400/80">
-              Hover Apply to preview inline diff
+              {t.redlineCard.hoverPreviewHint}
             </span>
           </div>
 
@@ -475,7 +493,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                     }}
                     className="h-7 shrink-0 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                   >
-                    Cancel
+                    {t.redlineCard.cancelModify}
                   </button>
                   <button
                     type="button"
@@ -483,7 +501,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                     onClick={handleSaveModified}
                     className="h-7 shrink-0 whitespace-nowrap rounded-lg bg-gradient-to-b from-emerald-500 to-emerald-600 px-3 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 hover:from-emerald-400 hover:to-emerald-600"
                   >
-                    Save Modified Redline
+                    {t.redlineCard.saveModified}
                   </button>
                 </div>
               </div>
@@ -502,7 +520,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
         <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2.5 dark:border-slate-800/80">
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-              Status:{" "}
+              {t.redlineCard.statusLabel}{" "}
               <strong
                 data-testid={`suggestion-status-${clause.id}`}
                 className="font-mono text-slate-800 dark:text-slate-200"
@@ -533,7 +551,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 isHoveringApply ? "ring-2 ring-emerald-500/40" : ""
               }`}
             >
-              Apply Redline
+              {t.redlineCard.applyRedline}
             </button>
 
             <button
@@ -546,7 +564,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
               }}
               className="inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
-              Modify
+              {t.redlineCard.modify}
             </button>
 
             <button
@@ -562,7 +580,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
               }}
               className="inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-lg border border-transparent px-2.5 text-xs font-medium text-slate-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:text-slate-400 dark:hover:border-rose-500/30 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
             >
-              Reject
+              {t.redlineCard.reject}
             </button>
           </div>
         </div>
@@ -575,7 +593,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
           {/* Upper Band: AI Power Tools Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5">
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              AI Power Tools
+              {t.redlineCard.aiPowerTools}
             </span>
             <div className="flex flex-wrap items-center gap-1">
               <button
@@ -595,7 +613,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 }`}
               >
                 <Sparkles className="h-3 w-3 shrink-0" />
-                <span>✨ AI Copilot</span>
+                <span>{t.redlineCard.aiCopilotBtn}</span>
               </button>
 
               <button
@@ -612,12 +630,12 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 {isSimulatingPushback ? (
                   <>
                     <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
-                    <span>Simulating...</span>
+                    <span>{t.redlineCard.simulatingBtn}</span>
                   </>
                 ) : (
                   <>
                     <Target className="h-3 w-3 shrink-0" />
-                    <span>🎯 Simulate Pushback</span>
+                    <span>{t.redlineCard.simulatePushbackBtn}</span>
                   </>
                 )}
               </button>
@@ -639,7 +657,7 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                       : "text-emerald-600 dark:text-emerald-400"
                   }`}
                 />
-                <span>🛡️ Critic Guard</span>
+                <span>{t.redlineCard.criticGuardBtn}</span>
                 {isCriticExpanded ? (
                   <ChevronUp className="h-3 w-3 shrink-0 opacity-80" />
                 ) : (
@@ -665,7 +683,9 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 >
                   {!policyPassed && <ShieldAlert className="h-3 w-3" />}
                   <span>
-                    {policyPassed ? "✓ Policy Grounded" : "Policy Review Needed"}
+                    {policyPassed
+                      ? t.redlineCard.policyGrounded
+                      : t.redlineCard.policyReviewNeeded}
                   </span>
                 </span>
                 <span
@@ -678,8 +698,8 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                   {!hallucinationFreePassed && <ShieldAlert className="h-3 w-3" />}
                   <span>
                     {hallucinationFreePassed
-                      ? "✓ Hallucination-Free"
-                      : "Hallucination Flagged"}
+                      ? t.redlineCard.hallucinationFree
+                      : t.redlineCard.hallucinationFlagged}
                   </span>
                 </span>
                 <span
@@ -694,8 +714,8 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                   )}
                   <span>
                     {obligationPreservedPassed
-                      ? "✓ Obligations & Numbering Preserved"
-                      : "Numbering Altered"}
+                      ? t.redlineCard.obligationsPreserved
+                      : t.redlineCard.numberingAltered}
                   </span>
                 </span>
               </div>
@@ -710,12 +730,12 @@ export const RedlineCard: React.FC<RedlineCardProps> = React.memo(
                 {isVerifyingCritic ? (
                   <>
                     <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
-                    <span>Verifying...</span>
+                    <span>{t.redlineCard.verifyingBtn}</span>
                   </>
                 ) : (
                   <>
                     <RefreshCw className="h-3 w-3 shrink-0" />
-                    <span>Re-Verify with Critic</span>
+                    <span>{t.redlineCard.reVerifyBtn}</span>
                   </>
                 )}
               </button>

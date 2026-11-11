@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { AuditAction, AuditLogEntryDTO } from "@/services/contracts";
+import { useI18n } from "@/i18n/useI18n";
 
 export interface AuditTrailPanelProps {
   auditLogs: AuditLogEntryDTO[];
@@ -39,6 +40,7 @@ const ACTION_BADGE_STYLES: Record<AuditAction, string> = {
 export const AuditTrailPanel: React.FC<AuditTrailPanelProps> = ({
   auditLogs,
 }) => {
+  const { t } = useI18n();
   return (
     <div
       data-testid="audit-trail-panel"
@@ -46,19 +48,19 @@ export const AuditTrailPanel: React.FC<AuditTrailPanelProps> = ({
     >
       <div className="mb-3 flex items-center justify-between border-b border-slate-200/80 pb-2.5 dark:border-slate-800">
         <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-          Immutable Compliance Audit Trail
+          {t.audit.title}
         </span>
         <span
           data-testid="audit-trail-count"
           className="rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-[11px] font-medium text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
         >
-          {auditLogs.length} events
+          {auditLogs.length} {t.audit.eventsSuffix}
         </span>
       </div>
 
       {auditLogs.length === 0 ? (
         <p className="text-xs italic text-slate-500 dark:text-slate-400">
-          No compliance audit events recorded yet.
+          {t.audit.empty}
         </p>
       ) : (
         auditLogs.map((entry) => {
