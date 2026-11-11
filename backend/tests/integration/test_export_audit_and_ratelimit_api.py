@@ -259,3 +259,92 @@ async def test_sliding_window_rate_limiting_middleware_enforces_429_and_retry_af
         assert throttled_resp.json()["error"]["code"] == "RATE_LIMIT_EXCEEDED"
     finally:
         reset_rate_limiter_state()
+
+
+@pytest.mark.asyncio
+async def test_workspace_session_bootstrap_and_export_download_endpoint(
+    client: AsyncClient,
+) -> None:
+    """Verify idempotent `/auth/workspace-session` and `/export/download` binary export."""
+    reset_rate_limiter_state()
+
+    # 1. First workspace-session call provisions org + ADMIN user and issues signed JWT
+    boot1 = await client.post("/api/v1/auth/workspace-session")
+    assert boot1.status_code == 200
+    data1 = boot1.json()
+    assert data1["token_type"] == "bearer"
+    assert data1["access_token"]
+    assert data1["user"]["email"] == "counsel@redlinestudio.local"
+    assert data1["user"]["role"] == "ADMIN"
+
+    # 2. Second concurrent/repeat call is idempotent and returns a valid JWT for the same user
+    boot2 = await client.post("/api/v1/auth/workspace-session")
+    assert boot2.status_code == 200
+    data2 = boot2.json()
+    assert data2["user"]["id"] == data1["user"]["id"]
+    token: str = data2["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 3. Bootstrapped JWT authenticates cleanly against documents and playbooks routes
+    docs_resp = await client.get("/api/v1/documents", headers=headers)
+    assert docs_resp.status_code == 200
+    rules_resp = await client.get("/api/v1/playbooks/rules", headers=headers)
+    assert rules_resp.status_code == 200
+
+    # 4. Upload, analyze, resolve, and download via `/export/download?export_type=...`
+    upload_resp = await client.post(
+        "/api/v1/documents/upload",
+        headers=headers,
+        files={
+            "file": (
+                "live_bootstrap_msa.docx",
+                _build_contract_docx_bytes(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+        data={"title": "Live Bootstrap MSA"},
+    )
+    assert upload_resp.status_code == 201
+    doc_id: str = upload_resp.json()["document_id"]
+
+    analyze_resp = await client.post(
+        f"/api/v1/documents/{doc_id}/analyze",
+        headers=headers,
+    )
+    assert analyze_resp.status_code == 200
+
+    ws_resp = await client.get(
+        f"/api/v1/documents/{doc_id}/workspace",
+        headers=headers,
+    )
+    assert ws_resp.status_code == 200
+    suggestions = ws_resp.json()["redlines"]
+    if suggestions:
+        resolve_resp = await client.post(
+            f"/api/v1/suggestions/{suggestions[0]['id']}/resolve",
+            headers=headers,
+            json={"action": "ACCEPT", "expected_clause_version": 1},
+        )
+        assert resolve_resp.status_code == 200
+
+    dl_tc = await client.get(
+        f"/api/v1/documents/{doc_id}/export/download?export_type=TRACK_CHANGES",
+        headers=headers,
+    )
+    assert dl_tc.status_code == 200
+    assert (
+        dl_tc.headers["content-type"]
+        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+    assert dl_tc.content.startswith(b"PK\x03\x04")
+
+    dl_clean = await client.get(
+        f"/api/v1/documents/{doc_id}/export/download?export_type=CLEAN",
+        headers=headers,
+    )
+    assert dl_clean.status_code == 200
+    assert dl_clean.content.startswith(b"PK\x03\x04")
+    with zipfile.ZipFile(io.BytesIO(dl_clean.content), mode="r") as archive:
+        clean_xml = archive.read("word/document.xml").decode("utf-8")
+    assert "<w:del " not in clean_xml
+    assert "<w:ins " not in clean_xml

@@ -74,6 +74,10 @@ import {
   sanitizeExtractedDocumentText,
   segmentCleanContractClauses,
 } from "./docxBrowserParser";
+import {
+  buildDocxBinaryBlob,
+  deriveSafeDocxFilename,
+} from "./docxBrowserBuilder";
 import type { SupportedLocale } from "@/i18n/translations";
 import { getActiveLocale } from "@/i18n/useI18n";
 
@@ -2243,48 +2247,66 @@ export async function createClauseComment(
   }
 }
 
+function buildOfflineDocxFallback(
+  documentId: string,
+  mode: ExportMode
+): { filename: string; blob: Blob } {
+  const localWs =
+    getLocalDocumentWorkspace(documentId) ??
+    (documentId === DEMO_DOCUMENT_ID || documentId === "demo" || getIsDemoMode()
+      ? DEMO_WORKSPACE_DATA
+      : null);
+
+  const title = localWs?.title || "Contract Agreement";
+  const filename = deriveSafeDocxFilename(title, mode);
+  const blob = buildDocxBinaryBlob({
+    title,
+    version: localWs?.version ?? 1,
+    mode,
+    clauses: localWs?.clauses ?? [],
+    redlines: localWs?.redlines ?? [],
+    comments: localWs?.comments ?? [],
+  });
+  return { filename, blob };
+}
+
 export async function exportDocumentDocx(
   documentId: string,
   mode: ExportMode = "track_changes",
   token?: string
 ): Promise<{ filename: string; blob: Blob }> {
   const validatedMode = ExportModeSchema.parse(mode);
-  const fallbackFilename = `contract_${validatedMode}.docx`;
+  const fallback = buildOfflineDocxFallback(documentId, validatedMode);
+
+  if (!token || documentId === DEMO_DOCUMENT_ID || documentId === "demo") {
+    return fallback;
+  }
 
   try {
     const response = await fetch(
       `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}/export?mode=${encodeURIComponent(validatedMode)}`,
       {
         method: "GET",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
 
     if (!response.ok) {
-      if (!token) {
-        return {
-          filename: fallbackFilename,
-          blob: new Blob(["PK\x03\x04"], {
-            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          }),
-        };
-      }
       throw new Error(`Failed to export document (${response.status})`);
     }
 
     const disposition = response.headers.get("Content-Disposition") ?? "";
     const match = /filename="?([^";]+)"?/i.exec(disposition);
-    const filename = match?.[1]?.trim() || fallbackFilename;
+    const filename = match?.[1]?.trim() || fallback.filename;
     const blob = await response.blob();
     return { filename, blob };
   } catch (err) {
     if (!token) {
-      return {
-        filename: fallbackFilename,
-        blob: new Blob(["PK\x03\x04"], {
-          type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        }),
-      };
+      return fallback;
+    }
+    // If local workspace exists offline after token expiration, fallback cleanly
+    if (getLocalDocumentWorkspace(documentId)) {
+      return fallback;
     }
     throw err;
   }
@@ -3611,6 +3633,88 @@ export async function login(
   }
   const raw = await response.json();
   return TokenResponseDTOSchema.parse(raw);
+}
+
+export async function bootstrapWorkspaceSession(): Promise<TokenResponseDTO> {
+  const response = await fetch(`${API_BASE_URL}/auth/workspace-session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Workspace session bootstrap failed (${response.status}): ${errorText}`
+    );
+  }
+  const raw = await response.json();
+  return TokenResponseDTOSchema.parse(raw);
+}
+
+export async function verifyBackendToken(token: string): Promise<boolean> {
+  if (!token) {
+    return false;
+  }
+  try {
+    const response = await fetch(`${API_BASE_URL}/users`, {
+      method: "GET",
+      headers: buildHeaders(token),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function ensureLiveBackendSession(
+  forceRefresh: boolean = false
+): Promise<{
+  token: string;
+  orgName: string;
+  userEmail: string;
+  userRole: string;
+} | null> {
+  const isHealthy = await checkBackendHealth();
+  if (!isHealthy) {
+    return null;
+  }
+
+  if (!forceRefresh && typeof window !== "undefined") {
+    const storedToken = localStorage.getItem("redline_session_token");
+    if (storedToken && (await verifyBackendToken(storedToken))) {
+      return {
+        token: storedToken,
+        orgName:
+          localStorage.getItem("redline_session_org") ||
+          "Redline Global Technologies",
+        userEmail:
+          localStorage.getItem("redline_session_email") ||
+          "counsel@redlinestudio.local",
+        userRole: localStorage.getItem("redline_session_role") || "ADMIN",
+      };
+    }
+    localStorage.removeItem("redline_session_token");
+  }
+
+  try {
+    const tokenResp = await bootstrapWorkspaceSession();
+    const orgName = "Redline Global Technologies";
+    const userEmail = tokenResp.user?.email ?? "counsel@redlinestudio.local";
+    const userRole = tokenResp.user?.role ?? "ADMIN";
+    if (typeof window !== "undefined") {
+      localStorage.setItem("redline_session_token", tokenResp.access_token);
+      localStorage.setItem("redline_session_org", orgName);
+      localStorage.setItem("redline_session_email", userEmail);
+      localStorage.setItem("redline_session_role", userRole);
+    }
+    return {
+      token: tokenResp.access_token,
+      orgName,
+      userEmail,
+      userRole,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export const DEFAULT_AI_PROVIDER_CATALOG: ProviderCatalogItemDTO[] = [

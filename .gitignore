@@ -66,3 +66,7 @@ next-env.d.ts
 
 # Encrypted AI Configuration Vault backups
 *.rsvault.json
+
+# Zero-config local SQLite dev database fallback
+local_workspace.db*
+backend/local_workspace.db*

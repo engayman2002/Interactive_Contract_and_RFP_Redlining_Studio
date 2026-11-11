@@ -3,7 +3,15 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Cpu, FlaskConical, LogOut, Scale, ShieldCheck, X } from "lucide-react";
+import {
+  Cpu,
+  FlaskConical,
+  LogOut,
+  RefreshCw,
+  Scale,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import {
   AISettingsModal,
   formatActiveAIBadge,
@@ -19,7 +27,8 @@ export const TopNavBar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useI18n();
-  const { session, connectionStatus, login, logout } = useAuthSession();
+  const { session, connectionStatus, refreshSession, login, logout } =
+    useAuthSession();
   const isDemoMode = useWorkspaceStore((state) => state.isDemoMode);
   const setDemoMode = useWorkspaceStore((state) => state.setDemoMode);
   const hydrateDemoMode = useWorkspaceStore((state) => state.hydrateDemoMode);
@@ -39,6 +48,16 @@ export const TopNavBar: React.FC = () => {
   const [passInput, setPassInput] = useState<string>("RedlineStudio2026!");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
+  const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
+
+  const handleReconnectBackend = async () => {
+    setIsReconnecting(true);
+    try {
+      await refreshSession(true);
+    } finally {
+      setIsReconnecting(false);
+    }
+  };
 
   useEffect(() => {
     hydrateDemoMode();
@@ -187,24 +206,39 @@ export const TopNavBar: React.FC = () => {
             </span>
           </button>
 
-          {/* Connection Status Badge */}
-          <div
+          {/* Connection Status Badge (Click to check / reconnect live backend) */}
+          <button
+            type="button"
             data-testid="backend-connection-badge"
-            className={`inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-[11px] font-medium ${
+            onClick={() => void handleReconnectBackend()}
+            disabled={isReconnecting}
+            title={
               connectionStatus === "live"
-                ? "border-emerald-200/90 bg-emerald-50/80 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
-                : "border-slate-200/90 bg-slate-100/80 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                ? t.nav.liveBackend
+                : "Click to reconnect to Live Backend (127.0.0.1:8000)"
+            }
+            className={`inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-[11px] font-medium transition-colors ${
+              connectionStatus === "live"
+                ? "border-emerald-200/90 bg-emerald-50/80 text-emerald-700 hover:bg-emerald-100/80 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+                : "border-slate-200/90 bg-slate-100/80 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-slate-800"
             }`}
           >
-            <span
-              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                connectionStatus === "live"
-                  ? "animate-pulse bg-emerald-500 dark:bg-emerald-400"
-                  : isDemoMode
-                  ? "bg-amber-500 dark:bg-amber-400"
-                  : "bg-slate-400 dark:bg-slate-500"
-              }`}
-            />
+            {isReconnecting ? (
+              <RefreshCw
+                className="h-3 w-3 shrink-0 animate-spin text-indigo-500"
+                aria-hidden="true"
+              />
+            ) : (
+              <span
+                className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                  connectionStatus === "live"
+                    ? "animate-pulse bg-emerald-500 dark:bg-emerald-400"
+                    : isDemoMode
+                    ? "bg-amber-500 dark:bg-amber-400"
+                    : "bg-slate-400 dark:bg-slate-500"
+                }`}
+              />
+            )}
             <span className="whitespace-nowrap">
               {connectionStatus === "live"
                 ? t.nav.liveBackend
@@ -212,7 +246,7 @@ export const TopNavBar: React.FC = () => {
                 ? t.nav.demoWorkspace
                 : t.nav.localWorkspace}
             </span>
-          </div>
+          </button>
 
           {/* Language Switcher & Theme Toggle */}
           <LanguageSwitcher />

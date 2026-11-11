@@ -155,7 +155,7 @@ export const RedliningStudioWorkspace: React.FC<
     let isMounted = true;
 
     if (documentId && !isDemoDocRoute) {
-      void fetchDocumentWorkspace(documentId, token).then((data) => {
+      void fetchDocumentWorkspace(documentId, effectiveToken).then((data) => {
         if (isMounted) {
           hydrateWorkspace(data);
           setCurrentTitle(data.title);
@@ -172,62 +172,66 @@ export const RedliningStudioWorkspace: React.FC<
     return () => {
       isMounted = false;
     };
-  }, [documentId, initialWorkspace, isDemoDocRoute, hydrateWorkspace, token]);
+  }, [documentId, initialWorkspace, isDemoDocRoute, hydrateWorkspace, effectiveToken]);
 
   const handleStreamComplete = useCallback(async () => {
-    const updated = await fetchDocumentWorkspace(resolvedDocId, token);
+    const updated = await fetchDocumentWorkspace(resolvedDocId, effectiveToken);
     hydrateWorkspace(updated);
     setCurrentTitle(updated.title);
     setCurrentStatus("ANALYZED");
-    void useWorkspaceStore.getState().refreshAITelemetry(token);
-  }, [resolvedDocId, token, hydrateWorkspace]);
+    void useWorkspaceStore.getState().refreshAITelemetry(effectiveToken);
+  }, [resolvedDocId, effectiveToken, hydrateWorkspace]);
 
   const { startStream, streamProgress } = useDocumentStream({
     documentId: resolvedDocId,
     totalClauses: clauses.length,
-    token,
+    token: effectiveToken,
     stance: negotiationStance,
     onStreamComplete: handleStreamComplete,
   });
 
   const handleTriggerAiAnalysis = useCallback(async () => {
-    await triggerDocumentAnalysis(resolvedDocId, token, negotiationStance);
+    await triggerDocumentAnalysis(
+      resolvedDocId,
+      effectiveToken,
+      negotiationStance
+    );
     await startStream();
-  }, [resolvedDocId, token, negotiationStance, startStream]);
+  }, [resolvedDocId, effectiveToken, negotiationStance, startStream]);
 
   const handleAcceptSuggestion = useCallback(
     async (suggestionId: string) => {
-      await acceptSuggestion(suggestionId, token);
+      await acceptSuggestion(suggestionId, effectiveToken);
     },
-    [acceptSuggestion, token]
+    [acceptSuggestion, effectiveToken]
   );
 
   const handleModifySuggestion = useCallback(
     async (suggestionId: string, modifiedText: string) => {
-      await modifySuggestion(suggestionId, modifiedText, token);
+      await modifySuggestion(suggestionId, modifiedText, effectiveToken);
     },
-    [modifySuggestion, token]
+    [modifySuggestion, effectiveToken]
   );
 
   const handleRejectSuggestion = useCallback(
     async (suggestionId: string) => {
-      await rejectSuggestion(suggestionId, token);
+      await rejectSuggestion(suggestionId, effectiveToken);
     },
-    [rejectSuggestion, token]
+    [rejectSuggestion, effectiveToken]
   );
 
   const handleAddComment = useCallback(
     async (clauseId: string, body: string) => {
-      await addClauseComment(clauseId, body, token);
+      await addClauseComment(clauseId, body, effectiveToken);
     },
-    [addClauseComment, token]
+    [addClauseComment, effectiveToken]
   );
 
   const handleExport = useCallback(
     async (mode: ExportMode) => {
-      await exportDocument(resolvedDocId, mode, token);
+      await exportDocument(resolvedDocId, mode, effectiveToken);
     },
-    [exportDocument, resolvedDocId, token]
+    [exportDocument, resolvedDocId, effectiveToken]
   );
 
   const handleDividerMouseDown = useCallback(() => {

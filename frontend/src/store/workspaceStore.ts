@@ -22,6 +22,11 @@ import {
   getLocalDocumentWorkspace,
   saveLocalDocumentWorkspace,
 } from "@/services/apiClient";
+import {
+  buildDocxBinaryBlob,
+  deriveSafeDocxFilename,
+  triggerBrowserDocxDownload,
+} from "@/services/docxBrowserBuilder";
 import type {
   AITelemetrySummaryDTO,
   AuditAction,
@@ -65,6 +70,7 @@ export interface WorkspaceStoreState {
   redlines: RedlineSuggestionDTO[];
   comments: ClauseCommentDTO[];
   auditLogs: AuditLogEntryDTO[];
+  documentTitle: string;
   documentVersion: number;
   conflictError: string | null;
   isExporting: boolean;
@@ -193,6 +199,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   redlines: getIsDemoMode() ? DEMO_WORKSPACE_DATA.redlines : [],
   comments: getIsDemoMode() ? DEMO_WORKSPACE_DATA.comments : [],
   auditLogs: getIsDemoMode() ? DEMO_WORKSPACE_DATA.audit_logs : [],
+  documentTitle: getIsDemoMode() ? DEMO_WORKSPACE_DATA.title : "Contract Agreement",
   documentVersion: getIsDemoMode() ? DEMO_WORKSPACE_DATA.version : 1,
   conflictError: null,
   isExporting: false,
@@ -259,6 +266,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       redlines: workspace.redlines,
       comments: workspace.comments ?? [],
       auditLogs: workspace.audit_logs ?? [],
+      documentTitle: workspace.title || "Contract Agreement",
       documentVersion: workspace.version,
       conflictError: null,
       pushbackSimulations: {},
@@ -767,24 +775,52 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   exportDocument: async (documentId, mode, token) => {
     set({ isExporting: true });
     try {
-      const { filename } = await exportDocumentDocx(documentId, mode, token);
-      const { clauses } = get();
+      const { filename, blob } = await exportDocumentDocx(documentId, mode, token);
+      const {
+        clauses,
+        redlines,
+        comments,
+        documentTitle,
+        documentVersion,
+      } = get();
+
+      const hasLiveStateEdits = !token && clauses.length > 0 && blob.size > 16;
+      const finalBlob = hasLiveStateEdits
+        ? buildDocxBinaryBlob({
+            title: documentTitle || "Contract Agreement",
+            version: documentVersion,
+            mode,
+            clauses,
+            redlines,
+            comments,
+          })
+        : blob;
+
+      const finalFilename =
+        hasLiveStateEdits &&
+        (filename === "contract_track_changes.docx" ||
+          filename === "contract_clean.docx")
+          ? deriveSafeDocxFilename(documentTitle || "Contract Agreement", mode)
+          : filename;
+
+      await triggerBrowserDocxDownload(finalBlob, finalFilename);
+
       const auditEntry = buildOptimisticAuditEntry(
         "DOCUMENT_EXPORTED",
         null,
         {
           mode,
-          filename,
+          filename: finalFilename,
           clause_count: clauses.length,
         },
         documentId
       );
       set((state) => ({
         isExporting: false,
-        lastExportedFilename: filename,
+        lastExportedFilename: finalFilename,
         auditLogs: [...state.auditLogs, auditEntry],
       }));
-      return filename;
+      return finalFilename;
     } catch (err) {
       set({ isExporting: false });
       throw err;
@@ -869,6 +905,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
         redlines: DEMO_WORKSPACE_DATA.redlines,
         comments: DEMO_WORKSPACE_DATA.comments,
         auditLogs: DEMO_WORKSPACE_DATA.audit_logs,
+        documentTitle: DEMO_WORKSPACE_DATA.title,
         documentVersion: DEMO_WORKSPACE_DATA.version,
         conflictError: null,
         crossClauseReport: null,
@@ -885,6 +922,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
         redlines: [],
         comments: [],
         auditLogs: [],
+        documentTitle: "Contract Agreement",
         documentVersion: 1,
         conflictError: null,
         crossClauseReport: null,
@@ -925,6 +963,9 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       redlines: DEFAULT_DEMO_MODE ? DEMO_WORKSPACE_DATA.redlines : [],
       comments: DEFAULT_DEMO_MODE ? DEMO_WORKSPACE_DATA.comments : [],
       auditLogs: DEFAULT_DEMO_MODE ? DEMO_WORKSPACE_DATA.audit_logs : [],
+      documentTitle: DEFAULT_DEMO_MODE
+        ? DEMO_WORKSPACE_DATA.title
+        : "Contract Agreement",
       documentVersion: DEFAULT_DEMO_MODE ? DEMO_WORKSPACE_DATA.version : 1,
       conflictError: null,
       isExporting: false,

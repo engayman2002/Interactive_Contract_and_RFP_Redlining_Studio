@@ -3,6 +3,7 @@ import {
   DEFAULT_PLAYBOOK_RULES,
   checkBackendHealth,
   createPlaybookRule,
+  ensureLiveBackendSession,
   getIsDemoMode,
   listPlaybookRules,
   login as apiLogin,
@@ -33,6 +34,7 @@ const DEFAULT_DEMO_SESSION: WorkspaceSession = {
 };
 
 let currentSession: WorkspaceSession = DEFAULT_DEMO_SESSION;
+let inflightSessionPromise: Promise<WorkspaceSession> | null = null;
 const listeners = new Set<(session: WorkspaceSession) => void>();
 
 function notifySessionChange(session: WorkspaceSession) {
@@ -42,24 +44,53 @@ function notifySessionChange(session: WorkspaceSession) {
   }
 }
 
-/**
- * Ensures an active workspace session exists.
- * If backend is reachable and no token is in localStorage,
- * automatically registers or logs in with default corporate credentials
- * and ensures standard playbook rules are populated.
- */
-export async function ensureWorkspaceSession(): Promise<WorkspaceSession> {
+async function runEnsureWorkspaceSession(
+  forceRefresh: boolean = false
+): Promise<WorkspaceSession> {
   if (typeof window === "undefined") {
     return DEFAULT_DEMO_SESSION;
   }
 
-  const storedToken = localStorage.getItem(STORAGE_KEY_TOKEN);
   const storedOrg = localStorage.getItem(STORAGE_KEY_ORG);
   const storedEmail = localStorage.getItem(STORAGE_KEY_EMAIL);
   const storedRole = localStorage.getItem(STORAGE_KEY_ROLE);
 
-  const isBackendLive = await checkBackendHealth();
+  const liveHandshake = await ensureLiveBackendSession(forceRefresh);
 
+  if (liveHandshake) {
+    if (getIsDemoMode()) {
+      try {
+        const rules = await listPlaybookRules(liveHandshake.token);
+        if (rules.length === 0) {
+          for (const rule of DEFAULT_PLAYBOOK_RULES) {
+            await createPlaybookRule(
+              {
+                category: rule.category,
+                standard_position: rule.standard_position,
+                fallback_position: rule.fallback_position,
+                unacceptable_triggers: rule.unacceptable_triggers,
+              },
+              liveHandshake.token
+            );
+          }
+        }
+      } catch {
+        // Non-fatal if seeding fails
+      }
+    }
+
+    const liveSession: WorkspaceSession = {
+      token: liveHandshake.token,
+      connectionStatus: "live",
+      orgName: liveHandshake.orgName,
+      userEmail: liveHandshake.userEmail,
+      userRole: liveHandshake.userRole,
+    };
+    notifySessionChange(liveSession);
+    return liveSession;
+  }
+
+  const isBackendLive = await checkBackendHealth();
   if (!isBackendLive) {
     const offlineSession: WorkspaceSession = {
       token: undefined,
@@ -72,26 +103,7 @@ export async function ensureWorkspaceSession(): Promise<WorkspaceSession> {
     return offlineSession;
   }
 
-  // Backend is live: if we have a stored token, verify it with a quick API call
-  if (storedToken) {
-    try {
-      await listPlaybookRules(storedToken);
-      const activeSession: WorkspaceSession = {
-        token: storedToken,
-        connectionStatus: "live",
-        orgName: storedOrg || "Redline Global Technologies",
-        userEmail: storedEmail || "counsel@redlinestudio.local",
-        userRole: storedRole || "ADMIN",
-      };
-      notifySessionChange(activeSession);
-      return activeSession;
-    } catch {
-      // Stored token is invalid or expired, continue to bootstrap below
-      localStorage.removeItem(STORAGE_KEY_TOKEN);
-    }
-  }
-
-  // Live backend bootstrapping: register default org or login
+  // Secondary fallback against backends without /auth/workspace-session
   const defaultOrgName = "Redline Global Technologies";
   const defaultEmail = "counsel@redlinestudio.local";
   const defaultPassword = "RedlineStudio2026!";
@@ -106,12 +118,11 @@ export async function ensureWorkspaceSession(): Promise<WorkspaceSession> {
     );
     activeToken = onboarding.access_token;
   } catch {
-    // If org or email already registered, log in
     try {
       const loginResp = await apiLogin(defaultEmail, defaultPassword);
       activeToken = loginResp.access_token;
     } catch {
-      // If login also fails, fallback gracefully to demo mode
+      // Fallback gracefully to offline local workspace
     }
   }
 
@@ -120,28 +131,6 @@ export async function ensureWorkspaceSession(): Promise<WorkspaceSession> {
     localStorage.setItem(STORAGE_KEY_ORG, defaultOrgName);
     localStorage.setItem(STORAGE_KEY_EMAIL, defaultEmail);
     localStorage.setItem(STORAGE_KEY_ROLE, "ADMIN");
-
-    // Seed default playbook rules only when Demo Sandbox Mode is explicitly active
-    if (getIsDemoMode()) {
-      try {
-        const rules = await listPlaybookRules(activeToken);
-        if (rules.length === 0) {
-          for (const rule of DEFAULT_PLAYBOOK_RULES) {
-            await createPlaybookRule(
-              {
-                category: rule.category,
-                standard_position: rule.standard_position,
-                fallback_position: rule.fallback_position,
-                unacceptable_triggers: rule.unacceptable_triggers,
-              },
-              activeToken
-            );
-          }
-        }
-      } catch {
-        // Non-fatal if seeding has minor issue
-      }
-    }
 
     const liveSession: WorkspaceSession = {
       token: activeToken,
@@ -163,6 +152,25 @@ export async function ensureWorkspaceSession(): Promise<WorkspaceSession> {
   };
   notifySessionChange(fallbackSession);
   return fallbackSession;
+}
+
+/**
+ * Ensures an active workspace session exists.
+ * Negotiates a signed JWT token cleanly against `/auth/workspace-session` when the FastAPI backend is reachable.
+ */
+export async function ensureWorkspaceSession(
+  forceRefresh: boolean = false
+): Promise<WorkspaceSession> {
+  if (!forceRefresh && inflightSessionPromise) {
+    return inflightSessionPromise;
+  }
+  const promise = runEnsureWorkspaceSession(forceRefresh).finally(() => {
+    if (inflightSessionPromise === promise) {
+      inflightSessionPromise = null;
+    }
+  });
+  inflightSessionPromise = promise;
+  return promise;
 }
 
 export function getStoredSession(): WorkspaceSession {

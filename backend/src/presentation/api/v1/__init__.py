@@ -1,6 +1,6 @@
 """FastAPI v1 routers for Health, Authentication, Organization Users, and RBAC Foundation routes."""
 
-from typing import Annotated
+from typing import Annotated, Final
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -23,7 +23,9 @@ from src.application.use_cases import (
     ListOrganizationUsersUseCase,
     RegisterOrganizationAndAdminUseCase,
 )
+from src.domain.entities import Organization, User
 from src.domain.enums import UserRole
+from src.domain.exceptions import DuplicateEntityError
 from src.domain.ports import UnitOfWorkPort
 from src.presentation.api.v1.ai_settings import ai_settings_router
 from src.presentation.api.v1.collaboration import (
@@ -118,6 +120,60 @@ async def login(
         jwt_service=jwt_service,
     )
     return await use_case.execute(payload)
+
+
+DEFAULT_WORKSPACE_ORG_NAME: Final[str] = "Redline Global Technologies"
+DEFAULT_WORKSPACE_EMAIL: Final[str] = "counsel@redlinestudio.local"
+DEFAULT_WORKSPACE_BOOTSTRAP_PASSWORD: Final[str] = "RedlineStudio2026!"  # noqa: S105
+
+
+@auth_router.post(
+    "/workspace-session",
+    response_model=TokenResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def bootstrap_workspace_session(
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    password_service: Annotated[PasswordService, Depends(get_password_service)],
+    jwt_service: Annotated[JwtTokenService, Depends(get_jwt_service)],
+) -> TokenResponseDTO:
+    """Idempotently provision/authenticate the default workspace user and return a signed JWT."""
+    user = await uow.users.get_by_email_for_auth(DEFAULT_WORKSPACE_EMAIL)
+    if user is None:
+        try:
+            org = await uow.organizations.create(
+                Organization(name=DEFAULT_WORKSPACE_ORG_NAME)
+            )
+            password_hash = password_service.hash_password(
+                DEFAULT_WORKSPACE_BOOTSTRAP_PASSWORD
+            )
+            created_user = await uow.users.create(
+                org_id=org.id,
+                user=User(
+                    org_id=org.id,
+                    email=DEFAULT_WORKSPACE_EMAIL,
+                    role=UserRole.ADMIN,
+                    password_hash=password_hash,
+                ),
+            )
+            await uow.commit()
+            user = created_user
+        except DuplicateEntityError:
+            await uow.rollback()
+            user = await uow.users.get_by_email_for_auth(DEFAULT_WORKSPACE_EMAIL)
+            if user is None:
+                raise
+
+    access_token = jwt_service.create_access_token(
+        user_id=user.id,
+        org_id=user.org_id,
+        role=user.role,
+    )
+    return TokenResponseDTO(
+        access_token=access_token,
+        expires_in=jwt_service.expire_seconds,
+        user=UserResponseDTO.model_validate(user),
+    )
 
 
 @auth_router.post(

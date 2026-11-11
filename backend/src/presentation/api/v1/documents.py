@@ -334,6 +334,43 @@ async def export_document_docx(
 
 
 @documents_router.get(
+    "/{document_id}/export/download",
+    status_code=status.HTTP_200_OK,
+)
+async def download_exported_document_docx(
+    document_id: UUID,
+    current_user: Annotated[TokenPayloadDTO, Depends(get_current_user)],
+    uow: Annotated[UnitOfWorkPort, Depends(get_uow)],
+    rbac_guard: Annotated[RbacGuardService, Depends(get_rbac_guard)],
+    exporter: Annotated[DocxExporterPort, Depends(get_docx_exporter)],
+    export_type: Annotated[
+        str,
+        Query(description="Export type: TRACK_CHANGES or CLEAN"),
+    ] = "TRACK_CHANGES",
+) -> Response:
+    """Stream raw `.docx` bytes using PythonDocxExportGenerator (`export_type` query support)."""
+    normalized = export_type.strip().lower()
+    mode = ExportMode.CLEAN if normalized == "clean" else ExportMode.TRACK_CHANGES
+    use_case = ExportDocumentUseCase(
+        uow=uow,
+        rbac_guard=rbac_guard,
+        exporter=exporter,
+    )
+    artifact = await use_case.execute(
+        actor=current_user,
+        document_id=document_id,
+        mode=mode,
+    )
+    return Response(
+        content=artifact.file_bytes,
+        media_type=artifact.content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{artifact.filename}"',
+        },
+    )
+
+
+@documents_router.get(
     "/{document_id}/audit-trail",
     response_model=list[AuditLogEntryResponseDTO],
     status_code=status.HTTP_200_OK,
