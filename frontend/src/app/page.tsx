@@ -8,7 +8,9 @@ import {
   BookOpen,
   Clock,
   FileText,
+  GraduationCap,
   HelpCircle,
+  Rocket,
   ShieldAlert,
   Sparkles,
 } from "lucide-react";
@@ -91,6 +93,47 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* First-Time Onboarding Callout */}
+        <section
+          data-testid="dashboard-onboarding-banner"
+          className="flex flex-col justify-between gap-4 rounded-2xl border border-indigo-200/90 bg-gradient-to-r from-indigo-50/80 via-white to-violet-50/60 p-5 shadow-sm dark:border-indigo-500/25 dark:from-indigo-950/35 dark:via-slate-900 dark:to-violet-950/20 lg:flex-row lg:items-center"
+        >
+          <div className="flex items-start gap-3.5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+              <GraduationCap className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                New User? Start the 2-Minute Interactive Tutorial
+              </h2>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                Walk through Golden Playbook extraction, Stance-tuned AI audits,
+                Copilot prompting, Critic Guard verification, Pushback
+                Simulation, and native Word Track Changes export step by step.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-wrap items-center gap-2.5">
+            <Link
+              href="/help"
+              data-testid="dashboard-start-tutorial-btn"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500"
+            >
+              <GraduationCap className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>🎓 Start Interactive Tutorial</span>
+            </Link>
+            <Link
+              href="/documents/demo"
+              data-testid="dashboard-guided-demo-btn"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-white px-4 py-2 text-xs font-semibold text-indigo-700 shadow-xs transition-colors hover:bg-indigo-50 dark:border-indigo-500/30 dark:bg-slate-800 dark:text-indigo-300 dark:hover:bg-slate-700"
+            >
+              <Rocket className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>🚀 Launch Guided Sample Studio</span>
+            </Link>
+          </div>
+        </section>
 
         {/* KPI Summary Ribbon */}
         <section

@@ -10,18 +10,25 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
+import { InteractiveTutorialWizard } from "@/components/help/InteractiveTutorialWizard";
 import { TopNavBar } from "@/components/navigation/TopNavBar";
 import {
   EXPORT_MODE_COMPARISON,
   HELP_FAQ_ITEMS,
   HELP_GUIDE_MODULES,
+  HELP_LEARNING_TRACKS,
+  type LearningTrackId,
   PLAYBOOK_RULE_TEMPLATES,
   type PlaybookRuleTemplate,
   RISK_HEATMAP_LEGEND,
+  getModuleLearningTrack,
 } from "@/services/helpContent";
 
 export default function HelpCenterPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedTrack, setSelectedTrack] = useState<"ALL" | LearningTrackId>(
+    "ALL"
+  );
   const [selectedModuleId, setSelectedModuleId] = useState<string>("ALL");
   const [copiedTemplateId, setCopiedTemplateId] = useState<string | null>(null);
   const [expandedFaqIds, setExpandedFaqIds] = useState<Record<string, boolean>>({
@@ -31,8 +38,17 @@ export default function HelpCenterPage() {
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
+  const trackModules = useMemo(() => {
+    if (selectedTrack === "ALL") {
+      return HELP_GUIDE_MODULES;
+    }
+    return HELP_GUIDE_MODULES.filter(
+      (mod) => getModuleLearningTrack(mod.id) === selectedTrack
+    );
+  }, [selectedTrack]);
+
   const filteredModules = useMemo(() => {
-    return HELP_GUIDE_MODULES.filter((mod) => {
+    return trackModules.filter((mod) => {
       if (selectedModuleId !== "ALL" && mod.id !== selectedModuleId) {
         return false;
       }
@@ -50,7 +66,7 @@ export default function HelpCenterPage() {
         .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-  }, [normalizedQuery, selectedModuleId]);
+  }, [normalizedQuery, selectedModuleId, trackModules]);
 
   const filteredTemplates = useMemo(() => {
     if (!normalizedQuery) {
@@ -195,6 +211,59 @@ export default function HelpCenterPage() {
           </div>
         </section>
 
+        {/* Hero Section: Interactive 5-Stage Masterclass Tutorial Wizard */}
+        <InteractiveTutorialWizard />
+
+        {/* Categorized Learning Tracks Filter Bar */}
+        <section
+          data-testid="help-learning-tracks"
+          aria-label="Reference Guide Learning Tracks"
+          className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90"
+        >
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Structured Learning Tracks &amp; Reference Library
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Filter all 14 product modules by workflow focus area
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            {HELP_LEARNING_TRACKS.map((track) => {
+              const isSelected = selectedTrack === track.id;
+              return (
+                <button
+                  key={track.id}
+                  type="button"
+                  data-testid={track.testId}
+                  onClick={() => {
+                    setSelectedTrack(track.id);
+                    setSelectedModuleId("ALL");
+                  }}
+                  className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
+                    isSelected
+                      ? "border-indigo-600 bg-indigo-600 text-white shadow-sm"
+                      : "border-slate-200/80 bg-slate-50/70 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300 dark:hover:border-indigo-500/40"
+                  }`}
+                >
+                  <span className="text-xs font-semibold">{track.label}</span>
+                  <span
+                    className={`mt-1 text-[10px] leading-snug ${
+                      isSelected
+                        ? "text-indigo-100"
+                        : "text-slate-500 dark:text-slate-400"
+                    }`}
+                  >
+                    {track.description}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
         {/* Main Two-Column Layout: Module Filter Sidebar + Guide Content */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           {/* Left Navigation Sidebar */}
@@ -214,7 +283,7 @@ export default function HelpCenterPage() {
                       : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                   }`}
                 >
-                  <span>All 6 Core Modules</span>
+                  <span>All Track Modules</span>
                   <span
                     className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${
                       selectedModuleId === "ALL"
@@ -222,11 +291,11 @@ export default function HelpCenterPage() {
                         : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                     }`}
                   >
-                    {HELP_GUIDE_MODULES.length}
+                    {trackModules.length}
                   </span>
                 </button>
 
-                {HELP_GUIDE_MODULES.map((mod) => (
+                {trackModules.map((mod) => (
                   <button
                     key={mod.id}
                     type="button"
@@ -239,7 +308,7 @@ export default function HelpCenterPage() {
                     }`}
                   >
                     <span className="font-mono text-[11px] opacity-75">
-                      0{mod.number}.
+                      {mod.number < 10 ? `0${mod.number}` : mod.number}.
                     </span>
                     <span className="line-clamp-1">{mod.badge}</span>
                   </button>
@@ -289,7 +358,7 @@ export default function HelpCenterPage() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5">
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 font-mono text-xs font-bold text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-300">
-                          0{mod.number}
+                          {mod.number < 10 ? `0${mod.number}` : mod.number}
                         </span>
                         <h2 className="text-base font-semibold tracking-tight text-slate-900 dark:text-white md:text-lg">
                           {mod.title}

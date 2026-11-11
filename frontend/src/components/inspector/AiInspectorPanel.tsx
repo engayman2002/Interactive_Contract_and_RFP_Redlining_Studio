@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import {
+  Activity,
+  CheckCircle2,
+  ClipboardList,
+  ShieldAlert,
+  Sparkles,
+} from "lucide-react";
 import type {
   AuditLogEntryDTO,
   ClauseCommentDTO,
@@ -283,55 +289,65 @@ export const AiInspectorPanel: React.FC<AiInspectorPanelProps> = ({
           </div>
         </div>
 
-        {/* Segmented Tab Control: AI Redlines vs Radar vs Audit Trail */}
-        <div className="mt-3.5 flex gap-1 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 dark:border-slate-800 dark:bg-slate-950/70">
+        {/* Segmented Tab Control: AI Redlines vs Radar vs AI Telemetry vs Audit Trail */}
+        <div className="mt-3.5 grid grid-cols-2 gap-1 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 dark:border-slate-800 dark:bg-slate-950/70 sm:flex">
           <button
             type="button"
             data-testid="inspector-tab-redlines"
             onClick={() => setActiveViewTab("redlines")}
-            className={`flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
+            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold transition-all ${
               activeViewTab === "redlines"
                 ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            Redlines ({redlines.length})
+            <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+            <span>Redlines</span>
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+              {redlines.length}
+            </span>
           </button>
           <button
             type="button"
             data-testid="inspector-tab-cross-clause"
             onClick={() => setActiveViewTab("radar")}
-            className={`flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
+            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold transition-all ${
               activeViewTab === "radar"
                 ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            Cross-Clause Radar
-          </button>
-          <button
-            type="button"
-            data-testid="inspector-tab-audit"
-            onClick={() => setActiveViewTab("audit")}
-            className={`flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
-              activeViewTab === "audit"
-                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
-                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
-            }`}
-          >
-            Audit Trail ({resolvedAuditLogs.length})
+            <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
+            <span className="truncate">Radar</span>
           </button>
           <button
             type="button"
             data-testid="inspector-tab-telemetry"
             onClick={() => setActiveViewTab("telemetry")}
-            className={`flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
+            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold transition-all ${
               activeViewTab === "telemetry"
                 ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
-            ⚡ AI Telemetry
+            <Activity className="h-3.5 w-3.5 text-emerald-500" />
+            <span className="truncate">⚡ AI Telemetry</span>
+          </button>
+          <button
+            type="button"
+            data-testid="inspector-tab-audit"
+            onClick={() => setActiveViewTab("audit")}
+            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold transition-all ${
+              activeViewTab === "audit"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            <ClipboardList className="h-3.5 w-3.5 text-sky-500" />
+            <span className="truncate">Audit Trail</span>
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+              {resolvedAuditLogs.length}
+            </span>
           </button>
         </div>
 

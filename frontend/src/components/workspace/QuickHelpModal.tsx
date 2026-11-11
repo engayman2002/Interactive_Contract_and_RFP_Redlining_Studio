@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, HelpCircle, X } from "lucide-react";
+import { ArrowRight, GraduationCap, HelpCircle, X } from "lucide-react";
 import {
   EXPORT_MODE_COMPARISON,
   HELP_GUIDE_MODULES,
@@ -46,7 +46,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
       data-testid="quick-help-modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm dark:bg-black/75"
     >
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200/80 px-6 py-4 dark:border-slate-800">
           <div className="flex items-center gap-3">
@@ -58,8 +58,7 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
                 Studio Quick-Reference Guide
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Contextual cheat-sheet for redlining, risk colors, and Word
-                exports
+                Contextual cheat-sheet for AI redlining tools, FinOps cache, and Word exports
               </p>
             </div>
           </div>
@@ -75,8 +74,27 @@ export const QuickHelpModal: React.FC<QuickHelpModalProps> = ({
           </button>
         </div>
 
-        {/* Segmented Tab Bar */}
-        <div className="flex gap-1 border-b border-slate-200/80 bg-slate-50 px-6 py-2.5 dark:border-slate-800 dark:bg-slate-950/60">
+        {/* Full Interactive Tutorial CTA Banner */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-violet-50/60 to-white px-6 py-2.5 dark:border-indigo-500/20 dark:from-indigo-950/50 dark:via-slate-900 dark:to-slate-900">
+          <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
+            <GraduationCap className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+            <span>
+              Want a hands-on 5-stage walkthrough of all AI capabilities?
+            </span>
+          </div>
+          <Link
+            href="/help"
+            data-testid="quick-help-launch-tutorial-btn"
+            onClick={onClose}
+            className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1 text-[11px] font-semibold text-white shadow-xs transition-colors hover:bg-indigo-500"
+          >
+            <span>Launch Full Interactive Tutorial (/help)</span>
+            <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+
+        {/* Scrollable Pill Navigation */}
+        <div className="flex gap-1.5 overflow-x-auto border-b border-slate-200/80 bg-slate-50 px-6 py-2.5 dark:border-slate-800 dark:bg-slate-950/60">
           <button
             type="button"
             data-testid="quick-help-tab-workflow"

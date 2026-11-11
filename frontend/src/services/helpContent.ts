@@ -52,6 +52,223 @@ export interface HelpFaqItem {
   keywords: string[];
 }
 
+export type LearningTrackId = "onboarding" | "studio" | "ai-agents" | "ops";
+
+export interface LearningTrackDefinition {
+  id: "ALL" | LearningTrackId;
+  label: string;
+  testId: string;
+  description: string;
+}
+
+export const HELP_LEARNING_TRACKS: LearningTrackDefinition[] = [
+  {
+    id: "ALL",
+    label: "All Guides (14)",
+    testId: "track-filter-all",
+    description: "Complete 14-module platform reference library",
+  },
+  {
+    id: "onboarding",
+    label: "1. Getting Started & Playbooks",
+    testId: "track-filter-onboarding",
+    description: "Contract ingestion, manual rules & Golden Contract extraction",
+  },
+  {
+    id: "studio",
+    label: "2. Studio & Word Export",
+    testId: "track-filter-studio",
+    description: "Split-pane diff review, 409 locks & Track Changes .docx export",
+  },
+  {
+    id: "ai-agents",
+    label: "3. AI Agents & Negotiation",
+    testId: "track-filter-ai-agents",
+    description: "Stance postures, AI Copilot, Critic Guard, Radar & Pushback Sim",
+  },
+  {
+    id: "ops",
+    label: "4. Security, Vault & FinOps",
+    testId: "track-filter-ops",
+    description: "Model Switcher, AES-256 Vault, SHA-256 Cache & AI Telemetry",
+  },
+];
+
+export const MODULE_TRACK_MAP: Record<string, LearningTrackId> = {
+  "quick-start": "onboarding",
+  "uploading-contracts": "onboarding",
+  "writing-playbook-rules": "onboarding",
+  "ai-playbook-extractor": "onboarding",
+  "mastering-studio": "studio",
+  "collaboration-concurrency-audit": "studio",
+  "exporting-word-docx": "studio",
+  "negotiation-stance-selector": "ai-agents",
+  "inline-clause-ai-copilot": "ai-agents",
+  "cross-clause-radar": "ai-agents",
+  "critic-verifier-guard": "ai-agents",
+  "counterparty-pushback-simulator": "ai-agents",
+  "ai-engine-switcher": "ops",
+  "ai-semantic-cache-telemetry": "ops",
+};
+
+export function getModuleLearningTrack(moduleId: string): LearningTrackId {
+  return MODULE_TRACK_MAP[moduleId] ?? "onboarding";
+}
+
+export interface TutorialStageItem {
+  index: number;
+  id: string;
+  shortTitle: string;
+  title: string;
+  subtitle: string;
+  checklist: string[];
+  visualPreview: {
+    badge: string;
+    promptOrInputLabel: string;
+    promptOrInput: string;
+    outputLabel: string;
+    output: string;
+  };
+  proTip: string;
+  ctaLabel: string;
+  ctaHref: string;
+}
+
+export const INTERACTIVE_TUTORIAL_STAGES: TutorialStageItem[] = [
+  {
+    index: 0,
+    id: "playbook-setup",
+    shortTitle: "Playbook Setup",
+    title: "Stage 1: Build or Auto-Extract Your Company Playbook",
+    subtitle:
+      "Establish corporate legal guardrails before auditing agreements, or import a signed Golden MSA in one click.",
+    checklist: [
+      "Open the Company Playbooks Manager (/playbooks) to inspect pre-seeded policies.",
+      "Click 'Load Sample Golden MSA' (or upload a signed .docx/.pdf contract) in the AI Playbook Auto-Extractor.",
+      "Click 'Auto-Extract Playbook Rules' to generate Standard Positions, Fallback Positions, Triggers, and 1536-d search vectors.",
+    ],
+    visualPreview: {
+      badge: "Golden MSA -> Playbook Rule",
+      promptOrInputLabel: "Golden Clause Input",
+      promptOrInput:
+        "1. Limitation of Liability. Neither party's aggregate liability shall exceed 12 months of fees paid...",
+      outputLabel: "Auto-Extracted Structured Policy",
+      output:
+        "Category: Liability (97% confidence) | Triggers: 'unlimited liability, cap below $10,000' | 1536-d Vector Indexed",
+    },
+    proTip:
+      "Legal Counsel and Technical Leads can uncheck 'Auto-save' to review candidates in safe Preview Mode before an ADMIN commits them organization-wide.",
+    ctaLabel: "Try Playbook Extractor Live",
+    ctaHref: "/playbooks",
+  },
+  {
+    index: 1,
+    id: "upload-and-engine",
+    shortTitle: "Upload & AI Engine",
+    title: "Stage 2: Upload Your Contract & Configure AI Engine",
+    subtitle:
+      "Ingest counterparty .docx or .pdf contracts while preserving legal numbering, and connect any Cloud or Local LLM dynamically.",
+    checklist: [
+      "Drag and drop a counterparty .docx or .pdf contract onto the Dashboard upload zone (or launch Sample Studio).",
+      "Click the AI Engine badge in the top toolbar to open Settings, choose Gemini, Groq, OpenAI, Anthropic, or Ollama, and click 'Fetch Live Models'.",
+      "Export your provider keys and model IDs into a passphrase-protected .rsvault.json encrypted vault for future sessions.",
+    ],
+    visualPreview: {
+      badge: "Zero-Restart Provider Switcher",
+      promptOrInputLabel: "Live Model Discovery & Vault",
+      promptOrInput:
+        "Provider: Gemini / Groq / Ollama -> Click 'Fetch Live Models' -> Run Connection Test (<200ms)",
+      outputLabel: "AEAD Vault Artifact (.rsvault.json)",
+      output:
+        "AES-256-GCM + PBKDF2-HMAC-SHA256 (600k iterations) encrypted locally; raw API keys never appear in GET responses.",
+    },
+    proTip:
+      "Wait until live connection testing turns emerald ('Verified') before auditing sensitive enterprise deals, and use your offline deterministic engine anytime for instant demos.",
+    ctaLabel: "Open Upload Dashboard",
+    ctaHref: "/",
+  },
+  {
+    index: 2,
+    id: "stance-and-audit",
+    shortTitle: "Stance & Live Audit",
+    title: "Stage 3: Choose Negotiation Stance & Run Live AI Audit",
+    subtitle:
+      "Calibrate redlining aggressiveness to the deal context and navigate flagged risks via the color-coded Risk Heatmap.",
+    checklist: [
+      "Pick Strict (zero-compromise standard), Balanced (reciprocal bilateral), or Commercial (fast-close fallback) in the Studio header.",
+      "Click 'Analyze Contract with AI' to stream Playbook-grounded clause evaluations in real time via SSE.",
+      "Use the left Risk Heatmap Gutter (Crimson = Critical, Amber = High, Sky = Medium, Emerald = Compliant) to jump straight to risky clauses.",
+    ],
+    visualPreview: {
+      badge: "Negotiation Posture Selector",
+      promptOrInputLabel: "Counterparty Clause ($500 Cap vs. 2x Fallback)",
+      promptOrInput:
+        "Vendor aggregate liability shall not exceed $500; Customer indemnity is uncapped.",
+      outputLabel: "Stance-Differentiated Audit Output",
+      output:
+        "STRICT: CRITICAL — Enforce 12-month cap | COMMERCIAL: HIGH — Adopt pre-approved 2x fees cap for fast close.",
+    },
+    proTip:
+      "Changing stance automatically keys a separate semantic cache entry so switching from Balanced to Commercial immediately generates fresh stance-tailored wording.",
+    ctaLabel: "Launch Sample Studio",
+    ctaHref: "/documents/demo",
+  },
+  {
+    index: 3,
+    id: "redlining-power-tools",
+    shortTitle: "Clause Power Tools",
+    title:
+      "Stage 4: Master Clause Redlining (Inline Diff, AI Copilot, Critic Guard & Pushback Sim)",
+    subtitle:
+      "Preview word-level deletions/insertions, steer wording conversationally, verify hallucination gates, and rehearse opposing counsel pushback.",
+    checklist: [
+      "Hover over 'Apply Redline' on any RedlineCard to inspect live word-level strikethrough deletions and emerald insertions inside the document.",
+      "Open '✨ AI Copilot' in the AI Power Tools bar to steer wording (e.g., 'Cap liability at $100,000') or review '🛡️ Critic Guard' verification gates.",
+      "Click '🎯 Simulate Pushback' to forecast opposing counsel acceptance odds (0-100%), copy Round-2 rebuttals, or apply Fallback Compromise wording in 1 click.",
+    ],
+    visualPreview: {
+      badge: "Progressive Disclosure AI Drawers",
+      promptOrInputLabel: "✨ AI Copilot Prompt + Critic Guard",
+      promptOrInput:
+        "Prompt: 'Add 30-day written notice and cure period' -> Critic Gates: ✓ Policy Grounded | ✓ Hallucination-Free",
+      outputLabel: "🎯 Counterparty Pushback Simulator",
+      output:
+        "Acceptance Likelihood: 78% (MODERATE) -> Round-2 Rebuttal Ready -> One-Click 'Use Compromise Wording'",
+    },
+    proTip:
+      "Only one heavy AI drawer (Copilot or Pushback Simulator) opens at a time inside each RedlineCard, keeping your visual workspace clutter-free.",
+    ctaLabel: "Practice Redlining in Studio",
+    ctaHref: "/documents/demo",
+  },
+  {
+    index: 4,
+    id: "radar-finops-export",
+    shortTitle: "Radar, FinOps & Export",
+    title:
+      "Stage 5: Run Cross-Clause Radar, Check FinOps Telemetry & Export to Word",
+    subtitle:
+      "Eliminate document-wide contradictions before signing, verify <1ms cache savings, and generate native Word Track Changes.",
+    checklist: [
+      "Switch the right Inspector to 'Radar' and click 'Scan Document Integrity' to catch conflicting liability caps, dangling section references, and undefined terms.",
+      "Open '⚡ AI Telemetry' to inspect Cache Hit Rate %, Tokens Saved, Avoided USD Spend, and purge the SHA-256 cache if needed.",
+      "Click 'Export Track Changes (.docx)' for opposing-counsel redline review (<w:ins>/<w:del>) or 'Export Clean (.docx)' for final signature.",
+    ],
+    visualPreview: {
+      badge: "Integrity + FinOps + OpenXML",
+      promptOrInputLabel: "Radar & SHA-256 Semantic Cache",
+      promptOrInput:
+        "Radar Score: 82/100 (1 broken Section 9.4 ref caught) | Re-Audit Hit Rate: 80.0% (<1ms latency)",
+      outputLabel: "Native Word Export Output",
+      output:
+        "Exports clean final text or native OpenXML <w:ins>/<w:del> revisions plus threaded margin comments.",
+    },
+    proTip:
+      "Open exported Track Changes files directly in Microsoft Word, Google Docs, or LibreOffice Writer—reviewers see your exact edits attributed cleanly.",
+    ctaLabel: "Open Studio Radar & Export",
+    ctaHref: "/documents/demo",
+  },
+];
+
 export const HELP_GUIDE_MODULES: HelpGuideModule[] = [
   {
     id: "quick-start",
